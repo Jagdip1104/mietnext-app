@@ -12,6 +12,7 @@ export default function Units() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [selectedProperty, setSelectedProperty] = useState('')
   const [name, setName] = useState('')
+  const [type, setType] = useState('wohnung')
   const [floor, setFloor] = useState('')
   const [sizeSqm, setSizeSqm] = useState('')
   const [rooms, setRooms] = useState('')
@@ -41,6 +42,7 @@ export default function Units() {
     setEditingId(u.id)
     setName(u.name)
     setSelectedProperty(u.property_id)
+    setType(u.type || 'wohnung')
     setFloor(u.floor?.toString() || '')
     setSizeSqm(u.size_sqm?.toString() || '')
     setRooms(u.rooms?.toString() || '')
@@ -50,7 +52,8 @@ export default function Units() {
   const handleCancel = () => {
     setShowForm(false)
     setEditingId(null)
-    setName(''); setSelectedProperty(''); setFloor(''); setSizeSqm(''); setRooms('')
+    setName(''); setSelectedProperty(''); setType('wohnung')
+    setFloor(''); setSizeSqm(''); setRooms('')
   }
 
   const handleSave = async () => {
@@ -59,6 +62,7 @@ export default function Units() {
     const data = {
       name,
       property_id: selectedProperty,
+      type,
       floor: floor ? parseInt(floor) : null,
       size_sqm: sizeSqm ? parseFloat(sizeSqm) : null,
       rooms: rooms ? parseFloat(rooms) : null,
@@ -77,6 +81,20 @@ export default function Units() {
     await supabase.from('units').delete().eq('id', id)
     setDeleteConfirm(null)
     loadData()
+  }
+
+  const typeStyle: any = {
+    wohnung: 'bg-blue-50 text-blue-600',
+    gewerbe: 'bg-purple-50 text-purple-600',
+    stellplatz: 'bg-gray-50 text-gray-500',
+    sonstige: 'bg-gray-50 text-gray-500',
+  }
+
+  const typeLabel: any = {
+    wohnung: 'Wohnung',
+    gewerbe: 'Gewerbe',
+    stellplatz: 'Stellplatz',
+    sonstige: 'Sonstige',
   }
 
   return (
@@ -115,6 +133,16 @@ export default function Units() {
                 <input value={name} onChange={e => setName(e.target.value)}
                   placeholder="z.B. Wohnung 1. OG links"
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
+              </div>
+              <div className="col-span-2">
+                <label className="text-xs text-gray-400 mb-1 block">Typ</label>
+                <select value={type} onChange={e => setType(e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400">
+                  <option value="wohnung">Wohnung</option>
+                  <option value="gewerbe">Gewerbe</option>
+                  <option value="stellplatz">Stellplatz</option>
+                  <option value="sonstige">Sonstige</option>
+                </select>
               </div>
               <div>
                 <label className="text-xs text-gray-400 mb-1 block">Etage</label>
@@ -182,10 +210,15 @@ export default function Units() {
                         {u.properties?.name}
                         {u.size_sqm && ` · ${u.size_sqm} m²`}
                         {u.rooms && ` · ${u.rooms} Zimmer`}
-                        {u.floor !== null && ` · ${u.floor}. OG`}
+                        {u.floor !== null && u.floor !== undefined && ` · ${u.floor}. OG`}
                       </p>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      {u.type && (
+                        <span className={`text-xs px-2 py-1 rounded-full ${typeStyle[u.type] || 'bg-gray-50 text-gray-500'}`}>
+                          {typeLabel[u.type] || u.type}
+                        </span>
+                      )}
                       <span className={`text-xs px-3 py-1 rounded-full ${u.is_occupied ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-400'}`}>
                         {u.is_occupied ? 'Vermietet' : 'Leer'}
                       </span>

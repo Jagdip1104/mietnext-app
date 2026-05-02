@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
+import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import Nav from '@/components/Nav'
 
 export default function Tickets() {
   const [units, setUnits] = useState<any[]>([])
@@ -15,11 +16,6 @@ export default function Tickets() {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-
   useEffect(() => {
     const check = async () => {
       const { data: { session } } = await supabase.auth.getSession()
@@ -31,14 +27,10 @@ export default function Tickets() {
 
   const loadData = async () => {
     const { data: unitsData } = await supabase
-      .from('units')
-      .select('*, properties(name)')
-      .order('name')
+      .from('units').select('*, properties(name)').order('name')
     setUnits(unitsData || [])
-
     const { data: ticketsData } = await supabase
-      .from('tickets')
-      .select('*, units(name, properties(name))')
+      .from('tickets').select('*, units(name, properties(name))')
       .order('created_at', { ascending: false })
     setTickets(ticketsData || [])
   }
@@ -47,9 +39,7 @@ export default function Tickets() {
     if (!title || !selectedUnit) return
     setLoading(true)
     await supabase.from('tickets').insert({
-      title,
-      description,
-      priority,
+      title, description, priority,
       unit_id: selectedUnit,
       status: 'open',
     })
@@ -70,33 +60,17 @@ export default function Tickets() {
     high: 'bg-red-50 text-red-600',
   }
 
-  const priorityLabel: any = {
-    low: 'Niedrig',
-    medium: 'Mittel',
-    high: 'Hoch',
-  }
-
+  const priorityLabel: any = { low: 'Niedrig', medium: 'Mittel', high: 'Hoch' }
   const statusStyle: any = {
     open: 'bg-red-50 text-red-500',
     in_progress: 'bg-amber-50 text-amber-600',
     closed: 'bg-green-50 text-green-600',
   }
-
-  const statusLabel: any = {
-    open: 'Offen',
-    in_progress: 'In Bearbeitung',
-    closed: 'Erledigt',
-  }
+  const statusLabel: any = { open: 'Offen', in_progress: 'In Bearbeitung', closed: 'Erledigt' }
 
   return (
     <main className="min-h-screen bg-gray-50">
-      <nav className="bg-white border-b border-gray-100 px-8 py-4 flex justify-between items-center">
-        <div className="text-lg font-medium text-gray-900">MietNext</div>
-        <button onClick={() => router.push('/dashboard')} className="text-sm text-gray-400 hover:text-gray-600">
-          ← Dashboard
-        </button>
-      </nav>
-
+      <Nav />
       <div className="max-w-4xl mx-auto px-8 py-10">
         <div className="flex justify-between items-center mb-8">
           <div>
@@ -121,9 +95,7 @@ export default function Tickets() {
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400">
                   <option value="">Einheit auswählen...</option>
                   {units.map(u => (
-                    <option key={u.id} value={u.id}>
-                      {u.properties?.name} – {u.name}
-                    </option>
+                    <option key={u.id} value={u.id}>{u.properties?.name} – {u.name}</option>
                   ))}
                 </select>
               </div>
@@ -136,8 +108,7 @@ export default function Tickets() {
               <div>
                 <label className="text-xs text-gray-400 mb-1 block">Beschreibung</label>
                 <textarea value={description} onChange={e => setDescription(e.target.value)}
-                  placeholder="Details zum Problem..."
-                  rows={3}
+                  placeholder="Details zum Problem..." rows={3}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
               </div>
               <div>
@@ -191,9 +162,7 @@ export default function Tickets() {
                     </span>
                   </div>
                 </div>
-                {t.description && (
-                  <p className="text-xs text-gray-400 mb-3">{t.description}</p>
-                )}
+                {t.description && <p className="text-xs text-gray-400 mb-3">{t.description}</p>}
                 <div className="flex gap-2">
                   {t.status !== 'in_progress' && t.status !== 'closed' && (
                     <button onClick={() => handleStatusChange(t.id, 'in_progress')}

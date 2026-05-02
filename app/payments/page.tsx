@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
+import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import Nav from '@/components/Nav'
 
 export default function Payments() {
   const [contracts, setContracts] = useState<any[]>([])
@@ -15,11 +16,6 @@ export default function Payments() {
   const [status, setStatus] = useState('pending')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
-
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
 
   useEffect(() => {
     const check = async () => {
@@ -78,22 +74,11 @@ export default function Payments() {
     pending: 'bg-amber-50 text-amber-600',
     late: 'bg-red-50 text-red-600',
   }
-
-  const statusLabel: any = {
-    paid: 'Bezahlt',
-    pending: 'Ausstehend',
-    late: 'Überfällig',
-  }
+  const statusLabel: any = { paid: 'Bezahlt', pending: 'Ausstehend', late: 'Überfällig' }
 
   return (
     <main className="min-h-screen bg-gray-50">
-      <nav className="bg-white border-b border-gray-100 px-8 py-4 flex justify-between items-center">
-        <div className="text-lg font-medium text-gray-900">MietNext</div>
-        <button onClick={() => router.push('/dashboard')} className="text-sm text-gray-400 hover:text-gray-600">
-          ← Dashboard
-        </button>
-      </nav>
-
+      <Nav />
       <div className="max-w-4xl mx-auto px-8 py-10">
         <div className="flex justify-between items-center mb-8">
           <div>
@@ -106,7 +91,6 @@ export default function Payments() {
           </button>
         </div>
 
-        {/* Übersicht */}
         <div className="grid grid-cols-3 gap-4 mb-8">
           <div className="bg-white border border-gray-100 rounded-xl p-5">
             <div className="text-2xl font-medium text-green-600 mb-1">{totalPaid.toLocaleString('de-DE')} €</div>
@@ -150,14 +134,12 @@ export default function Payments() {
               </div>
               <div>
                 <label className="text-xs text-gray-400 mb-1 block">Fällig am *</label>
-                <input value={dueDate} onChange={e => setDueDate(e.target.value)}
-                  type="date"
+                <input value={dueDate} onChange={e => setDueDate(e.target.value)} type="date"
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
               </div>
               <div>
-                <label className="text-xs text-gray-400 mb-1 block">Eingegangen am (leer = noch offen)</label>
-                <input value={paidDate} onChange={e => setPaidDate(e.target.value)}
-                  type="date"
+                <label className="text-xs text-gray-400 mb-1 block">Eingegangen am</label>
+                <input value={paidDate} onChange={e => setPaidDate(e.target.value)} type="date"
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
               </div>
               <div>
@@ -171,8 +153,7 @@ export default function Payments() {
               </div>
             </div>
             <div className="flex gap-2">
-              <button onClick={handleAdd}
-                disabled={loading || !selectedContract || !amount || !dueDate}
+              <button onClick={handleAdd} disabled={loading || !selectedContract || !amount || !dueDate}
                 className="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-600 disabled:opacity-40">
                 {loading ? 'Speichern...' : 'Speichern'}
               </button>
@@ -197,9 +178,7 @@ export default function Payments() {
             {payments.map(p => (
               <div key={p.id} className="bg-white border border-gray-100 rounded-xl p-5 flex justify-between items-center">
                 <div>
-                  <p className="font-medium text-gray-900 text-sm">
-                    {p.contracts?.tenants?.full_name}
-                  </p>
+                  <p className="font-medium text-gray-900 text-sm">{p.contracts?.tenants?.full_name}</p>
                   <p className="text-xs text-gray-400 mt-0.5">
                     Fällig: {new Date(p.due_date).toLocaleDateString('de-DE')}
                     {p.paid_date && ` · Bezahlt: ${new Date(p.paid_date).toLocaleDateString('de-DE')}`}

@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
+import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import Nav from '@/components/Nav'
 
 export default function Contracts() {
   const [tenants, setTenants] = useState<any[]>([])
@@ -18,11 +19,6 @@ export default function Contracts() {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-
   useEffect(() => {
     const check = async () => {
       const { data: { session } } = await supabase.auth.getSession()
@@ -33,18 +29,10 @@ export default function Contracts() {
   }, [])
 
   const loadData = async () => {
-    const { data: tenantsData } = await supabase
-      .from('tenants')
-      .select('*')
-      .order('full_name')
+    const { data: tenantsData } = await supabase.from('tenants').select('*').order('full_name')
     setTenants(tenantsData || [])
-
-    const { data: unitsData } = await supabase
-      .from('units')
-      .select('*, properties(name)')
-      .order('name')
+    const { data: unitsData } = await supabase.from('units').select('*, properties(name)').order('name')
     setUnits(unitsData || [])
-
     const { data: contractsData } = await supabase
       .from('contracts')
       .select('*, tenants(full_name), units(name, properties(name))')
@@ -73,13 +61,7 @@ export default function Contracts() {
 
   return (
     <main className="min-h-screen bg-gray-50">
-      <nav className="bg-white border-b border-gray-100 px-8 py-4 flex justify-between items-center">
-        <div className="text-lg font-medium text-gray-900">MietNext</div>
-        <button onClick={() => router.push('/dashboard')} className="text-sm text-gray-400 hover:text-gray-600">
-          ← Dashboard
-        </button>
-      </nav>
-
+      <Nav />
       <div className="max-w-4xl mx-auto px-8 py-10">
         <div className="flex justify-between items-center mb-8">
           <div>
@@ -114,9 +96,7 @@ export default function Contracts() {
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400">
                   <option value="">Einheit auswählen...</option>
                   {units.map(u => (
-                    <option key={u.id} value={u.id}>
-                      {u.properties?.name} – {u.name}
-                    </option>
+                    <option key={u.id} value={u.id}>{u.properties?.name} – {u.name}</option>
                   ))}
                 </select>
               </div>
@@ -134,14 +114,12 @@ export default function Contracts() {
               </div>
               <div>
                 <label className="text-xs text-gray-400 mb-1 block">Startdatum *</label>
-                <input value={startDate} onChange={e => setStartDate(e.target.value)}
-                  type="date"
+                <input value={startDate} onChange={e => setStartDate(e.target.value)} type="date"
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
               </div>
               <div>
                 <label className="text-xs text-gray-400 mb-1 block">Enddatum (leer = unbefristet)</label>
-                <input value={endDate} onChange={e => setEndDate(e.target.value)}
-                  type="date"
+                <input value={endDate} onChange={e => setEndDate(e.target.value)} type="date"
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
               </div>
             </div>
@@ -181,9 +159,7 @@ export default function Contracts() {
                 </div>
                 <div className="text-right">
                   <p className="font-medium text-gray-900 text-sm">{c.rent_amount} €/Monat</p>
-                  {c.deposit && (
-                    <p className="text-xs text-gray-400 mt-0.5">Kaution: {c.deposit} €</p>
-                  )}
+                  {c.deposit && <p className="text-xs text-gray-400 mt-0.5">Kaution: {c.deposit} €</p>}
                   <span className={`text-xs px-2 py-1 rounded-full mt-1 inline-block ${c.is_active ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-400'}`}>
                     {c.is_active ? 'Aktiv' : 'Beendet'}
                   </span>

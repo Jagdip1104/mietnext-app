@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
+import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import Nav from '@/components/Nav'
 
 export default function Tenants() {
   const [units, setUnits] = useState<any[]>([])
@@ -15,11 +16,6 @@ export default function Tenants() {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-
   useEffect(() => {
     const check = async () => {
       const { data: { session } } = await supabase.auth.getSession()
@@ -31,14 +27,10 @@ export default function Tenants() {
 
   const loadData = async () => {
     const { data: unitsData } = await supabase
-      .from('units')
-      .select('*, properties(name)')
-      .order('name')
+      .from('units').select('*, properties(name)').order('name')
     setUnits(unitsData || [])
-
     const { data: tenantsData } = await supabase
-      .from('tenants')
-      .select('*, units(name, properties(name))')
+      .from('tenants').select('*, units(name, properties(name))')
       .order('created_at', { ascending: false })
     setTenants(tenantsData || [])
   }
@@ -47,19 +39,14 @@ export default function Tenants() {
     if (!fullName) return
     setLoading(true)
     const { data: { session } } = await supabase.auth.getSession()
-
     await supabase.from('tenants').insert({
-      full_name: fullName,
-      email,
-      phone,
+      full_name: fullName, email, phone,
       unit_id: selectedUnit || null,
       owner_id: session?.user?.id,
     })
-
     if (selectedUnit) {
       await supabase.from('units').update({ is_occupied: true }).eq('id', selectedUnit)
     }
-
     setFullName(''); setEmail(''); setPhone(''); setSelectedUnit('')
     setShowForm(false)
     setLoading(false)
@@ -68,13 +55,7 @@ export default function Tenants() {
 
   return (
     <main className="min-h-screen bg-gray-50">
-      <nav className="bg-white border-b border-gray-100 px-8 py-4 flex justify-between items-center">
-        <div className="text-lg font-medium text-gray-900">MietNext</div>
-        <button onClick={() => router.push('/dashboard')} className="text-sm text-gray-400 hover:text-gray-600">
-          ← Dashboard
-        </button>
-      </nav>
-
+      <Nav />
       <div className="max-w-4xl mx-auto px-8 py-10">
         <div className="flex justify-between items-center mb-8">
           <div>
@@ -150,8 +131,7 @@ export default function Tenants() {
                 <div>
                   <p className="font-medium text-gray-900 text-sm">{t.full_name}</p>
                   <p className="text-xs text-gray-400 mt-0.5">
-                    {t.email && `${t.email}`}
-                    {t.phone && ` · ${t.phone}`}
+                    {t.email}{t.phone && ` · ${t.phone}`}
                   </p>
                 </div>
                 <div className="text-right">

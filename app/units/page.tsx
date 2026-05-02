@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
+import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import Nav from '@/components/Nav'
 
 export default function Units() {
   const [properties, setProperties] = useState<any[]>([])
@@ -15,11 +16,6 @@ export default function Units() {
   const [rooms, setRooms] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
-
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
 
   useEffect(() => {
     const check = async () => {
@@ -59,13 +55,7 @@ export default function Units() {
 
   return (
     <main className="min-h-screen bg-gray-50">
-      <nav className="bg-white border-b border-gray-100 px-8 py-4 flex justify-between items-center">
-        <div className="text-lg font-medium text-gray-900">MietNext</div>
-        <button onClick={() => router.push('/dashboard')} className="text-sm text-gray-400 hover:text-gray-600">
-          ← Dashboard
-        </button>
-      </nav>
-
+      <Nav />
       <div className="max-w-4xl mx-auto px-8 py-10">
         <div className="flex justify-between items-center mb-8">
           <div>
@@ -100,20 +90,17 @@ export default function Units() {
               </div>
               <div>
                 <label className="text-xs text-gray-400 mb-1 block">Etage</label>
-                <input value={floor} onChange={e => setFloor(e.target.value)}
-                  placeholder="z.B. 1" type="number"
+                <input value={floor} onChange={e => setFloor(e.target.value)} placeholder="z.B. 1" type="number"
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
               </div>
               <div>
                 <label className="text-xs text-gray-400 mb-1 block">Zimmer</label>
-                <input value={rooms} onChange={e => setRooms(e.target.value)}
-                  placeholder="z.B. 3" type="number"
+                <input value={rooms} onChange={e => setRooms(e.target.value)} placeholder="z.B. 3" type="number"
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
               </div>
               <div className="col-span-2">
                 <label className="text-xs text-gray-400 mb-1 block">Fläche (m²)</label>
-                <input value={sizeSqm} onChange={e => setSizeSqm(e.target.value)}
-                  placeholder="z.B. 75" type="number"
+                <input value={sizeSqm} onChange={e => setSizeSqm(e.target.value)} placeholder="z.B. 75" type="number"
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
               </div>
             </div>

@@ -9,11 +9,13 @@ export default function Tickets() {
   const [units, setUnits] = useState<any[]>([])
   const [tickets, setTickets] = useState<any[]>([])
   const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [selectedUnit, setSelectedUnit] = useState('')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [priority, setPriority] = useState('medium')
   const [loading, setLoading] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -35,16 +37,35 @@ export default function Tickets() {
     setTickets(ticketsData || [])
   }
 
-  const handleAdd = async () => {
+  const handleEdit = (t: any) => {
+    setEditingId(t.id)
+    setTitle(t.title)
+    setDescription(t.description || '')
+    setPriority(t.priority)
+    setSelectedUnit(t.unit_id)
+    setShowForm(true)
+  }
+
+  const handleCancel = () => {
+    setShowForm(false)
+    setEditingId(null)
+    setTitle(''); setDescription(''); setPriority('medium'); setSelectedUnit('')
+  }
+
+  const handleSave = async () => {
     if (!title || !selectedUnit) return
     setLoading(true)
-    await supabase.from('tickets').insert({
-      title, description, priority,
-      unit_id: selectedUnit,
-      status: 'open',
-    })
-    setTitle(''); setDescription(''); setPriority('medium'); setSelectedUnit('')
-    setShowForm(false)
+    if (editingId) {
+      await supabase.from('tickets').update({
+        title, description, priority, unit_id: selectedUnit,
+      }).eq('id', editingId)
+    } else {
+      await supabase.from('tickets').insert({
+        title, description, priority,
+        unit_id: selectedUnit, status: 'open',
+      })
+    }
+    handleCancel()
     setLoading(false)
     loadData()
   }
@@ -54,12 +75,17 @@ export default function Tickets() {
     loadData()
   }
 
+  const handleDelete = async (id: string) => {
+    await supabase.from('tickets').delete().eq('id', id)
+    setDeleteConfirm(null)
+    loadData()
+  }
+
   const priorityStyle: any = {
     low: 'bg-gray-50 text-gray-500',
     medium: 'bg-amber-50 text-amber-600',
     high: 'bg-red-50 text-red-600',
   }
-
   const priorityLabel: any = { low: 'Niedrig', medium: 'Mittel', high: 'Hoch' }
   const statusStyle: any = {
     open: 'bg-red-50 text-red-500',
@@ -87,7 +113,9 @@ export default function Tickets() {
 
         {showForm && (
           <div className="bg-white border border-gray-100 rounded-xl p-6 mb-6">
-            <h2 className="text-sm font-medium text-gray-700 mb-4">Neues Ticket</h2>
+            <h2 className="text-sm font-medium text-gray-700 mb-4">
+              {editingId ? 'Ticket bearbeiten' : 'Neues Ticket'}
+            </h2>
             <div className="flex flex-col gap-3 mb-4">
               <div>
                 <label className="text-xs text-gray-400 mb-1 block">Einheit *</label>
@@ -122,11 +150,11 @@ export default function Tickets() {
               </div>
             </div>
             <div className="flex gap-2">
-              <button onClick={handleAdd} disabled={loading || !title || !selectedUnit}
+              <button onClick={handleSave} disabled={loading || !title || !selectedUnit}
                 className="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-600 disabled:opacity-40">
-                {loading ? 'Speichern...' : 'Speichern'}
+                {loading ? 'Speichern...' : editingId ? 'Änderungen speichern' : 'Speichern'}
               </button>
-              <button onClick={() => setShowForm(false)}
+              <button onClick={handleCancel}
                 className="border border-gray-200 text-gray-500 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">
                 Abbrechen
               </button>
@@ -146,43 +174,69 @@ export default function Tickets() {
           <div className="flex flex-col gap-3">
             {tickets.map(t => (
               <div key={t.id} className="bg-white border border-gray-100 rounded-xl p-5">
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <p className="font-medium text-gray-900 text-sm">{t.title}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      {t.units?.properties?.name} – {t.units?.name}
-                    </p>
+                {deleteConfirm === t.id ? (
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm text-red-600">Ticket wirklich löschen?</p>
+                    <div className="flex gap-2">
+                      <button onClick={() => handleDelete(t.id)}
+                        className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-red-600">
+                        Ja, löschen
+                      </button>
+                      <button onClick={() => setDeleteConfirm(null)}
+                        className="border border-gray-200 text-gray-500 px-3 py-1.5 rounded-lg text-xs hover:bg-gray-50">
+                        Abbrechen
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <span className={`text-xs px-2 py-1 rounded-full ${priorityStyle[t.priority]}`}>
-                      {priorityLabel[t.priority]}
-                    </span>
-                    <span className={`text-xs px-2 py-1 rounded-full ${statusStyle[t.status]}`}>
-                      {statusLabel[t.status]}
-                    </span>
-                  </div>
-                </div>
-                {t.description && <p className="text-xs text-gray-400 mb-3">{t.description}</p>}
-                <div className="flex gap-2">
-                  {t.status !== 'in_progress' && t.status !== 'closed' && (
-                    <button onClick={() => handleStatusChange(t.id, 'in_progress')}
-                      className="text-xs border border-gray-200 text-gray-500 px-3 py-1 rounded-lg hover:bg-gray-50">
-                      In Bearbeitung
-                    </button>
-                  )}
-                  {t.status !== 'closed' && (
-                    <button onClick={() => handleStatusChange(t.id, 'closed')}
-                      className="text-xs border border-green-200 text-green-600 px-3 py-1 rounded-lg hover:bg-green-50">
-                      Erledigt
-                    </button>
-                  )}
-                  {t.status === 'closed' && (
-                    <button onClick={() => handleStatusChange(t.id, 'open')}
-                      className="text-xs border border-gray-200 text-gray-400 px-3 py-1 rounded-lg hover:bg-gray-50">
-                      Wieder öffnen
-                    </button>
-                  )}
-                </div>
+                ) : (
+                  <>
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <p className="font-medium text-gray-900 text-sm">{t.title}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {t.units?.properties?.name} – {t.units?.name}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <span className={`text-xs px-2 py-1 rounded-full ${priorityStyle[t.priority]}`}>
+                          {priorityLabel[t.priority]}
+                        </span>
+                        <span className={`text-xs px-2 py-1 rounded-full ${statusStyle[t.status]}`}>
+                          {statusLabel[t.status]}
+                        </span>
+                      </div>
+                    </div>
+                    {t.description && <p className="text-xs text-gray-400 mb-3">{t.description}</p>}
+                    <div className="flex gap-2">
+                      {t.status !== 'in_progress' && t.status !== 'closed' && (
+                        <button onClick={() => handleStatusChange(t.id, 'in_progress')}
+                          className="text-xs border border-gray-200 text-gray-500 px-3 py-1 rounded-lg hover:bg-gray-50">
+                          In Bearbeitung
+                        </button>
+                      )}
+                      {t.status !== 'closed' && (
+                        <button onClick={() => handleStatusChange(t.id, 'closed')}
+                          className="text-xs border border-green-200 text-green-600 px-3 py-1 rounded-lg hover:bg-green-50">
+                          Erledigt
+                        </button>
+                      )}
+                      {t.status === 'closed' && (
+                        <button onClick={() => handleStatusChange(t.id, 'open')}
+                          className="text-xs border border-gray-200 text-gray-400 px-3 py-1 rounded-lg hover:bg-gray-50">
+                          Wieder öffnen
+                        </button>
+                      )}
+                      <button onClick={() => handleEdit(t)}
+                        className="text-xs border border-gray-200 text-gray-500 px-3 py-1 rounded-lg hover:bg-gray-50">
+                        Bearbeiten
+                      </button>
+                      <button onClick={() => setDeleteConfirm(t.id)}
+                        className="text-xs border border-red-200 text-red-500 px-3 py-1 rounded-lg hover:bg-red-50">
+                        Löschen
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             ))}
           </div>

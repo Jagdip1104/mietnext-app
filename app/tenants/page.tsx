@@ -9,11 +9,13 @@ export default function Tenants() {
   const [units, setUnits] = useState<any[]>([])
   const [tenants, setTenants] = useState<any[]>([])
   const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [selectedUnit, setSelectedUnit] = useState('')
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [loading, setLoading] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -35,21 +37,48 @@ export default function Tenants() {
     setTenants(tenantsData || [])
   }
 
-  const handleAdd = async () => {
+  const handleEdit = (t: any) => {
+    setEditingId(t.id)
+    setFullName(t.full_name)
+    setEmail(t.email || '')
+    setPhone(t.phone || '')
+    setSelectedUnit(t.unit_id || '')
+    setShowForm(true)
+  }
+
+  const handleCancel = () => {
+    setShowForm(false)
+    setEditingId(null)
+    setFullName(''); setEmail(''); setPhone(''); setSelectedUnit('')
+  }
+
+  const handleSave = async () => {
     if (!fullName) return
     setLoading(true)
-    const { data: { session } } = await supabase.auth.getSession()
-    await supabase.from('tenants').insert({
-      full_name: fullName, email, phone,
-      unit_id: selectedUnit || null,
-      owner_id: session?.user?.id,
-    })
+    if (editingId) {
+      await supabase.from('tenants').update({
+        full_name: fullName, email, phone,
+        unit_id: selectedUnit || null,
+      }).eq('id', editingId)
+    } else {
+      const { data: { session } } = await supabase.auth.getSession()
+      await supabase.from('tenants').insert({
+        full_name: fullName, email, phone,
+        unit_id: selectedUnit || null,
+        owner_id: session?.user?.id,
+      })
+    }
     if (selectedUnit) {
       await supabase.from('units').update({ is_occupied: true }).eq('id', selectedUnit)
     }
-    setFullName(''); setEmail(''); setPhone(''); setSelectedUnit('')
-    setShowForm(false)
+    handleCancel()
     setLoading(false)
+    loadData()
+  }
+
+  const handleDelete = async (id: string) => {
+    await supabase.from('tenants').delete().eq('id', id)
+    setDeleteConfirm(null)
     loadData()
   }
 
@@ -70,7 +99,9 @@ export default function Tenants() {
 
         {showForm && (
           <div className="bg-white border border-gray-100 rounded-xl p-6 mb-6">
-            <h2 className="text-sm font-medium text-gray-700 mb-4">Neuer Mieter</h2>
+            <h2 className="text-sm font-medium text-gray-700 mb-4">
+              {editingId ? 'Mieter bearbeiten' : 'Neuer Mieter'}
+            </h2>
             <div className="grid grid-cols-2 gap-3 mb-4">
               <div className="col-span-2">
                 <label className="text-xs text-gray-400 mb-1 block">Name *</label>
@@ -94,8 +125,8 @@ export default function Tenants() {
                 <label className="text-xs text-gray-400 mb-1 block">Einheit zuweisen</label>
                 <select value={selectedUnit} onChange={e => setSelectedUnit(e.target.value)}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400">
-                  <option value="">Keine Einheit (später zuweisen)</option>
-                  {units.filter(u => !u.is_occupied).map(u => (
+                  <option value="">Keine Einheit</option>
+                  {units.map(u => (
                     <option key={u.id} value={u.id}>
                       {u.properties?.name} – {u.name}
                     </option>
@@ -104,11 +135,11 @@ export default function Tenants() {
               </div>
             </div>
             <div className="flex gap-2">
-              <button onClick={handleAdd} disabled={loading || !fullName}
+              <button onClick={handleSave} disabled={loading || !fullName}
                 className="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-600 disabled:opacity-40">
-                {loading ? 'Speichern...' : 'Speichern'}
+                {loading ? 'Speichern...' : editingId ? 'Änderungen speichern' : 'Speichern'}
               </button>
-              <button onClick={() => setShowForm(false)}
+              <button onClick={handleCancel}
                 className="border border-gray-200 text-gray-500 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">
                 Abbrechen
               </button>
@@ -127,24 +158,50 @@ export default function Tenants() {
         ) : (
           <div className="flex flex-col gap-3">
             {tenants.map(t => (
-              <div key={t.id} className="bg-white border border-gray-100 rounded-xl p-5 flex justify-between items-center">
-                <div>
-                  <p className="font-medium text-gray-900 text-sm">{t.full_name}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    {t.email}{t.phone && ` · ${t.phone}`}
-                  </p>
-                </div>
-                <div className="text-right">
-                  {t.units ? (
-                    <span className="text-xs bg-blue-50 text-blue-600 px-3 py-1 rounded-full">
-                      {t.units.properties?.name} – {t.units.name}
-                    </span>
-                  ) : (
-                    <span className="text-xs bg-gray-50 text-gray-400 px-3 py-1 rounded-full">
-                      Keine Einheit
-                    </span>
-                  )}
-                </div>
+              <div key={t.id} className="bg-white border border-gray-100 rounded-xl p-5">
+                {deleteConfirm === t.id ? (
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm text-red-600">Mieter wirklich löschen?</p>
+                    <div className="flex gap-2">
+                      <button onClick={() => handleDelete(t.id)}
+                        className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-red-600">
+                        Ja, löschen
+                      </button>
+                      <button onClick={() => setDeleteConfirm(null)}
+                        className="border border-gray-200 text-gray-500 px-3 py-1.5 rounded-lg text-xs hover:bg-gray-50">
+                        Abbrechen
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-medium text-gray-900 text-sm">{t.full_name}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {t.email}{t.phone && ` · ${t.phone}`}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {t.units ? (
+                        <span className="text-xs bg-blue-50 text-blue-600 px-3 py-1 rounded-full">
+                          {t.units.properties?.name} – {t.units.name}
+                        </span>
+                      ) : (
+                        <span className="text-xs bg-gray-50 text-gray-400 px-3 py-1 rounded-full">
+                          Keine Einheit
+                        </span>
+                      )}
+                      <button onClick={() => handleEdit(t)}
+                        className="text-xs border border-gray-200 text-gray-500 px-3 py-1.5 rounded-lg hover:bg-gray-50">
+                        Bearbeiten
+                      </button>
+                      <button onClick={() => setDeleteConfirm(t.id)}
+                        className="text-xs border border-red-200 text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50">
+                        Löschen
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>

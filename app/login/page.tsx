@@ -42,36 +42,34 @@ export default function LoginPage() {
 
         <div className="flex flex-col gap-1 mb-3">
           <label className="text-sm text-gray-500">E-Mail-Adresse</label>
-          <input
-            type="email"
-            value={email}
+          <input type="email" value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="jagdip@mietnext.de"
-            className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400"
-          />
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
         </div>
 
         <div className="flex flex-col gap-1 mb-4">
           <label className="text-sm text-gray-500">Passwort</label>
-          <input
-            type="password"
-            value={password}
+          <input type="password" value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
-            className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400"
-          />
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
         </div>
 
-        <button
-          onClick={handleLogin}
-          disabled={loading}
-          className="w-full bg-blue-500 text-white py-2 rounded-lg text-sm hover:bg-blue-600 disabled:opacity-50"
-        >
+        <button onClick={handleLogin} disabled={loading}
+          className="w-full bg-blue-500 text-white py-2 rounded-lg text-sm hover:bg-blue-600 disabled:opacity-50">
           {loading ? 'Laden...' : 'Einloggen →'}
         </button>
 
-        <div className="text-center text-sm text-gray-400 mt-4 cursor-pointer hover:text-gray-600">
+        <div className="text-center text-sm text-gray-400 mt-4">
           Passwort vergessen?
+        </div>
+        <div className="text-center text-sm text-gray-400 mt-2">
+          Noch kein Konto?{' '}
+          <button onClick={() => router.push('/register')}
+            className="text-blue-500 hover:underline">
+            Jetzt registrieren
+          </button>
         </div>
       </div>
     </main>

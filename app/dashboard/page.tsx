@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
+import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import Nav from '@/components/Nav'
 
 export default function Dashboard() {
   const [user, setUser] = useState<any>(null)
@@ -13,11 +14,6 @@ export default function Dashboard() {
     openTickets: 0,
   })
   const router = useRouter()
-
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
 
   useEffect(() => {
     const load = async () => {
@@ -42,28 +38,13 @@ export default function Dashboard() {
     load()
   }, [])
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
-    router.push('/login')
-  }
-
   return (
     <main className="min-h-screen bg-gray-50">
-      <nav className="bg-white border-b border-gray-100 px-8 py-4 flex justify-between items-center">
-        <div className="text-lg font-medium text-gray-900">MietNext</div>
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-gray-500">{user?.email}</span>
-          <button onClick={handleLogout} className="text-sm text-gray-400 hover:text-gray-600">
-            Abmelden
-          </button>
-        </div>
-      </nav>
-
+      <Nav />
       <div className="max-w-5xl mx-auto px-8 py-10">
         <h1 className="text-2xl font-medium text-gray-900 mb-1">Dashboard</h1>
-        <p className="text-sm text-gray-400 mb-8">Willkommen zurück!</p>
+        <p className="text-sm text-gray-400 mb-8">Willkommen zurück, {user?.email}</p>
 
-        {/* Stat Cards */}
         <div className="grid grid-cols-4 gap-4 mb-10">
           {[
             { label: 'Objekte', value: stats.properties, color: 'text-blue-600', href: '/properties' },
@@ -80,7 +61,6 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* Quick Actions */}
         <div className="bg-white border border-gray-100 rounded-xl p-6">
           <h2 className="text-sm font-medium text-gray-700 mb-4">Schnellzugriff</h2>
           <div className="flex gap-3">
@@ -96,9 +76,9 @@ export default function Dashboard() {
               className="border border-gray-200 text-gray-600 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">
               + Mieter anlegen
             </button>
-            <button onClick={() => router.push('/tickets')}
+            <button onClick={() => router.push('/payments')}
               className="border border-gray-200 text-gray-600 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">
-              Tickets ansehen
+              Zahlungen
             </button>
           </div>
         </div>

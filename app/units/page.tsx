@@ -23,22 +23,32 @@ export default function Units() {
   const [notes, setNotes] = useState('')
   const [loading, setLoading] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
     const check = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/login'); return }
-      loadData()
+      setUserId(session.user.id)
+      loadData(session.user.id)
     }
     check()
   }, [])
 
-  const loadData = async () => {
-    const { data: props } = await supabase.from('properties').select('*').order('name')
+  const loadData = async (uid: string) => {
+    const { data: props } = await supabase
+      .from('properties').select('*')
+      .eq('owner_id', uid)
+      .order('name')
     setProperties(props || [])
+
+    const propertyIds = (props || []).map((p: any) => p.id)
+    if (propertyIds.length === 0) { setUnits([]); return }
+
     const { data: unitsData } = await supabase
       .from('units').select('*, properties(name)')
+      .in('property_id', propertyIds)
       .order('created_at', { ascending: false })
     setUnits(unitsData || [])
   }
@@ -88,7 +98,6 @@ export default function Units() {
     if (type === 'stellplatz') {
       data.parking_type = parkingType
     }
-
     if (editingId) {
       await supabase.from('units').update(data).eq('id', editingId)
     } else {
@@ -96,13 +105,13 @@ export default function Units() {
     }
     handleCancel()
     setLoading(false)
-    loadData()
+    loadData(userId!)
   }
 
   const handleDelete = async (id: string) => {
     await supabase.from('units').delete().eq('id', id)
     setDeleteConfirm(null)
-    loadData()
+    loadData(userId!)
   }
 
   const typeStyle: any = {
@@ -137,8 +146,6 @@ export default function Units() {
               {editingId ? 'Einheit bearbeiten' : 'Neue Einheit'}
             </h2>
             <div className="grid grid-cols-2 gap-3 mb-4">
-
-              {/* Typ – immer zuerst */}
               <div className="col-span-2">
                 <label className="text-xs text-gray-400 mb-1 block">Typ *</label>
                 <select value={type} onChange={e => setType(e.target.value)}
@@ -149,8 +156,6 @@ export default function Units() {
                   <option value="sonstige">Sonstige</option>
                 </select>
               </div>
-
-              {/* Objekt – immer */}
               <div className="col-span-2">
                 <label className="text-xs text-gray-400 mb-1 block">Objekt *</label>
                 <select value={selectedProperty} onChange={e => setSelectedProperty(e.target.value)}
@@ -161,21 +166,17 @@ export default function Units() {
                   ))}
                 </select>
               </div>
-
-              {/* Bezeichnung – immer */}
               <div className="col-span-2">
                 <label className="text-xs text-gray-400 mb-1 block">Bezeichnung *</label>
                 <input value={name} onChange={e => setName(e.target.value)}
                   placeholder={
                     type === 'wohnung' ? 'z.B. Wohnung 1. OG links' :
                     type === 'gewerbe' ? 'z.B. Ladenlokal EG' :
-                    type === 'stellplatz' ? 'z.B. Stellplatz 3' :
-                    'z.B. Lagerraum'
+                    type === 'stellplatz' ? 'z.B. Stellplatz 3' : 'z.B. Lagerraum'
                   }
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
               </div>
 
-              {/* WOHNUNG Felder */}
               {type === 'wohnung' && (
                 <>
                   <div>
@@ -205,7 +206,6 @@ export default function Units() {
                 </>
               )}
 
-              {/* GEWERBE Felder */}
               {type === 'gewerbe' && (
                 <>
                   <div>
@@ -241,16 +241,12 @@ export default function Units() {
                   </div>
                   <div className="col-span-2 flex items-center gap-3">
                     <input type="checkbox" id="vat" checked={vatApplicable}
-                      onChange={e => setVatApplicable(e.target.checked)}
-                      className="w-4 h-4 rounded" />
-                    <label htmlFor="vat" className="text-sm text-gray-600">
-                      Umsatzsteuerpflichtig (19% MwSt.)
-                    </label>
+                      onChange={e => setVatApplicable(e.target.checked)} className="w-4 h-4 rounded" />
+                    <label htmlFor="vat" className="text-sm text-gray-600">Umsatzsteuerpflichtig (19% MwSt.)</label>
                   </div>
                 </>
               )}
 
-              {/* STELLPLATZ Felder */}
               {type === 'stellplatz' && (
                 <>
                   <div className="col-span-2">
@@ -272,7 +268,6 @@ export default function Units() {
                 </>
               )}
 
-              {/* SONSTIGE Felder */}
               {type === 'sonstige' && (
                 <>
                   <div>
@@ -290,12 +285,10 @@ export default function Units() {
                 </>
               )}
 
-              {/* Notizen – immer */}
               <div className="col-span-2">
                 <label className="text-xs text-gray-400 mb-1 block">Notizen</label>
                 <textarea value={notes} onChange={e => setNotes(e.target.value)}
-                  placeholder="Zusätzliche Informationen..."
-                  rows={2}
+                  placeholder="Zusätzliche Informationen..." rows={2}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
               </div>
             </div>

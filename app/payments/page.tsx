@@ -15,28 +15,37 @@ export default function Payments() {
   const [paidDate, setPaidDate] = useState('')
   const [status, setStatus] = useState('pending')
   const [loading, setLoading] = useState(false)
+  const [userId, setUserId] = useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
     const check = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/login'); return }
-      loadData()
+      setUserId(session.user.id)
+      loadData(session.user.id)
     }
     check()
   }, [])
 
-  const loadData = async () => {
+  const loadData = async (uid: string) => {
+    const { data: tenantsData } = await supabase
+      .from('tenants').select('id').eq('owner_id', uid)
+    const tenantIds = (tenantsData || []).map((t: any) => t.id)
+
     const { data: contractsData } = await supabase
       .from('contracts')
       .select('*, tenants(full_name), units(name, properties(name))')
+      .in('tenant_id', tenantIds.length > 0 ? tenantIds : ['none'])
       .eq('is_active', true)
       .order('created_at', { ascending: false })
     setContracts(contractsData || [])
 
+    const contractIds = (contractsData || []).map((c: any) => c.id)
     const { data: paymentsData } = await supabase
       .from('payments')
       .select('*, contracts(tenant_id, tenants(full_name), units(name, properties(name)))')
+      .in('contract_id', contractIds.length > 0 ? contractIds : ['none'])
       .order('due_date', { ascending: false })
     setPayments(paymentsData || [])
   }
@@ -54,7 +63,7 @@ export default function Payments() {
     setSelectedContract(''); setAmount(''); setDueDate(''); setPaidDate(''); setStatus('pending')
     setShowForm(false)
     setLoading(false)
-    loadData()
+    loadData(userId!)
   }
 
   const handleMarkPaid = async (id: string) => {
@@ -62,12 +71,12 @@ export default function Payments() {
       status: 'paid',
       paid_date: new Date().toISOString().split('T')[0],
     }).eq('id', id)
-    loadData()
+    loadData(userId!)
   }
 
-  const totalPaid = payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0)
-  const totalPending = payments.filter(p => p.status === 'pending').reduce((sum, p) => sum + p.amount, 0)
-  const totalLate = payments.filter(p => p.status === 'late').reduce((sum, p) => sum + p.amount, 0)
+  const totalPaid = payments.filter(p => p.status === 'paid').reduce((sum: number, p: any) => sum + p.amount, 0)
+  const totalPending = payments.filter(p => p.status === 'pending').reduce((sum: number, p: any) => sum + p.amount, 0)
+  const totalLate = payments.filter(p => p.status === 'late').reduce((sum: number, p: any) => sum + p.amount, 0)
 
   const statusStyle: any = {
     paid: 'bg-green-50 text-green-600',
@@ -178,7 +187,9 @@ export default function Payments() {
             {payments.map(p => (
               <div key={p.id} className="bg-white border border-gray-100 rounded-xl p-5 flex justify-between items-center">
                 <div>
-                  <p className="font-medium text-gray-900 text-sm">{p.contracts?.tenants?.full_name}</p>
+                  <p className="font-medium text-gray-900 text-sm">
+                    {p.contracts?.tenants?.full_name}
+                  </p>
                   <p className="text-xs text-gray-400 mt-0.5">
                     Fällig: {new Date(p.due_date).toLocaleDateString('de-DE')}
                     {p.paid_date && ` · Bezahlt: ${new Date(p.paid_date).toLocaleDateString('de-DE')}`}

@@ -16,23 +16,33 @@ export default function Tenants() {
   const [phone, setPhone] = useState('')
   const [loading, setLoading] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
     const check = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/login'); return }
-      loadData()
+      setUserId(session.user.id)
+      loadData(session.user.id)
     }
     check()
   }, [])
 
-  const loadData = async () => {
+  const loadData = async (uid: string) => {
+    const { data: props } = await supabase
+      .from('properties').select('id').eq('owner_id', uid)
+    const propertyIds = (props || []).map((p: any) => p.id)
+
     const { data: unitsData } = await supabase
-      .from('units').select('*, properties(name)').order('name')
+      .from('units').select('*, properties(name)')
+      .in('property_id', propertyIds.length > 0 ? propertyIds : ['none'])
+      .order('name')
     setUnits(unitsData || [])
+
     const { data: tenantsData } = await supabase
       .from('tenants').select('*, units(name, properties(name))')
+      .eq('owner_id', uid)
       .order('created_at', { ascending: false })
     setTenants(tenantsData || [])
   }
@@ -61,11 +71,10 @@ export default function Tenants() {
         unit_id: selectedUnit || null,
       }).eq('id', editingId)
     } else {
-      const { data: { session } } = await supabase.auth.getSession()
       await supabase.from('tenants').insert({
         full_name: fullName, email, phone,
         unit_id: selectedUnit || null,
-        owner_id: session?.user?.id,
+        owner_id: userId,
       })
     }
     if (selectedUnit) {
@@ -73,13 +82,13 @@ export default function Tenants() {
     }
     handleCancel()
     setLoading(false)
-    loadData()
+    loadData(userId!)
   }
 
   const handleDelete = async (id: string) => {
     await supabase.from('tenants').delete().eq('id', id)
     setDeleteConfirm(null)
-    loadData()
+    loadData(userId!)
   }
 
   return (

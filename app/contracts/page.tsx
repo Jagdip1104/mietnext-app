@@ -10,6 +10,7 @@ export default function Contracts() {
   const [units, setUnits] = useState<any[]>([])
   const [contracts, setContracts] = useState<any[]>([])
   const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [selectedTenant, setSelectedTenant] = useState('')
   const [selectedUnit, setSelectedUnit] = useState('')
   const [rentAmount, setRentAmount] = useState('')
@@ -17,33 +18,67 @@ export default function Contracts() {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [loading, setLoading] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
     const check = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/login'); return }
-      loadData()
+      setUserId(session.user.id)
+      loadData(session.user.id)
     }
     check()
   }, [])
 
-  const loadData = async () => {
-    const { data: tenantsData } = await supabase.from('tenants').select('*').order('full_name')
+  const loadData = async (uid: string) => {
+    const { data: props } = await supabase
+      .from('properties').select('id').eq('owner_id', uid)
+    const propertyIds = (props || []).map((p: any) => p.id)
+
+    const { data: tenantsData } = await supabase
+      .from('tenants').select('*')
+      .eq('owner_id', uid).order('full_name')
     setTenants(tenantsData || [])
-    const { data: unitsData } = await supabase.from('units').select('*, properties(name)').order('name')
+
+    const { data: unitsData } = await supabase
+      .from('units').select('*, properties(name)')
+      .in('property_id', propertyIds.length > 0 ? propertyIds : ['none'])
+      .order('name')
     setUnits(unitsData || [])
+
     const { data: contractsData } = await supabase
       .from('contracts')
       .select('*, tenants(full_name), units(name, properties(name))')
+      .in('tenant_id', (tenantsData || []).map((t: any) => t.id).length > 0
+        ? (tenantsData || []).map((t: any) => t.id) : ['none'])
       .order('created_at', { ascending: false })
     setContracts(contractsData || [])
   }
 
-  const handleAdd = async () => {
+  const handleEdit = (c: any) => {
+    setEditingId(c.id)
+    setSelectedTenant(c.tenant_id)
+    setSelectedUnit(c.unit_id)
+    setRentAmount(c.rent_amount?.toString() || '')
+    setDeposit(c.deposit?.toString() || '')
+    setStartDate(c.start_date || '')
+    setEndDate(c.end_date || '')
+    setShowForm(true)
+  }
+
+  const handleCancel = () => {
+    setShowForm(false)
+    setEditingId(null)
+    setSelectedTenant(''); setSelectedUnit(''); setRentAmount('')
+    setDeposit(''); setStartDate(''); setEndDate('')
+  }
+
+  const handleSave = async () => {
     if (!selectedTenant || !selectedUnit || !rentAmount || !startDate) return
     setLoading(true)
-    await supabase.from('contracts').insert({
+    const data = {
       tenant_id: selectedTenant,
       unit_id: selectedUnit,
       rent_amount: parseFloat(rentAmount),
@@ -51,12 +86,21 @@ export default function Contracts() {
       start_date: startDate,
       end_date: endDate || null,
       is_active: true,
-    })
-    setSelectedTenant(''); setSelectedUnit(''); setRentAmount('')
-    setDeposit(''); setStartDate(''); setEndDate('')
-    setShowForm(false)
+    }
+    if (editingId) {
+      await supabase.from('contracts').update(data).eq('id', editingId)
+    } else {
+      await supabase.from('contracts').insert(data)
+    }
+    handleCancel()
     setLoading(false)
-    loadData()
+    loadData(userId!)
+  }
+
+  const handleDelete = async (id: string) => {
+    await supabase.from('contracts').delete().eq('id', id)
+    setDeleteConfirm(null)
+    loadData(userId!)
   }
 
   return (
@@ -78,7 +122,9 @@ export default function Contracts() {
 
         {showForm && (
           <div className="bg-white border border-gray-100 rounded-xl p-6 mb-6">
-            <h2 className="text-sm font-medium text-gray-700 mb-4">Neuer Mietvertrag</h2>
+            <h2 className="text-sm font-medium text-gray-700 mb-4">
+              {editingId ? 'Vertrag bearbeiten' : 'Neuer Mietvertrag'}
+            </h2>
             <div className="grid grid-cols-2 gap-3 mb-4">
               <div className="col-span-2">
                 <label className="text-xs text-gray-400 mb-1 block">Mieter *</label>
@@ -124,12 +170,12 @@ export default function Contracts() {
               </div>
             </div>
             <div className="flex gap-2">
-              <button onClick={handleAdd}
+              <button onClick={handleSave}
                 disabled={loading || !selectedTenant || !selectedUnit || !rentAmount || !startDate}
                 className="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-600 disabled:opacity-40">
-                {loading ? 'Speichern...' : 'Speichern'}
+                {loading ? 'Speichern...' : editingId ? 'Änderungen speichern' : 'Speichern'}
               </button>
-              <button onClick={() => setShowForm(false)}
+              <button onClick={handleCancel}
                 className="border border-gray-200 text-gray-500 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">
                 Abbrechen
               </button>
@@ -148,22 +194,50 @@ export default function Contracts() {
         ) : (
           <div className="flex flex-col gap-3">
             {contracts.map(c => (
-              <div key={c.id} className="bg-white border border-gray-100 rounded-xl p-5 flex justify-between items-center">
-                <div>
-                  <p className="font-medium text-gray-900 text-sm">{c.tenants?.full_name}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    {c.units?.properties?.name} – {c.units?.name}
-                    {' · '}ab {new Date(c.start_date).toLocaleDateString('de-DE')}
-                    {c.end_date && ` bis ${new Date(c.end_date).toLocaleDateString('de-DE')}`}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="font-medium text-gray-900 text-sm">{c.rent_amount} €/Monat</p>
-                  {c.deposit && <p className="text-xs text-gray-400 mt-0.5">Kaution: {c.deposit} €</p>}
-                  <span className={`text-xs px-2 py-1 rounded-full mt-1 inline-block ${c.is_active ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-400'}`}>
-                    {c.is_active ? 'Aktiv' : 'Beendet'}
-                  </span>
-                </div>
+              <div key={c.id} className="bg-white border border-gray-100 rounded-xl p-5">
+                {deleteConfirm === c.id ? (
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm text-red-600">Vertrag wirklich löschen?</p>
+                    <div className="flex gap-2">
+                      <button onClick={() => handleDelete(c.id)}
+                        className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-red-600">
+                        Ja, löschen
+                      </button>
+                      <button onClick={() => setDeleteConfirm(null)}
+                        className="border border-gray-200 text-gray-500 px-3 py-1.5 rounded-lg text-xs hover:bg-gray-50">
+                        Abbrechen
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-medium text-gray-900 text-sm">{c.tenants?.full_name}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {c.units?.properties?.name} – {c.units?.name}
+                        {' · '}ab {new Date(c.start_date).toLocaleDateString('de-DE')}
+                        {c.end_date && ` bis ${new Date(c.end_date).toLocaleDateString('de-DE')}`}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <p className="font-medium text-gray-900 text-sm">{c.rent_amount} €/Monat</p>
+                        {c.deposit && <p className="text-xs text-gray-400">Kaution: {c.deposit} €</p>}
+                      </div>
+                      <span className={`text-xs px-2 py-1 rounded-full ${c.is_active ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-400'}`}>
+                        {c.is_active ? 'Aktiv' : 'Beendet'}
+                      </span>
+                      <button onClick={() => handleEdit(c)}
+                        className="text-xs border border-gray-200 text-gray-500 px-3 py-1.5 rounded-lg hover:bg-gray-50">
+                        Bearbeiten
+                      </button>
+                      <button onClick={() => setDeleteConfirm(c.id)}
+                        className="text-xs border border-red-200 text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50">
+                        Löschen
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>

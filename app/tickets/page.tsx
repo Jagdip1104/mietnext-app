@@ -16,23 +16,34 @@ export default function Tickets() {
   const [priority, setPriority] = useState('medium')
   const [loading, setLoading] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
     const check = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/login'); return }
-      loadData()
+      setUserId(session.user.id)
+      loadData(session.user.id)
     }
     check()
   }, [])
 
-  const loadData = async () => {
+  const loadData = async (uid: string) => {
+    const { data: props } = await supabase
+      .from('properties').select('id').eq('owner_id', uid)
+    const propertyIds = (props || []).map((p: any) => p.id)
+
     const { data: unitsData } = await supabase
-      .from('units').select('*, properties(name)').order('name')
+      .from('units').select('*, properties(name)')
+      .in('property_id', propertyIds.length > 0 ? propertyIds : ['none'])
+      .order('name')
     setUnits(unitsData || [])
+
+    const unitIds = (unitsData || []).map((u: any) => u.id)
     const { data: ticketsData } = await supabase
       .from('tickets').select('*, units(name, properties(name))')
+      .in('unit_id', unitIds.length > 0 ? unitIds : ['none'])
       .order('created_at', { ascending: false })
     setTickets(ticketsData || [])
   }
@@ -67,18 +78,18 @@ export default function Tickets() {
     }
     handleCancel()
     setLoading(false)
-    loadData()
+    loadData(userId!)
   }
 
   const handleStatusChange = async (id: string, status: string) => {
     await supabase.from('tickets').update({ status }).eq('id', id)
-    loadData()
+    loadData(userId!)
   }
 
   const handleDelete = async (id: string) => {
     await supabase.from('tickets').delete().eq('id', id)
     setDeleteConfirm(null)
-    loadData()
+    loadData(userId!)
   }
 
   const priorityStyle: any = {

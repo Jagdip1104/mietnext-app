@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
@@ -10,7 +10,17 @@ export default function ResetPassword() {
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
+  const [ready, setReady] = useState(false)
   const router = useRouter()
+
+  useEffect(() => {
+    // Supabase liest den Token automatisch aus der URL
+    supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setReady(true)
+      }
+    })
+  }, [])
 
   const handleReset = async () => {
     setError('')
@@ -44,9 +54,17 @@ export default function ResetPassword() {
         <div className="bg-white border border-gray-100 rounded-xl p-8 w-full max-w-sm text-center">
           <div className="text-4xl mb-4">🎉</div>
           <h2 className="text-lg font-medium text-gray-900 mb-2">Passwort geändert!</h2>
-          <p className="text-sm text-gray-400 mb-6">
-            Du wirst automatisch zum Login weitergeleitet...
-          </p>
+          <p className="text-sm text-gray-400">Du wirst automatisch zum Login weitergeleitet...</p>
+        </div>
+      </main>
+    )
+  }
+
+  if (!ready) {
+    return (
+      <main className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white border border-gray-100 rounded-xl p-8 w-full max-w-sm text-center">
+          <p className="text-sm text-gray-400">Link wird überprüft...</p>
         </div>
       </main>
     )

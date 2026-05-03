@@ -15,19 +15,25 @@ export default function Properties() {
   const [zip, setZip] = useState('')
   const [loading, setLoading] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
     const check = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/login'); return }
-      loadProperties()
+      setUserId(session.user.id)
+      loadProperties(session.user.id)
     }
     check()
   }, [])
 
-  const loadProperties = async () => {
-    const { data } = await supabase.from('properties').select('*, units(count)').order('created_at', { ascending: false })
+  const loadProperties = async (uid: string) => {
+    const { data } = await supabase
+      .from('properties')
+      .select('*, units(count)')
+      .eq('owner_id', uid)
+      .order('created_at', { ascending: false })
     setProperties(data || [])
   }
 
@@ -52,18 +58,17 @@ export default function Properties() {
     if (editingId) {
       await supabase.from('properties').update({ name, address, city, zip }).eq('id', editingId)
     } else {
-      const { data: { session } } = await supabase.auth.getSession()
-      await supabase.from('properties').insert({ name, address, city, zip, owner_id: session?.user?.id })
+      await supabase.from('properties').insert({ name, address, city, zip, owner_id: userId })
     }
     handleCancel()
     setLoading(false)
-    loadProperties()
+    loadProperties(userId!)
   }
 
   const handleDelete = async (id: string) => {
     await supabase.from('properties').delete().eq('id', id)
     setDeleteConfirm(null)
-    loadProperties()
+    loadProperties(userId!)
   }
 
   return (

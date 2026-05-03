@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
@@ -11,66 +11,98 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const router = useRouter()
 
-  const handleLogin = async () => {
-    setLoading(true)
-    setError('')
-    
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+  useEffect(() => {
+    // Prüfe ob bereits eingeloggt
+    const check = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        redirectUser(session.user.id)
+      }
+    }
+    check()
+
+    // Höre auf Auth-Änderungen (Magic Link)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        redirectUser(session.user.id)
+      }
     })
 
-    if (error) {
-      setError('E-Mail oder Passwort falsch')
-      setLoading(false)
+    return () => subscription.unsubscribe()
+  }, [])
+
+  const redirectUser = async (uid: string) => {
+    // Prüfe ob Mieter
+    const { data: tenantUser } = await supabase
+      .from('tenant_users')
+      .select('id')
+      .eq('user_id', uid)
+      .single()
+
+    if (tenantUser) {
+      router.push('/tenant-portal')
     } else {
       router.push('/dashboard')
     }
   }
 
+  const handleLogin = async () => {
+    setLoading(true)
+    setError('')
+
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+
+    if (error) {
+      setError('E-Mail oder Passwort falsch')
+      setLoading(false)
+    }
+  }
+
   return (
-    <main className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="bg-white border border-gray-100 rounded-xl p-8 w-full max-w-sm">
-        <div className="text-lg font-medium text-gray-900 text-center mb-1">MietNext</div>
-        <div className="text-sm text-gray-400 text-center mb-6">Professionelle Immobilienverwaltung</div>
-        
+    <main style={{ minHeight: '100vh', backgroundColor: '#fafaf8', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+      <div style={{ backgroundColor: '#fff', border: '1px solid #e8e6e0', borderRadius: '16px', padding: '40px', width: '100%', maxWidth: '380px' }}>
+        <div style={{ fontSize: '20px', fontWeight: '600', color: '#1a1a1a', textAlign: 'center', marginBottom: '4px', fontFamily: 'Georgia, serif' }}>
+          MietNext
+        </div>
+        <div style={{ fontSize: '14px', color: '#999', textAlign: 'center', marginBottom: '32px' }}>
+          Professionelle Immobilienverwaltung
+        </div>
+
         {error && (
-          <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg mb-4">
+          <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '12px 16px', marginBottom: '20px', fontSize: '14px', color: '#dc2626' }}>
             {error}
           </div>
         )}
 
-        <div className="flex flex-col gap-1 mb-3">
-          <label className="text-sm text-gray-500">E-Mail-Adresse</label>
-          <input type="email" value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="jagdip@mietnext.de"
-            className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ fontSize: '12px', color: '#999', marginBottom: '6px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>E-Mail-Adresse</label>
+          <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+            placeholder="name@email.de"
+            style={{ width: '100%', border: '1px solid #e8e6e0', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', outline: 'none', color: '#1a1a1a', backgroundColor: '#fff' }} />
         </div>
 
-        <div className="flex flex-col gap-1 mb-4">
-          <label className="text-sm text-gray-500">Passwort</label>
-          <input type="password" value={password}
-            onChange={(e) => setPassword(e.target.value)}
+        <div style={{ marginBottom: '24px' }}>
+          <label style={{ fontSize: '12px', color: '#999', marginBottom: '6px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Passwort</label>
+          <input type="password" value={password} onChange={e => setPassword(e.target.value)}
             placeholder="••••••••"
-            className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
+            style={{ width: '100%', border: '1px solid #e8e6e0', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', outline: 'none', color: '#1a1a1a', backgroundColor: '#fff' }} />
         </div>
 
         <button onClick={handleLogin} disabled={loading}
-          className="w-full bg-blue-500 text-white py-2 rounded-lg text-sm hover:bg-blue-600 disabled:opacity-50">
+          style={{ width: '100%', backgroundColor: '#1a1a1a', color: '#fff', padding: '12px', borderRadius: '8px', border: 'none', fontSize: '14px', cursor: 'pointer', opacity: loading ? 0.5 : 1, marginBottom: '16px' }}>
           {loading ? 'Laden...' : 'Einloggen →'}
         </button>
 
-        <div className="text-center text-sm text-gray-400 mt-4">
+        <div style={{ textAlign: 'center', marginBottom: '8px' }}>
           <button onClick={() => router.push('/forgot-password')}
-            className="text-blue-500 hover:underline">
+            style={{ background: 'none', border: 'none', color: '#999', fontSize: '13px', cursor: 'pointer' }}>
             Passwort vergessen?
           </button>
         </div>
-        <div className="text-center text-sm text-gray-400 mt-2">
-          Noch kein Konto?{' '}
+        <div style={{ textAlign: 'center' }}>
+          <span style={{ fontSize: '13px', color: '#999' }}>Noch kein Konto? </span>
           <button onClick={() => router.push('/register')}
-            className="text-blue-500 hover:underline">
+            style={{ background: 'none', border: 'none', color: '#1a1a1a', fontSize: '13px', cursor: 'pointer', textDecoration: 'underline' }}>
             Jetzt registrieren
           </button>
         </div>

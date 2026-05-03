@@ -8,14 +8,9 @@ import Nav from '@/components/Nav'
 export default function Dashboard() {
   const [user, setUser] = useState<any>(null)
   const [stats, setStats] = useState({
-    properties: 0,
-    units: 0,
-    occupiedUnits: 0,
-    tenants: 0,
-    openTickets: 0,
-    monthlyIncome: 0,
-    pendingPayments: 0,
-    latePayments: 0,
+    properties: 0, units: 0, occupiedUnits: 0,
+    tenants: 0, openTickets: 0, monthlyIncome: 0,
+    pendingPayments: 0, latePayments: 0,
   })
   const [recentTickets, setRecentTickets] = useState<any[]>([])
   const [recentPayments, setRecentPayments] = useState<any[]>([])
@@ -73,112 +68,117 @@ export default function Dashboard() {
       .from('payments').select('*, contracts(tenants(full_name))')
       .order('created_at', { ascending: false }).limit(4)
 
-    const monthlyIncome = (paidThisMonth || []).reduce((sum: number, p: any) => sum + p.amount, 0)
-    const pendingTotal = (pendingPayments || []).reduce((sum: number, p: any) => sum + p.amount, 0)
-    const lateTotal = (latePayments || []).reduce((sum: number, p: any) => sum + p.amount, 0)
-
     setStats({
-      properties: propCount || 0,
-      units: unitCount || 0,
-      occupiedUnits: occupiedCount || 0,
-      tenants: tenantCount || 0,
+      properties: propCount || 0, units: unitCount || 0,
+      occupiedUnits: occupiedCount || 0, tenants: tenantCount || 0,
       openTickets: ticketCount || 0,
-      monthlyIncome,
-      pendingPayments: pendingTotal,
-      latePayments: lateTotal,
+      monthlyIncome: (paidThisMonth || []).reduce((s: number, p: any) => s + p.amount, 0),
+      pendingPayments: (pendingPayments || []).reduce((s: number, p: any) => s + p.amount, 0),
+      latePayments: (latePayments || []).reduce((s: number, p: any) => s + p.amount, 0),
     })
     setRecentTickets(tickets || [])
     setRecentPayments(payments || [])
   }
 
-  const occupancyRate = stats.units > 0
-    ? Math.round((stats.occupiedUnits / stats.units) * 100)
-    : 0
+  const occupancyRate = stats.units > 0 ? Math.round((stats.occupiedUnits / stats.units) * 100) : 0
 
-  const priorityStyle: any = {
-    low: 'bg-gray-50 text-gray-500',
-    medium: 'bg-amber-50 text-amber-600',
-    high: 'bg-red-50 text-red-600',
+  const card = {
+    backgroundColor: '#fff',
+    border: '1px solid #e8e6e0',
+    borderRadius: '12px',
+    padding: '24px',
   }
+
+  const priorityColor: any = { low: '#888', medium: '#d97706', high: '#dc2626' }
   const priorityLabel: any = { low: 'Niedrig', medium: 'Mittel', high: 'Hoch' }
-  const statusStyle: any = {
-    paid: 'bg-green-50 text-green-600',
-    pending: 'bg-amber-50 text-amber-600',
-    late: 'bg-red-50 text-red-600',
-  }
+  const statusColor: any = { paid: '#16a34a', pending: '#d97706', late: '#dc2626' }
   const statusLabel: any = { paid: 'Bezahlt', pending: 'Ausstehend', late: 'Überfällig' }
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main style={{ backgroundColor: '#fafaf8', minHeight: '100vh' }}>
       <Nav />
-      <div className="max-w-5xl mx-auto px-8 py-10">
+      <div style={{ maxWidth: '1040px', margin: '0 auto', padding: '48px 48px' }}>
 
-        <div className="flex justify-between items-center mb-8">
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '40px' }}>
           <div>
-            <h1 className="text-2xl font-medium text-gray-900">Dashboard</h1>
-            <p className="text-sm text-gray-400 mt-1">Willkommen zurück, {user?.email}</p>
-          </div>
-          <div className="text-right">
-            <p className="text-xs text-gray-400">Auslastung</p>
-            <p className="text-2xl font-medium text-gray-900">{occupancyRate}%</p>
-            <p className="text-xs text-gray-400">{stats.occupiedUnits} von {stats.units} Einheiten</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="bg-white border border-gray-100 rounded-xl p-5">
-            <p className="text-xs text-gray-400 mb-1">Einnahmen diesen Monat</p>
-            <p className="text-2xl font-medium text-green-600">
-              {stats.monthlyIncome.toLocaleString('de-DE')} €
+            <h1 style={{ fontSize: '28px', fontWeight: '400', color: '#1a1a1a', margin: '0 0 4px', fontFamily: 'Georgia, serif' }}>
+              Dashboard
+            </h1>
+            <p style={{ fontSize: '14px', color: '#999', margin: 0 }}>
+              Willkommen zurück, {user?.email}
             </p>
           </div>
-          <div className="bg-white border border-gray-100 rounded-xl p-5">
-            <p className="text-xs text-gray-400 mb-1">Ausstehende Zahlungen</p>
-            <p className="text-2xl font-medium text-amber-600">
-              {stats.pendingPayments.toLocaleString('de-DE')} €
+          <div style={{ textAlign: 'right' }}>
+            <p style={{ fontSize: '12px', color: '#999', margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '1px' }}>Auslastung</p>
+            <p style={{ fontSize: '32px', fontWeight: '300', color: '#1a1a1a', margin: '0 0 2px', fontFamily: 'Georgia, serif' }}>
+              {occupancyRate}%
             </p>
-          </div>
-          <div className="bg-white border border-gray-100 rounded-xl p-5">
-            <p className="text-xs text-gray-400 mb-1">Überfällige Zahlungen</p>
-            <p className="text-2xl font-medium text-red-600">
-              {stats.latePayments.toLocaleString('de-DE')} €
+            <p style={{ fontSize: '12px', color: '#bbb', margin: 0 }}>
+              {stats.occupiedUnits} von {stats.units} Einheiten
             </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-4 mb-8">
+        {/* Finanz-Karten */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '16px' }}>
           {[
-            { label: 'Objekte', value: stats.properties, color: 'text-blue-600', href: '/properties' },
-            { label: 'Einheiten', value: stats.units, color: 'text-green-600', href: '/units' },
-            { label: 'Mieter', value: stats.tenants, color: 'text-purple-600', href: '/tenants' },
-            { label: 'Offene Tickets', value: stats.openTickets, color: 'text-orange-600', href: '/tickets' },
-          ].map((s) => (
-            <div key={s.label} onClick={() => router.push(s.href)}
-              className="bg-white border border-gray-100 rounded-xl p-5 cursor-pointer hover:border-gray-200 hover:shadow-sm transition-all">
-              <div className={`text-2xl font-medium mb-1 ${s.color}`}>{s.value}</div>
-              <div className="text-sm text-gray-400">{s.label}</div>
+            { label: 'Einnahmen diesen Monat', value: stats.monthlyIncome, color: '#16a34a' },
+            { label: 'Ausstehende Zahlungen', value: stats.pendingPayments, color: '#d97706' },
+            { label: 'Überfällige Zahlungen', value: stats.latePayments, color: '#dc2626' },
+          ].map(s => (
+            <div key={s.label} style={card}>
+              <p style={{ fontSize: '12px', color: '#999', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                {s.label}
+              </p>
+              <p style={{ fontSize: '28px', fontWeight: '300', color: s.color, margin: 0, fontFamily: 'Georgia, serif' }}>
+                {s.value.toLocaleString('de-DE')} €
+              </p>
             </div>
           ))}
         </div>
 
-        <div className="grid grid-cols-2 gap-6 mb-6">
-          <div className="bg-white border border-gray-100 rounded-xl p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-sm font-medium text-gray-700">Offene Tickets</h2>
+        {/* Objekte Karten */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' }}>
+          {[
+            { label: 'Objekte', value: stats.properties, href: '/properties' },
+            { label: 'Einheiten', value: stats.units, href: '/units' },
+            { label: 'Mieter', value: stats.tenants, href: '/tenants' },
+            { label: 'Offene Tickets', value: stats.openTickets, href: '/tickets' },
+          ].map(s => (
+            <div key={s.label} onClick={() => router.push(s.href)}
+              style={{ ...card, cursor: 'pointer', transition: 'all 0.15s' }}
+              onMouseEnter={e => (e.currentTarget.style.borderColor = '#1a1a1a')}
+              onMouseLeave={e => (e.currentTarget.style.borderColor = '#e8e6e0')}>
+              <p style={{ fontSize: '36px', fontWeight: '300', color: '#1a1a1a', margin: '0 0 6px', fontFamily: 'Georgia, serif' }}>
+                {s.value}
+              </p>
+              <p style={{ fontSize: '13px', color: '#999', margin: 0 }}>{s.label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Tickets & Zahlungen */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+          <div style={card}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <p style={{ fontSize: '13px', fontWeight: '500', color: '#1a1a1a', margin: 0 }}>Offene Tickets</p>
               <button onClick={() => router.push('/tickets')}
-                className="text-xs text-blue-500 hover:underline">Alle ansehen →</button>
+                style={{ fontSize: '12px', color: '#888', background: 'none', border: 'none', cursor: 'pointer' }}>
+                Alle ansehen →
+              </button>
             </div>
             {recentTickets.length === 0 ? (
-              <p className="text-sm text-gray-400">Keine offenen Tickets</p>
+              <p style={{ fontSize: '13px', color: '#bbb', margin: 0 }}>Keine offenen Tickets</p>
             ) : (
-              <div className="flex flex-col gap-3">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {recentTickets.map(t => (
-                  <div key={t.id} className="flex justify-between items-center">
+                  <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                      <p className="text-sm text-gray-900">{t.title}</p>
-                      <p className="text-xs text-gray-400">{t.units?.properties?.name} – {t.units?.name}</p>
+                      <p style={{ fontSize: '13px', color: '#1a1a1a', margin: '0 0 2px' }}>{t.title}</p>
+                      <p style={{ fontSize: '12px', color: '#bbb', margin: 0 }}>{t.units?.properties?.name} – {t.units?.name}</p>
                     </div>
-                    <span className={`text-xs px-2 py-1 rounded-full ${priorityStyle[t.priority]}`}>
+                    <span style={{ fontSize: '11px', color: priorityColor[t.priority], fontWeight: '500' }}>
                       {priorityLabel[t.priority]}
                     </span>
                   </div>
@@ -187,29 +187,27 @@ export default function Dashboard() {
             )}
           </div>
 
-          <div className="bg-white border border-gray-100 rounded-xl p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-sm font-medium text-gray-700">Letzte Zahlungen</h2>
+          <div style={card}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <p style={{ fontSize: '13px', fontWeight: '500', color: '#1a1a1a', margin: 0 }}>Letzte Zahlungen</p>
               <button onClick={() => router.push('/payments')}
-                className="text-xs text-blue-500 hover:underline">Alle ansehen →</button>
+                style={{ fontSize: '12px', color: '#888', background: 'none', border: 'none', cursor: 'pointer' }}>
+                Alle ansehen →
+              </button>
             </div>
             {recentPayments.length === 0 ? (
-              <p className="text-sm text-gray-400">Noch keine Zahlungen</p>
+              <p style={{ fontSize: '13px', color: '#bbb', margin: 0 }}>Noch keine Zahlungen</p>
             ) : (
-              <div className="flex flex-col gap-3">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {recentPayments.map(p => (
-                  <div key={p.id} className="flex justify-between items-center">
+                  <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                      <p className="text-sm text-gray-900">{p.contracts?.tenants?.full_name || 'Unbekannt'}</p>
-                      <p className="text-xs text-gray-400">{new Date(p.due_date).toLocaleDateString('de-DE')}</p>
+                      <p style={{ fontSize: '13px', color: '#1a1a1a', margin: '0 0 2px' }}>{p.contracts?.tenants?.full_name || 'Unbekannt'}</p>
+                      <p style={{ fontSize: '12px', color: '#bbb', margin: 0 }}>{new Date(p.due_date).toLocaleDateString('de-DE')}</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-gray-900">
-                        {p.amount.toLocaleString('de-DE')} €
-                      </span>
-                      <span className={`text-xs px-2 py-1 rounded-full ${statusStyle[p.status]}`}>
-                        {statusLabel[p.status]}
-                      </span>
+                    <div style={{ textAlign: 'right' }}>
+                      <p style={{ fontSize: '13px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 2px' }}>{p.amount.toLocaleString('de-DE')} €</p>
+                      <p style={{ fontSize: '11px', color: statusColor[p.status], margin: 0, fontWeight: '500' }}>{statusLabel[p.status]}</p>
                     </div>
                   </div>
                 ))}
@@ -218,25 +216,26 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-white border border-gray-100 rounded-xl p-6">
-          <h2 className="text-sm font-medium text-gray-700 mb-4">Schnellzugriff</h2>
-          <div className="flex gap-3">
-            <button onClick={() => router.push('/properties')}
-              className="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-600">
-              + Objekt anlegen
-            </button>
-            <button onClick={() => router.push('/units')}
-              className="border border-gray-200 text-gray-600 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">
-              + Einheit anlegen
-            </button>
-            <button onClick={() => router.push('/tenants')}
-              className="border border-gray-200 text-gray-600 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">
-              + Mieter anlegen
-            </button>
-            <button onClick={() => router.push('/payments')}
-              className="border border-gray-200 text-gray-600 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">
-              Zahlung erfassen
-            </button>
+        {/* Schnellzugriff */}
+        <div style={card}>
+          <p style={{ fontSize: '13px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 16px' }}>Schnellzugriff</p>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {[
+              { label: '+ Objekt anlegen', href: '/properties', primary: true },
+              { label: '+ Einheit anlegen', href: '/units', primary: false },
+              { label: '+ Mieter anlegen', href: '/tenants', primary: false },
+              { label: 'Zahlung erfassen', href: '/payments', primary: false },
+            ].map(b => (
+              <button key={b.label} onClick={() => router.push(b.href)}
+                style={{
+                  padding: '10px 16px', fontSize: '13px', borderRadius: '8px', cursor: 'pointer',
+                  backgroundColor: b.primary ? '#1a1a1a' : '#fff',
+                  color: b.primary ? '#fff' : '#666',
+                  border: b.primary ? 'none' : '1px solid #e8e6e0',
+                }}>
+                {b.label}
+              </button>
+            ))}
           </div>
         </div>
 

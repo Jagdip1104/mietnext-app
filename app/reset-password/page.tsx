@@ -14,8 +14,7 @@ export default function ResetPassword() {
   const router = useRouter()
 
   useEffect(() => {
-    // Supabase liest den Token automatisch aus der URL
-    supabase.auth.onAuthStateChange((event) => {
+    supabase.auth.onAuthStateChange((event: string) => {
       if (event === 'PASSWORD_RECOVERY') {
         setReady(true)
       }
@@ -24,7 +23,6 @@ export default function ResetPassword() {
 
   const handleReset = async () => {
     setError('')
-
     if (password.length < 8) {
       setError('Passwort muss mindestens 8 Zeichen lang sein.')
       return
@@ -33,16 +31,13 @@ export default function ResetPassword() {
       setError('Passwörter stimmen nicht überein.')
       return
     }
-
     setLoading(true)
     const { error } = await supabase.auth.updateUser({ password })
-
     if (error) {
       setError(error.message)
       setLoading(false)
       return
     }
-
     setSuccess(true)
     setLoading(false)
     setTimeout(() => router.push('/login'), 3000)
@@ -75,13 +70,9 @@ export default function ResetPassword() {
       <div className="bg-white border border-gray-100 rounded-xl p-8 w-full max-w-sm">
         <div className="text-lg font-medium text-gray-900 text-center mb-1">MietNext</div>
         <div className="text-sm text-gray-400 text-center mb-6">Neues Passwort setzen</div>
-
         {error && (
-          <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg mb-4">
-            {error}
-          </div>
+          <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg mb-4">{error}</div>
         )}
-
         <div className="flex flex-col gap-3 mb-4">
           <div>
             <label className="text-xs text-gray-400 mb-1 block">Neues Passwort</label>
@@ -96,7 +87,6 @@ export default function ResetPassword() {
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
           </div>
         </div>
-
         <button onClick={handleReset} disabled={loading}
           className="w-full bg-blue-500 text-white py-2 rounded-lg text-sm hover:bg-blue-600 disabled:opacity-50">
           {loading ? 'Speichern...' : 'Passwort speichern →'}

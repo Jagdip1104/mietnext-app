@@ -37,269 +37,159 @@ export default function Units() {
   }, [])
 
   const loadData = async (uid: string) => {
-    const { data: props } = await supabase
-      .from('properties').select('*')
-      .eq('owner_id', uid)
-      .order('name')
+    const { data: props } = await supabase.from('properties').select('*').eq('owner_id', uid).order('name')
     setProperties(props || [])
-
     const propertyIds = (props || []).map((p: any) => p.id)
     if (propertyIds.length === 0) { setUnits([]); return }
-
-    const { data: unitsData } = await supabase
-      .from('units').select('*, properties(name)')
-      .in('property_id', propertyIds)
-      .order('created_at', { ascending: false })
+    const { data: unitsData } = await supabase.from('units').select('*, properties(name)')
+      .in('property_id', propertyIds).order('created_at', { ascending: false })
     setUnits(unitsData || [])
   }
 
   const handleEdit = (u: any) => {
-    setEditingId(u.id)
-    setType(u.type || 'wohnung')
-    setName(u.name)
-    setSelectedProperty(u.property_id)
-    setFloor(u.floor?.toString() || '')
-    setSizeSqm(u.size_sqm?.toString() || '')
-    setRooms(u.rooms?.toString() || '')
-    setRentAmount(u.rent_amount?.toString() || '')
-    setUsageType(u.usage_type || '')
-    setParkingType(u.parking_type || 'garage')
-    setVatApplicable(u.vat_applicable || false)
-    setNotes(u.notes || '')
-    setShowForm(true)
+    setEditingId(u.id); setType(u.type || 'wohnung'); setName(u.name)
+    setSelectedProperty(u.property_id); setFloor(u.floor?.toString() || '')
+    setSizeSqm(u.size_sqm?.toString() || ''); setRooms(u.rooms?.toString() || '')
+    setRentAmount(u.rent_amount?.toString() || ''); setUsageType(u.usage_type || '')
+    setParkingType(u.parking_type || 'garage'); setVatApplicable(u.vat_applicable || false)
+    setNotes(u.notes || ''); setShowForm(true)
   }
 
   const handleCancel = () => {
-    setShowForm(false)
-    setEditingId(null)
-    setType('wohnung'); setName(''); setSelectedProperty('')
-    setFloor(''); setSizeSqm(''); setRooms(''); setRentAmount('')
-    setUsageType(''); setParkingType('garage'); setVatApplicable(false); setNotes('')
+    setShowForm(false); setEditingId(null); setType('wohnung'); setName('')
+    setSelectedProperty(''); setFloor(''); setSizeSqm(''); setRooms('')
+    setRentAmount(''); setUsageType(''); setParkingType('garage')
+    setVatApplicable(false); setNotes('')
   }
 
   const handleSave = async () => {
     if (!name || !selectedProperty) return
     setLoading(true)
-    const data: any = {
-      name, property_id: selectedProperty, type,
-      size_sqm: sizeSqm ? parseFloat(sizeSqm) : null,
-      rent_amount: rentAmount ? parseFloat(rentAmount) : null,
-      notes: notes || null,
-    }
-    if (type === 'wohnung') {
-      data.floor = floor ? parseInt(floor) : null
-      data.rooms = rooms ? parseFloat(rooms) : null
-    }
-    if (type === 'gewerbe') {
-      data.floor = floor ? parseInt(floor) : null
-      data.usage_type = usageType || null
-      data.vat_applicable = vatApplicable
-    }
-    if (type === 'stellplatz') {
-      data.parking_type = parkingType
-    }
-    if (editingId) {
-      await supabase.from('units').update(data).eq('id', editingId)
-    } else {
-      await supabase.from('units').insert({ ...data, is_occupied: false })
-    }
-    handleCancel()
-    setLoading(false)
-    loadData(userId!)
+    const data: any = { name, property_id: selectedProperty, type, notes: notes || null,
+      size_sqm: sizeSqm ? parseFloat(sizeSqm) : null, rent_amount: rentAmount ? parseFloat(rentAmount) : null }
+    if (type === 'wohnung') { data.floor = floor ? parseInt(floor) : null; data.rooms = rooms ? parseFloat(rooms) : null }
+    if (type === 'gewerbe') { data.floor = floor ? parseInt(floor) : null; data.usage_type = usageType || null; data.vat_applicable = vatApplicable }
+    if (type === 'stellplatz') { data.parking_type = parkingType }
+    if (editingId) { await supabase.from('units').update(data).eq('id', editingId) }
+    else { await supabase.from('units').insert({ ...data, is_occupied: false }) }
+    handleCancel(); setLoading(false); loadData(userId!)
   }
 
   const handleDelete = async (id: string) => {
     await supabase.from('units').delete().eq('id', id)
-    setDeleteConfirm(null)
-    loadData(userId!)
+    setDeleteConfirm(null); loadData(userId!)
   }
 
-  const typeStyle: any = {
-    wohnung: 'bg-blue-50 text-blue-600',
-    gewerbe: 'bg-purple-50 text-purple-600',
-    stellplatz: 'bg-gray-50 text-gray-500',
-    sonstige: 'bg-gray-50 text-gray-500',
-  }
-  const typeLabel: any = {
-    wohnung: 'Wohnung', gewerbe: 'Gewerbe',
-    stellplatz: 'Stellplatz', sonstige: 'Sonstige',
-  }
+  const typeColor: any = { wohnung: '#3b82f6', gewerbe: '#8b5cf6', stellplatz: '#6b7280', sonstige: '#6b7280' }
+  const typeBg: any = { wohnung: '#eff6ff', gewerbe: '#f5f3ff', stellplatz: '#f5f4f0', sonstige: '#f5f4f0' }
+  const typeLabel: any = { wohnung: 'Wohnung', gewerbe: 'Gewerbe', stellplatz: 'Stellplatz', sonstige: 'Sonstige' }
+
+  const card = { backgroundColor: '#fff', border: '1px solid #e8e6e0', borderRadius: '12px', padding: '24px' }
+  const input = { width: '100%', border: '1px solid #e8e6e0', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', outline: 'none', color: '#1a1a1a', backgroundColor: '#fff' }
+  const label = { fontSize: '12px', color: '#999', marginBottom: '6px', display: 'block', textTransform: 'uppercase' as const, letterSpacing: '0.5px' }
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main style={{ backgroundColor: '#fafaf8', minHeight: '100vh' }}>
       <Nav />
-      <div className="max-w-4xl mx-auto px-8 py-10">
-        <div className="flex justify-between items-center mb-8">
+      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '48px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '40px' }}>
           <div>
-            <h1 className="text-2xl font-medium text-gray-900">Einheiten</h1>
-            <p className="text-sm text-gray-400 mt-1">{units.length} Einheiten gesamt</p>
+            <h1 style={{ fontSize: '28px', fontWeight: '400', color: '#1a1a1a', margin: '0 0 4px', fontFamily: 'Georgia, serif' }}>Einheiten</h1>
+            <p style={{ fontSize: '14px', color: '#999', margin: 0 }}>{units.length} Einheiten gesamt</p>
           </div>
-          <button onClick={() => setShowForm(true)}
-            className="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-600">
+          <button onClick={() => setShowForm(true)} style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>
             + Einheit anlegen
           </button>
         </div>
 
         {showForm && (
-          <div className="bg-white border border-gray-100 rounded-xl p-6 mb-6">
-            <h2 className="text-sm font-medium text-gray-700 mb-4">
+          <div style={{ ...card, marginBottom: '24px' }}>
+            <h2 style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 20px', fontFamily: 'Georgia, serif' }}>
               {editingId ? 'Einheit bearbeiten' : 'Neue Einheit'}
             </h2>
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              <div className="col-span-2">
-                <label className="text-xs text-gray-400 mb-1 block">Typ *</label>
-                <select value={type} onChange={e => setType(e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+              <div style={{ gridColumn: 'span 2' }}>
+                <label style={label}>Typ *</label>
+                <select value={type} onChange={e => setType(e.target.value)} style={input}>
                   <option value="wohnung">Wohnung</option>
                   <option value="gewerbe">Gewerbe</option>
                   <option value="stellplatz">Stellplatz</option>
                   <option value="sonstige">Sonstige</option>
                 </select>
               </div>
-              <div className="col-span-2">
-                <label className="text-xs text-gray-400 mb-1 block">Objekt *</label>
-                <select value={selectedProperty} onChange={e => setSelectedProperty(e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400">
+              <div style={{ gridColumn: 'span 2' }}>
+                <label style={label}>Objekt *</label>
+                <select value={selectedProperty} onChange={e => setSelectedProperty(e.target.value)} style={input}>
                   <option value="">Objekt auswählen...</option>
-                  {properties.map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
+                  {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
               </div>
-              <div className="col-span-2">
-                <label className="text-xs text-gray-400 mb-1 block">Bezeichnung *</label>
+              <div style={{ gridColumn: 'span 2' }}>
+                <label style={label}>Bezeichnung *</label>
                 <input value={name} onChange={e => setName(e.target.value)}
-                  placeholder={
-                    type === 'wohnung' ? 'z.B. Wohnung 1. OG links' :
-                    type === 'gewerbe' ? 'z.B. Ladenlokal EG' :
-                    type === 'stellplatz' ? 'z.B. Stellplatz 3' : 'z.B. Lagerraum'
-                  }
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
+                  placeholder={type === 'wohnung' ? 'z.B. Wohnung 1. OG links' : type === 'gewerbe' ? 'z.B. Ladenlokal EG' : type === 'stellplatz' ? 'z.B. Stellplatz 3' : 'z.B. Lagerraum'}
+                  style={input} />
               </div>
 
-              {type === 'wohnung' && (
-                <>
-                  <div>
-                    <label className="text-xs text-gray-400 mb-1 block">Etage</label>
-                    <input value={floor} onChange={e => setFloor(e.target.value)}
-                      placeholder="z.B. 1" type="number"
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-400 mb-1 block">Zimmer</label>
-                    <input value={rooms} onChange={e => setRooms(e.target.value)}
-                      placeholder="z.B. 3" type="number"
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-400 mb-1 block">Fläche (m²)</label>
-                    <input value={sizeSqm} onChange={e => setSizeSqm(e.target.value)}
-                      placeholder="z.B. 75" type="number"
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-400 mb-1 block">Soll-Kaltmiete (€)</label>
-                    <input value={rentAmount} onChange={e => setRentAmount(e.target.value)}
-                      placeholder="z.B. 950" type="number"
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
-                  </div>
-                </>
-              )}
+              {type === 'wohnung' && (<>
+                <div><label style={label}>Etage</label><input value={floor} onChange={e => setFloor(e.target.value)} placeholder="z.B. 1" type="number" style={input} /></div>
+                <div><label style={label}>Zimmer</label><input value={rooms} onChange={e => setRooms(e.target.value)} placeholder="z.B. 3" type="number" style={input} /></div>
+                <div><label style={label}>Fläche (m²)</label><input value={sizeSqm} onChange={e => setSizeSqm(e.target.value)} placeholder="z.B. 75" type="number" style={input} /></div>
+                <div><label style={label}>Soll-Kaltmiete (€)</label><input value={rentAmount} onChange={e => setRentAmount(e.target.value)} placeholder="z.B. 950" type="number" style={input} /></div>
+              </>)}
 
-              {type === 'gewerbe' && (
-                <>
-                  <div>
-                    <label className="text-xs text-gray-400 mb-1 block">Etage</label>
-                    <input value={floor} onChange={e => setFloor(e.target.value)}
-                      placeholder="z.B. 0 (EG)" type="number"
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-400 mb-1 block">Fläche (m²)</label>
-                    <input value={sizeSqm} onChange={e => setSizeSqm(e.target.value)}
-                      placeholder="z.B. 120" type="number"
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-400 mb-1 block">Nutzungsart</label>
-                    <select value={usageType} onChange={e => setUsageType(e.target.value)}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400">
-                      <option value="">Bitte wählen...</option>
-                      <option value="buero">Büro</option>
-                      <option value="laden">Laden / Einzelhandel</option>
-                      <option value="lager">Lager</option>
-                      <option value="restaurant">Restaurant / Gastronomie</option>
-                      <option value="praxis">Praxis / Kanzlei</option>
-                      <option value="sonstige">Sonstige</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-400 mb-1 block">Soll-Kaltmiete (€/Monat)</label>
-                    <input value={rentAmount} onChange={e => setRentAmount(e.target.value)}
-                      placeholder="z.B. 2000" type="number"
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
-                  </div>
-                  <div className="col-span-2 flex items-center gap-3">
-                    <input type="checkbox" id="vat" checked={vatApplicable}
-                      onChange={e => setVatApplicable(e.target.checked)} className="w-4 h-4 rounded" />
-                    <label htmlFor="vat" className="text-sm text-gray-600">Umsatzsteuerpflichtig (19% MwSt.)</label>
-                  </div>
-                </>
-              )}
+              {type === 'gewerbe' && (<>
+                <div><label style={label}>Etage</label><input value={floor} onChange={e => setFloor(e.target.value)} placeholder="z.B. 0 (EG)" type="number" style={input} /></div>
+                <div><label style={label}>Fläche (m²)</label><input value={sizeSqm} onChange={e => setSizeSqm(e.target.value)} placeholder="z.B. 120" type="number" style={input} /></div>
+                <div>
+                  <label style={label}>Nutzungsart</label>
+                  <select value={usageType} onChange={e => setUsageType(e.target.value)} style={input}>
+                    <option value="">Bitte wählen...</option>
+                    <option value="buero">Büro</option>
+                    <option value="laden">Laden / Einzelhandel</option>
+                    <option value="lager">Lager</option>
+                    <option value="restaurant">Restaurant / Gastronomie</option>
+                    <option value="praxis">Praxis / Kanzlei</option>
+                    <option value="sonstige">Sonstige</option>
+                  </select>
+                </div>
+                <div><label style={label}>Soll-Kaltmiete (€/Monat)</label><input value={rentAmount} onChange={e => setRentAmount(e.target.value)} placeholder="z.B. 2000" type="number" style={input} /></div>
+                <div style={{ gridColumn: 'span 2', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <input type="checkbox" id="vat" checked={vatApplicable} onChange={e => setVatApplicable(e.target.checked)} style={{ width: '16px', height: '16px' }} />
+                  <label htmlFor="vat" style={{ fontSize: '14px', color: '#666' }}>Umsatzsteuerpflichtig (19% MwSt.)</label>
+                </div>
+              </>)}
 
-              {type === 'stellplatz' && (
-                <>
-                  <div className="col-span-2">
-                    <label className="text-xs text-gray-400 mb-1 block">Stellplatz-Typ</label>
-                    <select value={parkingType} onChange={e => setParkingType(e.target.value)}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400">
-                      <option value="garage">Garage</option>
-                      <option value="carport">Carport</option>
-                      <option value="aussen">Außenstellplatz</option>
-                      <option value="tiefgarage">Tiefgarage</option>
-                    </select>
-                  </div>
-                  <div className="col-span-2">
-                    <label className="text-xs text-gray-400 mb-1 block">Miete (€/Monat)</label>
-                    <input value={rentAmount} onChange={e => setRentAmount(e.target.value)}
-                      placeholder="z.B. 80" type="number"
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
-                  </div>
-                </>
-              )}
+              {type === 'stellplatz' && (<>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <label style={label}>Stellplatz-Typ</label>
+                  <select value={parkingType} onChange={e => setParkingType(e.target.value)} style={input}>
+                    <option value="garage">Garage</option>
+                    <option value="carport">Carport</option>
+                    <option value="aussen">Außenstellplatz</option>
+                    <option value="tiefgarage">Tiefgarage</option>
+                  </select>
+                </div>
+                <div style={{ gridColumn: 'span 2' }}><label style={label}>Miete (€/Monat)</label><input value={rentAmount} onChange={e => setRentAmount(e.target.value)} placeholder="z.B. 80" type="number" style={input} /></div>
+              </>)}
 
-              {type === 'sonstige' && (
-                <>
-                  <div>
-                    <label className="text-xs text-gray-400 mb-1 block">Fläche (m²)</label>
-                    <input value={sizeSqm} onChange={e => setSizeSqm(e.target.value)}
-                      placeholder="z.B. 20" type="number"
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-400 mb-1 block">Miete (€/Monat)</label>
-                    <input value={rentAmount} onChange={e => setRentAmount(e.target.value)}
-                      placeholder="z.B. 50" type="number"
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
-                  </div>
-                </>
-              )}
+              {type === 'sonstige' && (<>
+                <div><label style={label}>Fläche (m²)</label><input value={sizeSqm} onChange={e => setSizeSqm(e.target.value)} placeholder="z.B. 20" type="number" style={input} /></div>
+                <div><label style={label}>Miete (€/Monat)</label><input value={rentAmount} onChange={e => setRentAmount(e.target.value)} placeholder="z.B. 50" type="number" style={input} /></div>
+              </>)}
 
-              <div className="col-span-2">
-                <label className="text-xs text-gray-400 mb-1 block">Notizen</label>
-                <textarea value={notes} onChange={e => setNotes(e.target.value)}
-                  placeholder="Zusätzliche Informationen..." rows={2}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
+              <div style={{ gridColumn: 'span 2' }}>
+                <label style={label}>Notizen</label>
+                <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Zusätzliche Informationen..." rows={2}
+                  style={{ ...input, resize: 'vertical' as const }} />
               </div>
             </div>
-
-            <div className="flex gap-2">
+            <div style={{ display: 'flex', gap: '8px' }}>
               <button onClick={handleSave} disabled={loading || !name || !selectedProperty}
-                className="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-600 disabled:opacity-40">
+                style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer', opacity: loading ? 0.4 : 1 }}>
                 {loading ? 'Speichern...' : editingId ? 'Änderungen speichern' : 'Speichern'}
               </button>
-              <button onClick={handleCancel}
-                className="border border-gray-200 text-gray-500 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">
+              <button onClick={handleCancel} style={{ backgroundColor: '#fff', color: '#666', padding: '10px 20px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer' }}>
                 Abbrechen
               </button>
             </div>
@@ -307,36 +197,29 @@ export default function Units() {
         )}
 
         {units.length === 0 ? (
-          <div className="bg-white border border-gray-100 rounded-xl p-12 text-center">
-            <p className="text-gray-400 text-sm">Noch keine Einheiten angelegt.</p>
-            <button onClick={() => setShowForm(true)}
-              className="mt-3 text-blue-500 text-sm hover:underline">
+          <div style={{ ...card, textAlign: 'center', padding: '64px' }}>
+            <p style={{ fontSize: '14px', color: '#bbb', margin: '0 0 12px' }}>Noch keine Einheiten angelegt.</p>
+            <button onClick={() => setShowForm(true)} style={{ background: 'none', border: 'none', color: '#1a1a1a', fontSize: '14px', cursor: 'pointer', textDecoration: 'underline' }}>
               Erste Einheit anlegen →
             </button>
           </div>
         ) : (
-          <div className="flex flex-col gap-3">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {units.map(u => (
-              <div key={u.id} className="bg-white border border-gray-100 rounded-xl p-5">
+              <div key={u.id} style={card}>
                 {deleteConfirm === u.id ? (
-                  <div className="flex justify-between items-center">
-                    <p className="text-sm text-red-600">Einheit wirklich löschen?</p>
-                    <div className="flex gap-2">
-                      <button onClick={() => handleDelete(u.id)}
-                        className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-red-600">
-                        Ja, löschen
-                      </button>
-                      <button onClick={() => setDeleteConfirm(null)}
-                        className="border border-gray-200 text-gray-500 px-3 py-1.5 rounded-lg text-xs hover:bg-gray-50">
-                        Abbrechen
-                      </button>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <p style={{ fontSize: '14px', color: '#dc2626', margin: 0 }}>Einheit wirklich löschen?</p>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button onClick={() => handleDelete(u.id)} style={{ backgroundColor: '#dc2626', color: '#fff', padding: '8px 16px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>Ja, löschen</button>
+                      <button onClick={() => setDeleteConfirm(null)} style={{ backgroundColor: '#fff', color: '#666', padding: '8px 16px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer' }}>Abbrechen</button>
                     </div>
                   </div>
                 ) : (
-                  <div className="flex justify-between items-center">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                      <p className="font-medium text-gray-900 text-sm">{u.name}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">
+                      <p style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 4px' }}>{u.name}</p>
+                      <p style={{ fontSize: '13px', color: '#bbb', margin: 0 }}>
                         {u.properties?.name}
                         {u.size_sqm && ` · ${u.size_sqm} m²`}
                         {u.rooms && ` · ${u.rooms} Zimmer`}
@@ -344,21 +227,15 @@ export default function Units() {
                         {u.rent_amount && ` · ${u.rent_amount} €/Monat`}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`text-xs px-2 py-1 rounded-full ${typeStyle[u.type] || 'bg-gray-50 text-gray-500'}`}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '11px', color: typeColor[u.type] || '#6b7280', backgroundColor: typeBg[u.type] || '#f5f4f0', padding: '4px 10px', borderRadius: '20px', fontWeight: '500' }}>
                         {typeLabel[u.type] || 'Sonstige'}
                       </span>
-                      <span className={`text-xs px-3 py-1 rounded-full ${u.is_occupied ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-400'}`}>
+                      <span style={{ fontSize: '11px', color: u.is_occupied ? '#16a34a' : '#999', backgroundColor: u.is_occupied ? '#f0fdf4' : '#f5f4f0', padding: '4px 10px', borderRadius: '20px', fontWeight: '500' }}>
                         {u.is_occupied ? 'Vermietet' : 'Leer'}
                       </span>
-                      <button onClick={() => handleEdit(u)}
-                        className="text-xs border border-gray-200 text-gray-500 px-3 py-1.5 rounded-lg hover:bg-gray-50">
-                        Bearbeiten
-                      </button>
-                      <button onClick={() => setDeleteConfirm(u.id)}
-                        className="text-xs border border-red-200 text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50">
-                        Löschen
-                      </button>
+                      <button onClick={() => handleEdit(u)} style={{ backgroundColor: '#fff', color: '#666', padding: '8px 14px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer' }}>Bearbeiten</button>
+                      <button onClick={() => setDeleteConfirm(u.id)} style={{ backgroundColor: '#fff', color: '#dc2626', padding: '8px 14px', borderRadius: '8px', border: '1px solid #fecaca', fontSize: '13px', cursor: 'pointer' }}>Löschen</button>
                     </div>
                   </div>
                 )}

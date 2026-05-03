@@ -29,21 +29,15 @@ export default function Payments() {
   }, [])
 
   const loadData = async (uid: string) => {
-    const { data: tenantsData } = await supabase
-      .from('tenants').select('id').eq('owner_id', uid)
+    const { data: tenantsData } = await supabase.from('tenants').select('id').eq('owner_id', uid)
     const tenantIds = (tenantsData || []).map((t: any) => t.id)
-
-    const { data: contractsData } = await supabase
-      .from('contracts')
+    const { data: contractsData } = await supabase.from('contracts')
       .select('*, tenants(full_name), units(name, properties(name))')
       .in('tenant_id', tenantIds.length > 0 ? tenantIds : ['none'])
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
+      .eq('is_active', true).order('created_at', { ascending: false })
     setContracts(contractsData || [])
-
     const contractIds = (contractsData || []).map((c: any) => c.id)
-    const { data: paymentsData } = await supabase
-      .from('payments')
+    const { data: paymentsData } = await supabase.from('payments')
       .select('*, contracts(tenant_id, tenants(full_name), units(name, properties(name)))')
       .in('contract_id', contractIds.length > 0 ? contractIds : ['none'])
       .order('due_date', { ascending: false })
@@ -54,120 +48,107 @@ export default function Payments() {
     if (!selectedContract || !amount || !dueDate) return
     setLoading(true)
     await supabase.from('payments').insert({
-      contract_id: selectedContract,
-      amount: parseFloat(amount),
-      due_date: dueDate,
-      paid_date: paidDate || null,
+      contract_id: selectedContract, amount: parseFloat(amount),
+      due_date: dueDate, paid_date: paidDate || null,
       status: paidDate ? 'paid' : status,
     })
     setSelectedContract(''); setAmount(''); setDueDate(''); setPaidDate(''); setStatus('pending')
-    setShowForm(false)
-    setLoading(false)
-    loadData(userId!)
+    setShowForm(false); setLoading(false); loadData(userId!)
   }
 
   const handleMarkPaid = async (id: string) => {
-    await supabase.from('payments').update({
-      status: 'paid',
-      paid_date: new Date().toISOString().split('T')[0],
-    }).eq('id', id)
+    await supabase.from('payments').update({ status: 'paid', paid_date: new Date().toISOString().split('T')[0] }).eq('id', id)
     loadData(userId!)
   }
 
-  const totalPaid = payments.filter(p => p.status === 'paid').reduce((sum: number, p: any) => sum + p.amount, 0)
-  const totalPending = payments.filter(p => p.status === 'pending').reduce((sum: number, p: any) => sum + p.amount, 0)
-  const totalLate = payments.filter(p => p.status === 'late').reduce((sum: number, p: any) => sum + p.amount, 0)
+  const totalPaid = payments.filter(p => p.status === 'paid').reduce((s: number, p: any) => s + p.amount, 0)
+  const totalPending = payments.filter(p => p.status === 'pending').reduce((s: number, p: any) => s + p.amount, 0)
+  const totalLate = payments.filter(p => p.status === 'late').reduce((s: number, p: any) => s + p.amount, 0)
 
-  const statusStyle: any = {
-    paid: 'bg-green-50 text-green-600',
-    pending: 'bg-amber-50 text-amber-600',
-    late: 'bg-red-50 text-red-600',
-  }
+  const statusColor: any = { paid: '#16a34a', pending: '#d97706', late: '#dc2626' }
+  const statusBg: any = { paid: '#f0fdf4', pending: '#fffbeb', late: '#fef2f2' }
   const statusLabel: any = { paid: 'Bezahlt', pending: 'Ausstehend', late: 'Überfällig' }
 
+  const card = { backgroundColor: '#fff', border: '1px solid #e8e6e0', borderRadius: '12px', padding: '24px' }
+  const input = { width: '100%', border: '1px solid #e8e6e0', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', outline: 'none', color: '#1a1a1a', backgroundColor: '#fff' }
+  const label = { fontSize: '12px', color: '#999', marginBottom: '6px', display: 'block', textTransform: 'uppercase' as const, letterSpacing: '0.5px' }
+
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main style={{ backgroundColor: '#fafaf8', minHeight: '100vh' }}>
       <Nav />
-      <div className="max-w-4xl mx-auto px-8 py-10">
-        <div className="flex justify-between items-center mb-8">
+      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '48px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '40px' }}>
           <div>
-            <h1 className="text-2xl font-medium text-gray-900">Zahlungen</h1>
-            <p className="text-sm text-gray-400 mt-1">{payments.length} Zahlungen gesamt</p>
+            <h1 style={{ fontSize: '28px', fontWeight: '400', color: '#1a1a1a', margin: '0 0 4px', fontFamily: 'Georgia, serif' }}>Zahlungen</h1>
+            <p style={{ fontSize: '14px', color: '#999', margin: 0 }}>{payments.length} Zahlungen gesamt</p>
           </div>
-          <button onClick={() => setShowForm(true)}
-            className="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-600">
+          <button onClick={() => setShowForm(true)} style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>
             + Zahlung erfassen
           </button>
         </div>
 
-        <div className="grid grid-cols-3 gap-4 mb-8">
-          <div className="bg-white border border-gray-100 rounded-xl p-5">
-            <div className="text-2xl font-medium text-green-600 mb-1">{totalPaid.toLocaleString('de-DE')} €</div>
-            <div className="text-sm text-gray-400">Eingegangen</div>
-          </div>
-          <div className="bg-white border border-gray-100 rounded-xl p-5">
-            <div className="text-2xl font-medium text-amber-600 mb-1">{totalPending.toLocaleString('de-DE')} €</div>
-            <div className="text-sm text-gray-400">Ausstehend</div>
-          </div>
-          <div className="bg-white border border-gray-100 rounded-xl p-5">
-            <div className="text-2xl font-medium text-red-600 mb-1">{totalLate.toLocaleString('de-DE')} €</div>
-            <div className="text-sm text-gray-400">Überfällig</div>
-          </div>
+        {/* Übersicht */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
+          {[
+            { label: 'Eingegangen', value: totalPaid, color: '#16a34a' },
+            { label: 'Ausstehend', value: totalPending, color: '#d97706' },
+            { label: 'Überfällig', value: totalLate, color: '#dc2626' },
+          ].map(s => (
+            <div key={s.label} style={card}>
+              <p style={{ fontSize: '12px', color: '#999', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{s.label}</p>
+              <p style={{ fontSize: '28px', fontWeight: '300', color: s.color, margin: 0, fontFamily: 'Georgia, serif' }}>
+                {s.value.toLocaleString('de-DE')} €
+              </p>
+            </div>
+          ))}
         </div>
 
         {showForm && (
-          <div className="bg-white border border-gray-100 rounded-xl p-6 mb-6">
-            <h2 className="text-sm font-medium text-gray-700 mb-4">Zahlung erfassen</h2>
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              <div className="col-span-2">
-                <label className="text-xs text-gray-400 mb-1 block">Mietvertrag *</label>
+          <div style={{ ...card, marginBottom: '24px' }}>
+            <h2 style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 20px', fontFamily: 'Georgia, serif' }}>
+              Zahlung erfassen
+            </h2>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+              <div style={{ gridColumn: 'span 2' }}>
+                <label style={label}>Mietvertrag *</label>
                 <select value={selectedContract} onChange={e => {
                   setSelectedContract(e.target.value)
-                  const contract = contracts.find(c => c.id === e.target.value)
-                  if (contract) setAmount(contract.rent_amount.toString())
-                }}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400">
+                  const c = contracts.find(c => c.id === e.target.value)
+                  if (c) setAmount(c.rent_amount.toString())
+                }} style={input}>
                   <option value="">Vertrag auswählen...</option>
                   {contracts.map(c => (
-                    <option key={c.id} value={c.id}>
-                      {c.tenants?.full_name} – {c.units?.properties?.name} – {c.rent_amount} €
-                    </option>
+                    <option key={c.id} value={c.id}>{c.tenants?.full_name} – {c.units?.properties?.name} – {c.rent_amount} €</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="text-xs text-gray-400 mb-1 block">Betrag (€) *</label>
-                <input value={amount} onChange={e => setAmount(e.target.value)}
-                  placeholder="z.B. 950" type="number"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
+                <label style={label}>Betrag (€) *</label>
+                <input value={amount} onChange={e => setAmount(e.target.value)} placeholder="z.B. 950" type="number" style={input} />
               </div>
               <div>
-                <label className="text-xs text-gray-400 mb-1 block">Fällig am *</label>
-                <input value={dueDate} onChange={e => setDueDate(e.target.value)} type="date"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
+                <label style={label}>Fällig am *</label>
+                <input value={dueDate} onChange={e => setDueDate(e.target.value)} type="date" style={input} />
               </div>
               <div>
-                <label className="text-xs text-gray-400 mb-1 block">Eingegangen am</label>
-                <input value={paidDate} onChange={e => setPaidDate(e.target.value)} type="date"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
+                <label style={label}>Eingegangen am</label>
+                <input value={paidDate} onChange={e => setPaidDate(e.target.value)} type="date" style={input} />
               </div>
               <div>
-                <label className="text-xs text-gray-400 mb-1 block">Status</label>
-                <select value={status} onChange={e => setStatus(e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400">
+                <label style={label}>Status</label>
+                <select value={status} onChange={e => setStatus(e.target.value)} style={input}>
                   <option value="pending">Ausstehend</option>
                   <option value="paid">Bezahlt</option>
                   <option value="late">Überfällig</option>
                 </select>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div style={{ display: 'flex', gap: '8px' }}>
               <button onClick={handleAdd} disabled={loading || !selectedContract || !amount || !dueDate}
-                className="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-600 disabled:opacity-40">
+                style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer', opacity: loading ? 0.4 : 1 }}>
                 {loading ? 'Speichern...' : 'Speichern'}
               </button>
-              <button onClick={() => setShowForm(false)}
-                className="border border-gray-200 text-gray-500 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">
+              <button onClick={() => setShowForm(false)} style={{ backgroundColor: '#fff', color: '#666', padding: '10px 20px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer' }}>
                 Abbrechen
               </button>
             </div>
@@ -175,34 +156,34 @@ export default function Payments() {
         )}
 
         {payments.length === 0 ? (
-          <div className="bg-white border border-gray-100 rounded-xl p-12 text-center">
-            <p className="text-gray-400 text-sm">Noch keine Zahlungen erfasst.</p>
-            <button onClick={() => setShowForm(true)}
-              className="mt-3 text-blue-500 text-sm hover:underline">
+          <div style={{ ...card, textAlign: 'center', padding: '64px' }}>
+            <p style={{ fontSize: '14px', color: '#bbb', margin: '0 0 12px' }}>Noch keine Zahlungen erfasst.</p>
+            <button onClick={() => setShowForm(true)} style={{ background: 'none', border: 'none', color: '#1a1a1a', fontSize: '14px', cursor: 'pointer', textDecoration: 'underline' }}>
               Erste Zahlung erfassen →
             </button>
           </div>
         ) : (
-          <div className="flex flex-col gap-3">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {payments.map(p => (
-              <div key={p.id} className="bg-white border border-gray-100 rounded-xl p-5 flex justify-between items-center">
+              <div key={p.id} style={{ ...card, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <p className="font-medium text-gray-900 text-sm">
+                  <p style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 4px' }}>
                     {p.contracts?.tenants?.full_name}
                   </p>
-                  <p className="text-xs text-gray-400 mt-0.5">
+                  <p style={{ fontSize: '13px', color: '#bbb', margin: 0 }}>
                     Fällig: {new Date(p.due_date).toLocaleDateString('de-DE')}
                     {p.paid_date && ` · Bezahlt: ${new Date(p.paid_date).toLocaleDateString('de-DE')}`}
                   </p>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="font-medium text-gray-900 text-sm">{p.amount.toLocaleString('de-DE')} €</span>
-                  <span className={`text-xs px-2 py-1 rounded-full ${statusStyle[p.status]}`}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <p style={{ fontSize: '16px', fontWeight: '500', color: '#1a1a1a', margin: 0, fontFamily: 'Georgia, serif' }}>
+                    {p.amount.toLocaleString('de-DE')} €
+                  </p>
+                  <span style={{ fontSize: '11px', color: statusColor[p.status], backgroundColor: statusBg[p.status], padding: '4px 12px', borderRadius: '20px', fontWeight: '500' }}>
                     {statusLabel[p.status]}
                   </span>
                   {p.status !== 'paid' && (
-                    <button onClick={() => handleMarkPaid(p.id)}
-                      className="text-xs border border-green-200 text-green-600 px-3 py-1 rounded-lg hover:bg-green-50">
+                    <button onClick={() => handleMarkPaid(p.id)} style={{ backgroundColor: '#f0fdf4', color: '#16a34a', padding: '8px 14px', borderRadius: '8px', border: '1px solid #bbf7d0', fontSize: '13px', cursor: 'pointer' }}>
                       Als bezahlt markieren
                     </button>
                   )}

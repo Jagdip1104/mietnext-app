@@ -30,36 +30,25 @@ export default function Tickets() {
   }, [])
 
   const loadData = async (uid: string) => {
-    const { data: props } = await supabase
-      .from('properties').select('id').eq('owner_id', uid)
+    const { data: props } = await supabase.from('properties').select('id').eq('owner_id', uid)
     const propertyIds = (props || []).map((p: any) => p.id)
-
-    const { data: unitsData } = await supabase
-      .from('units').select('*, properties(name)')
-      .in('property_id', propertyIds.length > 0 ? propertyIds : ['none'])
-      .order('name')
+    const { data: unitsData } = await supabase.from('units').select('*, properties(name)')
+      .in('property_id', propertyIds.length > 0 ? propertyIds : ['none']).order('name')
     setUnits(unitsData || [])
-
     const unitIds = (unitsData || []).map((u: any) => u.id)
-    const { data: ticketsData } = await supabase
-      .from('tickets').select('*, units(name, properties(name))')
+    const { data: ticketsData } = await supabase.from('tickets').select('*, units(name, properties(name))')
       .in('unit_id', unitIds.length > 0 ? unitIds : ['none'])
       .order('created_at', { ascending: false })
     setTickets(ticketsData || [])
   }
 
   const handleEdit = (t: any) => {
-    setEditingId(t.id)
-    setTitle(t.title)
-    setDescription(t.description || '')
-    setPriority(t.priority)
-    setSelectedUnit(t.unit_id)
-    setShowForm(true)
+    setEditingId(t.id); setTitle(t.title); setDescription(t.description || '')
+    setPriority(t.priority); setSelectedUnit(t.unit_id); setShowForm(true)
   }
 
   const handleCancel = () => {
-    setShowForm(false)
-    setEditingId(null)
+    setShowForm(false); setEditingId(null)
     setTitle(''); setDescription(''); setPriority('medium'); setSelectedUnit('')
   }
 
@@ -67,18 +56,11 @@ export default function Tickets() {
     if (!title || !selectedUnit) return
     setLoading(true)
     if (editingId) {
-      await supabase.from('tickets').update({
-        title, description, priority, unit_id: selectedUnit,
-      }).eq('id', editingId)
+      await supabase.from('tickets').update({ title, description, priority, unit_id: selectedUnit }).eq('id', editingId)
     } else {
-      await supabase.from('tickets').insert({
-        title, description, priority,
-        unit_id: selectedUnit, status: 'open',
-      })
+      await supabase.from('tickets').insert({ title, description, priority, unit_id: selectedUnit, status: 'open' })
     }
-    handleCancel()
-    setLoading(false)
-    loadData(userId!)
+    handleCancel(); setLoading(false); loadData(userId!)
   }
 
   const handleStatusChange = async (id: string, status: string) => {
@@ -88,85 +70,74 @@ export default function Tickets() {
 
   const handleDelete = async (id: string) => {
     await supabase.from('tickets').delete().eq('id', id)
-    setDeleteConfirm(null)
-    loadData(userId!)
+    setDeleteConfirm(null); loadData(userId!)
   }
 
-  const priorityStyle: any = {
-    low: 'bg-gray-50 text-gray-500',
-    medium: 'bg-amber-50 text-amber-600',
-    high: 'bg-red-50 text-red-600',
-  }
+  const priorityColor: any = { low: '#888', medium: '#d97706', high: '#dc2626' }
+  const priorityBg: any = { low: '#f5f4f0', medium: '#fffbeb', high: '#fef2f2' }
   const priorityLabel: any = { low: 'Niedrig', medium: 'Mittel', high: 'Hoch' }
-  const statusStyle: any = {
-    open: 'bg-red-50 text-red-500',
-    in_progress: 'bg-amber-50 text-amber-600',
-    closed: 'bg-green-50 text-green-600',
-  }
+  const statusColor: any = { open: '#dc2626', in_progress: '#d97706', closed: '#16a34a' }
+  const statusBg: any = { open: '#fef2f2', in_progress: '#fffbeb', closed: '#f0fdf4' }
   const statusLabel: any = { open: 'Offen', in_progress: 'In Bearbeitung', closed: 'Erledigt' }
 
+  const card = { backgroundColor: '#fff', border: '1px solid #e8e6e0', borderRadius: '12px', padding: '24px' }
+  const input = { width: '100%', border: '1px solid #e8e6e0', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', outline: 'none', color: '#1a1a1a', backgroundColor: '#fff' }
+  const label = { fontSize: '12px', color: '#999', marginBottom: '6px', display: 'block', textTransform: 'uppercase' as const, letterSpacing: '0.5px' }
+
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main style={{ backgroundColor: '#fafaf8', minHeight: '100vh' }}>
       <Nav />
-      <div className="max-w-4xl mx-auto px-8 py-10">
-        <div className="flex justify-between items-center mb-8">
+      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '48px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '40px' }}>
           <div>
-            <h1 className="text-2xl font-medium text-gray-900">Tickets</h1>
-            <p className="text-sm text-gray-400 mt-1">
+            <h1 style={{ fontSize: '28px', fontWeight: '400', color: '#1a1a1a', margin: '0 0 4px', fontFamily: 'Georgia, serif' }}>Tickets</h1>
+            <p style={{ fontSize: '14px', color: '#999', margin: 0 }}>
               {tickets.filter(t => t.status === 'open').length} offen · {tickets.length} gesamt
             </p>
           </div>
-          <button onClick={() => setShowForm(true)}
-            className="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-600">
+          <button onClick={() => setShowForm(true)} style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>
             + Ticket erstellen
           </button>
         </div>
 
         {showForm && (
-          <div className="bg-white border border-gray-100 rounded-xl p-6 mb-6">
-            <h2 className="text-sm font-medium text-gray-700 mb-4">
+          <div style={{ ...card, marginBottom: '24px' }}>
+            <h2 style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 20px', fontFamily: 'Georgia, serif' }}>
               {editingId ? 'Ticket bearbeiten' : 'Neues Ticket'}
             </h2>
-            <div className="flex flex-col gap-3 mb-4">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '20px' }}>
               <div>
-                <label className="text-xs text-gray-400 mb-1 block">Einheit *</label>
-                <select value={selectedUnit} onChange={e => setSelectedUnit(e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400">
+                <label style={label}>Einheit *</label>
+                <select value={selectedUnit} onChange={e => setSelectedUnit(e.target.value)} style={input}>
                   <option value="">Einheit auswählen...</option>
-                  {units.map(u => (
-                    <option key={u.id} value={u.id}>{u.properties?.name} – {u.name}</option>
-                  ))}
+                  {units.map(u => <option key={u.id} value={u.id}>{u.properties?.name} – {u.name}</option>)}
                 </select>
               </div>
               <div>
-                <label className="text-xs text-gray-400 mb-1 block">Titel *</label>
-                <input value={title} onChange={e => setTitle(e.target.value)}
-                  placeholder="z.B. Heizung defekt"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
+                <label style={label}>Titel *</label>
+                <input value={title} onChange={e => setTitle(e.target.value)} placeholder="z.B. Heizung defekt" style={input} />
               </div>
               <div>
-                <label className="text-xs text-gray-400 mb-1 block">Beschreibung</label>
+                <label style={label}>Beschreibung</label>
                 <textarea value={description} onChange={e => setDescription(e.target.value)}
                   placeholder="Details zum Problem..." rows={3}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
+                  style={{ ...input, resize: 'vertical' as const }} />
               </div>
               <div>
-                <label className="text-xs text-gray-400 mb-1 block">Priorität</label>
-                <select value={priority} onChange={e => setPriority(e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400">
+                <label style={label}>Priorität</label>
+                <select value={priority} onChange={e => setPriority(e.target.value)} style={input}>
                   <option value="low">Niedrig</option>
                   <option value="medium">Mittel</option>
                   <option value="high">Hoch</option>
                 </select>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div style={{ display: 'flex', gap: '8px' }}>
               <button onClick={handleSave} disabled={loading || !title || !selectedUnit}
-                className="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-600 disabled:opacity-40">
+                style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer', opacity: loading ? 0.4 : 1 }}>
                 {loading ? 'Speichern...' : editingId ? 'Änderungen speichern' : 'Speichern'}
               </button>
-              <button onClick={handleCancel}
-                className="border border-gray-200 text-gray-500 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">
+              <button onClick={handleCancel} style={{ backgroundColor: '#fff', color: '#666', padding: '10px 20px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer' }}>
                 Abbrechen
               </button>
             </div>
@@ -174,79 +145,55 @@ export default function Tickets() {
         )}
 
         {tickets.length === 0 ? (
-          <div className="bg-white border border-gray-100 rounded-xl p-12 text-center">
-            <p className="text-gray-400 text-sm">Noch keine Tickets vorhanden.</p>
-            <button onClick={() => setShowForm(true)}
-              className="mt-3 text-blue-500 text-sm hover:underline">
+          <div style={{ ...card, textAlign: 'center', padding: '64px' }}>
+            <p style={{ fontSize: '14px', color: '#bbb', margin: '0 0 12px' }}>Noch keine Tickets vorhanden.</p>
+            <button onClick={() => setShowForm(true)} style={{ background: 'none', border: 'none', color: '#1a1a1a', fontSize: '14px', cursor: 'pointer', textDecoration: 'underline' }}>
               Erstes Ticket erstellen →
             </button>
           </div>
         ) : (
-          <div className="flex flex-col gap-3">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {tickets.map(t => (
-              <div key={t.id} className="bg-white border border-gray-100 rounded-xl p-5">
+              <div key={t.id} style={card}>
                 {deleteConfirm === t.id ? (
-                  <div className="flex justify-between items-center">
-                    <p className="text-sm text-red-600">Ticket wirklich löschen?</p>
-                    <div className="flex gap-2">
-                      <button onClick={() => handleDelete(t.id)}
-                        className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-red-600">
-                        Ja, löschen
-                      </button>
-                      <button onClick={() => setDeleteConfirm(null)}
-                        className="border border-gray-200 text-gray-500 px-3 py-1.5 rounded-lg text-xs hover:bg-gray-50">
-                        Abbrechen
-                      </button>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <p style={{ fontSize: '14px', color: '#dc2626', margin: 0 }}>Ticket wirklich löschen?</p>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button onClick={() => handleDelete(t.id)} style={{ backgroundColor: '#dc2626', color: '#fff', padding: '8px 16px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>Ja, löschen</button>
+                      <button onClick={() => setDeleteConfirm(null)} style={{ backgroundColor: '#fff', color: '#666', padding: '8px 16px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer' }}>Abbrechen</button>
                     </div>
                   </div>
                 ) : (
-                  <>
-                    <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: t.description ? '12px' : '16px' }}>
                       <div>
-                        <p className="font-medium text-gray-900 text-sm">{t.title}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">
-                          {t.units?.properties?.name} – {t.units?.name}
-                        </p>
+                        <p style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 4px' }}>{t.title}</p>
+                        <p style={{ fontSize: '13px', color: '#bbb', margin: 0 }}>{t.units?.properties?.name} – {t.units?.name}</p>
                       </div>
-                      <div className="flex gap-2">
-                        <span className={`text-xs px-2 py-1 rounded-full ${priorityStyle[t.priority]}`}>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <span style={{ fontSize: '11px', color: priorityColor[t.priority], backgroundColor: priorityBg[t.priority], padding: '4px 10px', borderRadius: '20px', fontWeight: '500' }}>
                           {priorityLabel[t.priority]}
                         </span>
-                        <span className={`text-xs px-2 py-1 rounded-full ${statusStyle[t.status]}`}>
+                        <span style={{ fontSize: '11px', color: statusColor[t.status], backgroundColor: statusBg[t.status], padding: '4px 10px', borderRadius: '20px', fontWeight: '500' }}>
                           {statusLabel[t.status]}
                         </span>
                       </div>
                     </div>
-                    {t.description && <p className="text-xs text-gray-400 mb-3">{t.description}</p>}
-                    <div className="flex gap-2">
+                    {t.description && <p style={{ fontSize: '13px', color: '#888', margin: '0 0 16px', lineHeight: '1.5' }}>{t.description}</p>}
+                    <div style={{ display: 'flex', gap: '6px' }}>
                       {t.status !== 'in_progress' && t.status !== 'closed' && (
-                        <button onClick={() => handleStatusChange(t.id, 'in_progress')}
-                          className="text-xs border border-gray-200 text-gray-500 px-3 py-1 rounded-lg hover:bg-gray-50">
-                          In Bearbeitung
-                        </button>
+                        <button onClick={() => handleStatusChange(t.id, 'in_progress')} style={{ backgroundColor: '#fff', color: '#666', padding: '6px 12px', borderRadius: '6px', border: '1px solid #e8e6e0', fontSize: '12px', cursor: 'pointer' }}>In Bearbeitung</button>
                       )}
                       {t.status !== 'closed' && (
-                        <button onClick={() => handleStatusChange(t.id, 'closed')}
-                          className="text-xs border border-green-200 text-green-600 px-3 py-1 rounded-lg hover:bg-green-50">
-                          Erledigt
-                        </button>
+                        <button onClick={() => handleStatusChange(t.id, 'closed')} style={{ backgroundColor: '#f0fdf4', color: '#16a34a', padding: '6px 12px', borderRadius: '6px', border: '1px solid #bbf7d0', fontSize: '12px', cursor: 'pointer' }}>Erledigt</button>
                       )}
                       {t.status === 'closed' && (
-                        <button onClick={() => handleStatusChange(t.id, 'open')}
-                          className="text-xs border border-gray-200 text-gray-400 px-3 py-1 rounded-lg hover:bg-gray-50">
-                          Wieder öffnen
-                        </button>
+                        <button onClick={() => handleStatusChange(t.id, 'open')} style={{ backgroundColor: '#fff', color: '#888', padding: '6px 12px', borderRadius: '6px', border: '1px solid #e8e6e0', fontSize: '12px', cursor: 'pointer' }}>Wieder öffnen</button>
                       )}
-                      <button onClick={() => handleEdit(t)}
-                        className="text-xs border border-gray-200 text-gray-500 px-3 py-1 rounded-lg hover:bg-gray-50">
-                        Bearbeiten
-                      </button>
-                      <button onClick={() => setDeleteConfirm(t.id)}
-                        className="text-xs border border-red-200 text-red-500 px-3 py-1 rounded-lg hover:bg-red-50">
-                        Löschen
-                      </button>
+                      <button onClick={() => handleEdit(t)} style={{ backgroundColor: '#fff', color: '#666', padding: '6px 12px', borderRadius: '6px', border: '1px solid #e8e6e0', fontSize: '12px', cursor: 'pointer' }}>Bearbeiten</button>
+                      <button onClick={() => setDeleteConfirm(t.id)} style={{ backgroundColor: '#fff', color: '#dc2626', padding: '6px 12px', borderRadius: '6px', border: '1px solid #fecaca', fontSize: '12px', cursor: 'pointer' }}>Löschen</button>
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
             ))}

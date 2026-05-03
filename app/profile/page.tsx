@@ -22,61 +22,29 @@ export default function Profile() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/login'); return }
       setEmail(session.user.email || '')
-
-      const { data } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', session.user.id)
-        .single()
-
-      if (data) {
-        setFullName(data.full_name || '')
-        setPhone(data.phone || '')
-      }
+      const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single()
+      if (data) { setFullName(data.full_name || ''); setPhone(data.phone || '') }
     }
     load()
   }, [])
 
   const handleSave = async () => {
-    setLoading(true)
-    setSuccess('')
-    setError('')
-
+    setLoading(true); setSuccess(''); setError('')
     const { data: { session } } = await supabase.auth.getSession()
-    await supabase.from('profiles').upsert({
-      id: session?.user.id,
-      full_name: fullName,
-      phone,
-      email,
-    })
-
-    setLoading(false)
-    setSuccess('Profil erfolgreich gespeichert!')
+    await supabase.from('profiles').upsert({ id: session?.user.id, full_name: fullName, phone, email })
+    setLoading(false); setSuccess('Profil erfolgreich gespeichert!')
     setTimeout(() => setSuccess(''), 3000)
   }
 
   const handlePasswordChange = async () => {
-    setError('')
-    setSuccess('')
-
-    if (newPassword.length < 8) {
-      setError('Passwort muss mindestens 8 Zeichen lang sein.')
-      return
-    }
-    if (newPassword !== passwordConfirm) {
-      setError('Passwörter stimmen nicht überein.')
-      return
-    }
-
+    setError(''); setSuccess('')
+    if (newPassword.length < 8) { setError('Passwort muss mindestens 8 Zeichen lang sein.'); return }
+    if (newPassword !== passwordConfirm) { setError('Passwörter stimmen nicht überein.'); return }
     setLoadingPassword(true)
     const { error } = await supabase.auth.updateUser({ password: newPassword })
-
-    if (error) {
-      setError(error.message)
-    } else {
+    if (error) { setError(error.message) } else {
       setSuccess('Passwort erfolgreich geändert!')
-      setNewPassword('')
-      setPasswordConfirm('')
+      setNewPassword(''); setPasswordConfirm('')
       setTimeout(() => setSuccess(''), 3000)
     }
     setLoadingPassword(false)
@@ -87,82 +55,91 @@ export default function Profile() {
     router.push('/login')
   }
 
+  const card = { backgroundColor: '#fff', border: '1px solid #e8e6e0', borderRadius: '12px', padding: '28px' }
+  const input = { width: '100%', border: '1px solid #e8e6e0', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', outline: 'none', color: '#1a1a1a', backgroundColor: '#fff' }
+  const label = { fontSize: '12px', color: '#999', marginBottom: '6px', display: 'block', textTransform: 'uppercase' as const, letterSpacing: '0.5px' }
+
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main style={{ backgroundColor: '#fafaf8', minHeight: '100vh' }}>
       <Nav />
-      <div className="max-w-2xl mx-auto px-8 py-10">
-        <h1 className="text-2xl font-medium text-gray-900 mb-1">Profil</h1>
-        <p className="text-sm text-gray-400 mb-8">Deine persönlichen Einstellungen</p>
+      <div style={{ maxWidth: '640px', margin: '0 auto', padding: '48px' }}>
+        <h1 style={{ fontSize: '28px', fontWeight: '400', color: '#1a1a1a', margin: '0 0 4px', fontFamily: 'Georgia, serif' }}>
+          Profil
+        </h1>
+        <p style={{ fontSize: '14px', color: '#999', margin: '0 0 40px' }}>Deine persönlichen Einstellungen</p>
 
         {success && (
-          <div className="bg-green-50 text-green-600 text-sm p-3 rounded-lg mb-6">
+          <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '12px 16px', marginBottom: '24px', fontSize: '14px', color: '#16a34a' }}>
             {success}
           </div>
         )}
         {error && (
-          <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg mb-6">
+          <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '12px 16px', marginBottom: '24px', fontSize: '14px', color: '#dc2626' }}>
             {error}
           </div>
         )}
 
         {/* Persönliche Daten */}
-        <div className="bg-white border border-gray-100 rounded-xl p-6 mb-6">
-          <h2 className="text-sm font-medium text-gray-700 mb-4">Persönliche Daten</h2>
-          <div className="flex flex-col gap-3 mb-4">
+        <div style={{ ...card, marginBottom: '16px' }}>
+          <h2 style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 20px', fontFamily: 'Georgia, serif' }}>
+            Persönliche Daten
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '20px' }}>
             <div>
-              <label className="text-xs text-gray-400 mb-1 block">E-Mail-Adresse</label>
-              <input value={email} disabled
-                className="w-full border border-gray-100 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-400 cursor-not-allowed" />
-              <p className="text-xs text-gray-400 mt-1">E-Mail kann nicht geändert werden</p>
+              <label style={label}>E-Mail-Adresse</label>
+              <input value={email} disabled style={{ ...input, backgroundColor: '#f5f4f0', color: '#999', cursor: 'not-allowed' }} />
+              <p style={{ fontSize: '12px', color: '#bbb', margin: '6px 0 0' }}>E-Mail kann nicht geändert werden</p>
             </div>
             <div>
-              <label className="text-xs text-gray-400 mb-1 block">Vollständiger Name</label>
-              <input value={fullName} onChange={e => setFullName(e.target.value)}
-                placeholder="Vor- und Nachname"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
+              <label style={label}>Vollständiger Name</label>
+              <input value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Vor- und Nachname" style={input} />
             </div>
             <div>
-              <label className="text-xs text-gray-400 mb-1 block">Telefon</label>
-              <input value={phone} onChange={e => setPhone(e.target.value)}
-                placeholder="+49 123 456789"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
+              <label style={label}>Telefon</label>
+              <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="+49 123 456789" style={input} />
             </div>
           </div>
-          <button onClick={handleSave} disabled={loading}
-            className="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-600 disabled:opacity-40">
+          <button onClick={handleSave} disabled={loading} style={{
+            backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 20px',
+            borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer', opacity: loading ? 0.4 : 1,
+          }}>
             {loading ? 'Speichern...' : 'Änderungen speichern'}
           </button>
         </div>
 
-        {/* Passwort ändern */}
-        <div className="bg-white border border-gray-100 rounded-xl p-6 mb-6">
-          <h2 className="text-sm font-medium text-gray-700 mb-4">Passwort ändern</h2>
-          <div className="flex flex-col gap-3 mb-4">
+        {/* Passwort */}
+        <div style={{ ...card, marginBottom: '16px' }}>
+          <h2 style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 20px', fontFamily: 'Georgia, serif' }}>
+            Passwort ändern
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '20px' }}>
             <div>
-              <label className="text-xs text-gray-400 mb-1 block">Neues Passwort</label>
-              <input value={newPassword} onChange={e => setNewPassword(e.target.value)}
-                placeholder="••••••••" type="password"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
+              <label style={label}>Neues Passwort</label>
+              <input value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="••••••••" type="password" style={input} />
             </div>
             <div>
-              <label className="text-xs text-gray-400 mb-1 block">Passwort bestätigen</label>
-              <input value={passwordConfirm} onChange={e => setPasswordConfirm(e.target.value)}
-                placeholder="••••••••" type="password"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
+              <label style={label}>Passwort bestätigen</label>
+              <input value={passwordConfirm} onChange={e => setPasswordConfirm(e.target.value)} placeholder="••••••••" type="password" style={input} />
             </div>
           </div>
-          <button onClick={handlePasswordChange} disabled={loadingPassword}
-            className="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-600 disabled:opacity-40">
+          <button onClick={handlePasswordChange} disabled={loadingPassword} style={{
+            backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 20px',
+            borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer', opacity: loadingPassword ? 0.4 : 1,
+          }}>
             {loadingPassword ? 'Speichern...' : 'Passwort ändern'}
           </button>
         </div>
 
         {/* Abmelden */}
-        <div className="bg-white border border-gray-100 rounded-xl p-6">
-          <h2 className="text-sm font-medium text-gray-700 mb-2">Account</h2>
-          <p className="text-xs text-gray-400 mb-4">Abmelden von MietNext auf diesem Gerät</p>
-          <button onClick={handleLogout}
-            className="border border-red-200 text-red-500 px-4 py-2 rounded-lg text-sm hover:bg-red-50">
+        <div style={card}>
+          <h2 style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 8px', fontFamily: 'Georgia, serif' }}>
+            Account
+          </h2>
+          <p style={{ fontSize: '13px', color: '#999', margin: '0 0 20px' }}>Abmelden von MietNext auf diesem Gerät</p>
+          <button onClick={handleLogout} style={{
+            backgroundColor: '#fff', color: '#dc2626', padding: '10px 20px',
+            borderRadius: '8px', border: '1px solid #fecaca', fontSize: '13px', cursor: 'pointer',
+          }}>
             Abmelden
           </button>
         </div>

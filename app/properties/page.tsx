@@ -30,25 +30,20 @@ export default function Properties() {
 
   const loadProperties = async (uid: string) => {
     const { data } = await supabase
-      .from('properties')
-      .select('*, units(count)')
+      .from('properties').select('*, units(count)')
       .eq('owner_id', uid)
       .order('created_at', { ascending: false })
     setProperties(data || [])
   }
 
   const handleEdit = (p: any) => {
-    setEditingId(p.id)
-    setName(p.name)
-    setAddress(p.address || '')
-    setCity(p.city || '')
-    setZip(p.zip || '')
+    setEditingId(p.id); setName(p.name)
+    setAddress(p.address || ''); setCity(p.city || ''); setZip(p.zip || '')
     setShowForm(true)
   }
 
   const handleCancel = () => {
-    setShowForm(false)
-    setEditingId(null)
+    setShowForm(false); setEditingId(null)
     setName(''); setAddress(''); setCity(''); setZip('')
   }
 
@@ -60,70 +55,75 @@ export default function Properties() {
     } else {
       await supabase.from('properties').insert({ name, address, city, zip, owner_id: userId })
     }
-    handleCancel()
-    setLoading(false)
-    loadProperties(userId!)
+    handleCancel(); setLoading(false); loadProperties(userId!)
   }
 
   const handleDelete = async (id: string) => {
     await supabase.from('properties').delete().eq('id', id)
-    setDeleteConfirm(null)
-    loadProperties(userId!)
+    setDeleteConfirm(null); loadProperties(userId!)
   }
 
+  const card = { backgroundColor: '#fff', border: '1px solid #e8e6e0', borderRadius: '12px', padding: '24px' }
+  const input = { width: '100%', border: '1px solid #e8e6e0', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', outline: 'none', color: '#1a1a1a', backgroundColor: '#fff' }
+  const label = { fontSize: '12px', color: '#999', marginBottom: '6px', display: 'block', textTransform: 'uppercase' as const, letterSpacing: '0.5px' }
+
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main style={{ backgroundColor: '#fafaf8', minHeight: '100vh' }}>
       <Nav />
-      <div className="max-w-4xl mx-auto px-8 py-10">
-        <div className="flex justify-between items-center mb-8">
+      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '48px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '40px' }}>
           <div>
-            <h1 className="text-2xl font-medium text-gray-900">Objekte</h1>
-            <p className="text-sm text-gray-400 mt-1">{properties.length} Objekte gesamt</p>
+            <h1 style={{ fontSize: '28px', fontWeight: '400', color: '#1a1a1a', margin: '0 0 4px', fontFamily: 'Georgia, serif' }}>
+              Objekte
+            </h1>
+            <p style={{ fontSize: '14px', color: '#999', margin: 0 }}>{properties.length} Objekte gesamt</p>
           </div>
-          <button onClick={() => setShowForm(true)}
-            className="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-600">
+          <button onClick={() => setShowForm(true)} style={{
+            backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 20px',
+            borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer',
+          }}>
             + Objekt anlegen
           </button>
         </div>
 
         {showForm && (
-          <div className="bg-white border border-gray-100 rounded-xl p-6 mb-6">
-            <h2 className="text-sm font-medium text-gray-700 mb-4">
+          <div style={{ ...card, marginBottom: '24px' }}>
+            <h2 style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 20px', fontFamily: 'Georgia, serif' }}>
               {editingId ? 'Objekt bearbeiten' : 'Neues Objekt'}
             </h2>
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              <div className="col-span-2">
-                <label className="text-xs text-gray-400 mb-1 block">Name *</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+              <div style={{ gridColumn: 'span 2' }}>
+                <label style={label}>Name *</label>
                 <input value={name} onChange={e => setName(e.target.value)}
-                  placeholder="z.B. Mehrfamilienhaus Musterstraße"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
+                  placeholder="z.B. Mehrfamilienhaus Musterstraße" style={input} />
               </div>
-              <div className="col-span-2">
-                <label className="text-xs text-gray-400 mb-1 block">Adresse</label>
+              <div style={{ gridColumn: 'span 2' }}>
+                <label style={label}>Adresse</label>
                 <input value={address} onChange={e => setAddress(e.target.value)}
-                  placeholder="Musterstraße 1"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
+                  placeholder="Musterstraße 1" style={input} />
               </div>
               <div>
-                <label className="text-xs text-gray-400 mb-1 block">PLZ</label>
+                <label style={label}>PLZ</label>
                 <input value={zip} onChange={e => setZip(e.target.value)}
-                  placeholder="12345"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
+                  placeholder="12345" style={input} />
               </div>
               <div>
-                <label className="text-xs text-gray-400 mb-1 block">Stadt</label>
+                <label style={label}>Stadt</label>
                 <input value={city} onChange={e => setCity(e.target.value)}
-                  placeholder="Berlin"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
+                  placeholder="Berlin" style={input} />
               </div>
             </div>
-            <div className="flex gap-2">
-              <button onClick={handleSave} disabled={loading || !name}
-                className="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-600 disabled:opacity-40">
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={handleSave} disabled={loading || !name} style={{
+                backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 20px',
+                borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer', opacity: loading || !name ? 0.4 : 1,
+              }}>
                 {loading ? 'Speichern...' : editingId ? 'Änderungen speichern' : 'Speichern'}
               </button>
-              <button onClick={handleCancel}
-                className="border border-gray-200 text-gray-500 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">
+              <button onClick={handleCancel} style={{
+                backgroundColor: '#fff', color: '#666', padding: '10px 20px',
+                borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer',
+              }}>
                 Abbrechen
               </button>
             </div>
@@ -131,51 +131,55 @@ export default function Properties() {
         )}
 
         {properties.length === 0 ? (
-          <div className="bg-white border border-gray-100 rounded-xl p-12 text-center">
-            <p className="text-gray-400 text-sm">Noch keine Objekte angelegt.</p>
-            <button onClick={() => setShowForm(true)}
-              className="mt-3 text-blue-500 text-sm hover:underline">
+          <div style={{ ...card, textAlign: 'center', padding: '64px' }}>
+            <p style={{ fontSize: '14px', color: '#bbb', margin: '0 0 12px' }}>Noch keine Objekte angelegt.</p>
+            <button onClick={() => setShowForm(true)} style={{
+              background: 'none', border: 'none', color: '#1a1a1a',
+              fontSize: '14px', cursor: 'pointer', textDecoration: 'underline',
+            }}>
               Erstes Objekt anlegen →
             </button>
           </div>
         ) : (
-          <div className="flex flex-col gap-3">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {properties.map(p => (
-              <div key={p.id} className="bg-white border border-gray-100 rounded-xl p-5">
+              <div key={p.id} style={card}>
                 {deleteConfirm === p.id ? (
-                  <div className="flex justify-between items-center">
-                    <p className="text-sm text-red-600">Objekt wirklich löschen? Alle Einheiten und Mieter werden auch gelöscht!</p>
-                    <div className="flex gap-2">
-                      <button onClick={() => handleDelete(p.id)}
-                        className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-red-600">
-                        Ja, löschen
-                      </button>
-                      <button onClick={() => setDeleteConfirm(null)}
-                        className="border border-gray-200 text-gray-500 px-3 py-1.5 rounded-lg text-xs hover:bg-gray-50">
-                        Abbrechen
-                      </button>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <p style={{ fontSize: '14px', color: '#dc2626', margin: 0 }}>
+                      Objekt wirklich löschen? Alle Einheiten werden auch gelöscht!
+                    </p>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button onClick={() => handleDelete(p.id)} style={{
+                        backgroundColor: '#dc2626', color: '#fff', padding: '8px 16px',
+                        borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer',
+                      }}>Ja, löschen</button>
+                      <button onClick={() => setDeleteConfirm(null)} style={{
+                        backgroundColor: '#fff', color: '#666', padding: '8px 16px',
+                        borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer',
+                      }}>Abbrechen</button>
                     </div>
                   </div>
                 ) : (
-                  <div className="flex justify-between items-center">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                      <p className="font-medium text-gray-900 text-sm">{p.name}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">
+                      <p style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 4px' }}>{p.name}</p>
+                      <p style={{ fontSize: '13px', color: '#bbb', margin: 0 }}>
                         {[p.address, p.zip, p.city].filter(Boolean).join(', ')}
                       </p>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs text-gray-400 bg-gray-50 px-3 py-1 rounded-full">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '12px', color: '#999', backgroundColor: '#f5f4f0', padding: '4px 12px', borderRadius: '20px' }}>
                         {p.units?.[0]?.count || 0} Einheiten
                       </span>
-                      <button onClick={() => handleEdit(p)}
-                        className="text-xs border border-gray-200 text-gray-500 px-3 py-1.5 rounded-lg hover:bg-gray-50">
-                        Bearbeiten
-                      </button>
-                      <button onClick={() => setDeleteConfirm(p.id)}
-                        className="text-xs border border-red-200 text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50">
-                        Löschen
-                      </button>
+                      <button onClick={() => handleEdit(p)} style={{
+                        backgroundColor: '#fff', color: '#666', padding: '8px 14px',
+                        borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer',
+                      }}>Bearbeiten</button>
+                      <button onClick={() => setDeleteConfirm(p.id)} style={{
+                        backgroundColor: '#fff', color: '#dc2626', padding: '8px 14px',
+                        borderRadius: '8px', border: '1px solid #fecaca', fontSize: '13px', cursor: 'pointer',
+                      }}>Löschen</button>
                     </div>
                   </div>
                 )}

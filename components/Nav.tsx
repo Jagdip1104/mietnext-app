@@ -39,9 +39,15 @@ export default function Nav() {
           ))}
         </div>
       </div>
-      <button onClick={handleLogout} className="text-sm text-gray-400 hover:text-gray-600">
-        Abmelden
-      </button>
+      <div className="flex items-center gap-4">
+        <button onClick={() => router.push('/profile')}
+          className={`text-sm ${pathname === '/profile' ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}>
+          Profil
+        </button>
+        <button onClick={handleLogout} className="text-sm text-gray-400 hover:text-gray-600">
+          Abmelden
+        </button>
+      </div>
     </nav>
   )
 }

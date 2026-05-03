@@ -26,25 +26,30 @@ export default function Dashboard() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/login'); return }
       setUser(session.user)
-      loadData()
+      loadData(session.user.id)
     }
     load()
   }, [])
 
-  const loadData = async () => {
+  const loadData = async (uid: string) => {
     const [
       { count: propCount },
       { count: unitCount },
       { count: occupiedCount },
       { count: tenantCount },
-      { count: ticketCount },
     ] = await Promise.all([
-      supabase.from('properties').select('*', { count: 'exact', head: true }),
-      supabase.from('units').select('*', { count: 'exact', head: true }),
-      supabase.from('units').select('*', { count: 'exact', head: true }).eq('is_occupied', true),
-      supabase.from('tenants').select('*', { count: 'exact', head: true }),
-      supabase.from('tickets').select('*', { count: 'exact', head: true }).eq('status', 'open'),
+      supabase.from('properties').select('*', { count: 'exact', head: true }).eq('owner_id', uid),
+      supabase.from('units').select('*', { count: 'exact', head: true }).in('property_id',
+        (await supabase.from('properties').select('id').eq('owner_id', uid)).data?.map((p: any) => p.id) || []
+      ),
+      supabase.from('units').select('*', { count: 'exact', head: true }).eq('is_occupied', true).in('property_id',
+        (await supabase.from('properties').select('id').eq('owner_id', uid)).data?.map((p: any) => p.id) || []
+      ),
+      supabase.from('tenants').select('*', { count: 'exact', head: true }).eq('owner_id', uid),
     ])
+
+    const { count: ticketCount } = await supabase
+      .from('tickets').select('*', { count: 'exact', head: true }).eq('status', 'open')
 
     const now = new Date()
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]

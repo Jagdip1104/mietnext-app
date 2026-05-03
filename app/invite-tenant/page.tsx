@@ -12,15 +12,12 @@ export default function InviteTenant() {
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState('')
   const [error, setError] = useState('')
-  const [userId, setUserId] = useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
     const load = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/login'); return }
-      setUserId(session.user.id)
-
       const { data } = await supabase.from('tenants')
         .select('*, units(name, properties(name))')
         .eq('owner_id', session.user.id)
@@ -34,19 +31,10 @@ export default function InviteTenant() {
     if (!selectedTenant || !inviteEmail) return
     setLoading(true); setError(''); setSuccess('')
 
-    const tenant = tenants.find(t => t.id === selectedTenant)
-
-    // Einladung per Supabase Auth
-    const { data, error: inviteError } = await supabase.auth.admin?.inviteUserByEmail
-      ? { data: null, error: { message: 'Admin API nicht verfügbar' } }
-      : { data: null, error: null }
-
-    // Alternativ: Magic Link senden
     const { error: magicError } = await supabase.auth.signInWithOtp({
       email: inviteEmail,
       options: {
-        emailRedirectTo: 'https://mietnext.de/tenant-portal',
-        data: { tenant_id: selectedTenant, tenant_name: tenant?.full_name }
+        emailRedirectTo: 'https://mietnext.de',
       }
     })
 
@@ -56,8 +44,6 @@ export default function InviteTenant() {
       return
     }
 
-    // Tenant-User Verknüpfung vorbereiten (wird nach erstem Login gesetzt)
-    // E-Mail im Tenant speichern
     await supabase.from('tenants').update({ email: inviteEmail }).eq('id', selectedTenant)
 
     setSuccess(`Einladung an ${inviteEmail} gesendet! Der Mieter erhält einen Login-Link.`)
@@ -124,7 +110,6 @@ export default function InviteTenant() {
           </button>
         </div>
 
-        {/* Bestehende Mieter */}
         {tenants.length > 0 && (
           <div style={{ ...card, marginTop: '16px' }}>
             <h2 style={{ fontSize: '13px', color: '#999', margin: '0 0 16px', textTransform: 'uppercase', letterSpacing: '1px' }}>

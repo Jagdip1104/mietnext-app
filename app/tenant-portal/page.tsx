@@ -14,6 +14,7 @@ export default function TenantPortal() {
   const [description, setDescription] = useState('')
   const [priority, setPriority] = useState('medium')
   const [loading, setLoading] = useState(false)
+  const [notFound, setNotFound] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -21,38 +22,56 @@ export default function TenantPortal() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/login'); return }
 
-      // Prüfe ob User ein Mieter ist
+      // Prüfe ob tenant_users Eintrag existiert
       const { data: tenantUser } = await supabase
         .from('tenant_users')
         .select('*, tenants(*, units(*, properties(*)))')
         .eq('user_id', session.user.id)
         .single()
 
-      if (!tenantUser) { router.push('/dashboard'); return }
+      if (!tenantUser) {
+        // Versuche Mieter anhand E-Mail zu finden
+        const { data: tenantData } = await supabase
+          .from('tenants')
+          .select('*, units(*, properties(*))')
+          .eq('email', session.user.email)
+          .single()
+
+        if (tenantData) {
+          // Erstelle tenant_users Eintrag
+          await supabase.from('tenant_users').insert({
+            user_id: session.user.id,
+            tenant_id: tenantData.id,
+          })
+          setTenant(tenantData)
+          setUnit(tenantData.units)
+          loadContractAndTickets(tenantData.id, tenantData.unit_id)
+        } else {
+          setNotFound(true)
+        }
+        return
+      }
 
       const tenantData = tenantUser.tenants
       setTenant(tenantData)
       setUnit(tenantData.units)
-
-      // Vertrag laden
-      const { data: contractData } = await supabase
-        .from('contracts')
-        .select('*')
-        .eq('tenant_id', tenantData.id)
-        .eq('is_active', true)
-        .single()
-      setContract(contractData)
-
-      // Tickets laden
-      const { data: ticketsData } = await supabase
-        .from('tickets')
-        .select('*')
-        .eq('unit_id', tenantData.unit_id)
-        .order('created_at', { ascending: false })
-      setTickets(ticketsData || [])
+      loadContractAndTickets(tenantData.id, tenantData.unit_id)
     }
     load()
   }, [])
+
+  const loadContractAndTickets = async (tenantId: string, unitId: string) => {
+    const { data: contractData } = await supabase
+      .from('contracts').select('*')
+      .eq('tenant_id', tenantId).eq('is_active', true).single()
+    setContract(contractData)
+
+    const { data: ticketsData } = await supabase
+      .from('tickets').select('*')
+      .eq('unit_id', unitId)
+      .order('created_at', { ascending: false })
+    setTickets(ticketsData || [])
+  }
 
   const handleTicket = async () => {
     if (!title || !tenant) return
@@ -60,16 +79,11 @@ export default function TenantPortal() {
     await supabase.from('tickets').insert({
       title, description, priority,
       unit_id: tenant.unit_id,
-      tenant_id: tenant.id,
       status: 'open',
     })
     setTitle(''); setDescription(''); setPriority('medium')
     setShowForm(false); setLoading(false)
-
-    // Tickets neu laden
-    const { data } = await supabase.from('tickets').select('*')
-      .eq('unit_id', tenant.unit_id).order('created_at', { ascending: false })
-    setTickets(data || [])
+    loadContractAndTickets(tenant.id, tenant.unit_id)
   }
 
   const handleLogout = async () => {
@@ -87,6 +101,20 @@ export default function TenantPortal() {
   const input = { width: '100%', border: '1px solid #e8e6e0', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', outline: 'none', color: '#1a1a1a', backgroundColor: '#fff' }
   const label = { fontSize: '12px', color: '#999', marginBottom: '6px', display: 'block', textTransform: 'uppercase' as const, letterSpacing: '0.5px' }
 
+  if (notFound) {
+    return (
+      <main style={{ backgroundColor: '#fafaf8', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center' }}>
+          <p style={{ fontSize: '16px', color: '#1a1a1a', marginBottom: '8px' }}>Kein Mieter-Account gefunden</p>
+          <p style={{ fontSize: '14px', color: '#999', marginBottom: '24px' }}>Bitte kontaktiere deinen Vermieter.</p>
+          <button onClick={handleLogout} style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', fontSize: '14px', cursor: 'pointer' }}>
+            Abmelden
+          </button>
+        </div>
+      </main>
+    )
+  }
+
   if (!tenant) {
     return (
       <main style={{ backgroundColor: '#fafaf8', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -97,7 +125,6 @@ export default function TenantPortal() {
 
   return (
     <main style={{ backgroundColor: '#fafaf8', minHeight: '100vh' }}>
-      {/* Nav */}
       <nav style={{ backgroundColor: '#fff', borderBottom: '1px solid #e8e6e0', padding: '0 48px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ fontSize: '16px', fontWeight: '600', color: '#1a1a1a', fontFamily: 'Georgia, serif', padding: '16px 0' }}>
           MietNext
@@ -116,7 +143,7 @@ export default function TenantPortal() {
         </h1>
         <p style={{ fontSize: '14px', color: '#999', margin: '0 0 40px' }}>Willkommen zurück, {tenant.full_name}</p>
 
-        {/* Wohnung Info */}
+        {/* Wohnung */}
         <div style={{ ...card, marginBottom: '16px' }}>
           <h2 style={{ fontSize: '13px', color: '#999', margin: '0 0 16px', textTransform: 'uppercase', letterSpacing: '1px' }}>Meine Wohnung</h2>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
@@ -149,7 +176,7 @@ export default function TenantPortal() {
           </div>
         </div>
 
-        {/* Vertrag Info */}
+        {/* Vertrag */}
         {contract && (
           <div style={{ ...card, marginBottom: '16px' }}>
             <h2 style={{ fontSize: '13px', color: '#999', margin: '0 0 16px', textTransform: 'uppercase', letterSpacing: '1px' }}>Mein Mietvertrag</h2>

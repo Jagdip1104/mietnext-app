@@ -15,50 +15,74 @@ export default function TenantPortal() {
   const [priority, setPriority] = useState('medium')
   const [loading, setLoading] = useState(false)
   const [notFound, setNotFound] = useState(false)
+  const [status, setStatus] = useState('Laden...')
   const router = useRouter()
 
   useEffect(() => {
-    const load = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { router.push('/login'); return }
-
-      // Prüfe ob tenant_users Eintrag existiert
-      const { data: tenantUser } = await supabase
-        .from('tenant_users')
-        .select('*, tenants(*, units(*, properties(*)))')
-        .eq('user_id', session.user.id)
-        .single()
-
-      if (!tenantUser) {
-        // Versuche Mieter anhand E-Mail zu finden
-        const { data: tenantData } = await supabase
-          .from('tenants')
-          .select('*, units(*, properties(*))')
-          .eq('email', session.user.email)
-          .single()
-
-        if (tenantData) {
-          // Erstelle tenant_users Eintrag
-          await supabase.from('tenant_users').insert({
-            user_id: session.user.id,
-            tenant_id: tenantData.id,
-          })
-          setTenant(tenantData)
-          setUnit(tenantData.units)
-          loadContractAndTickets(tenantData.id, tenantData.unit_id)
-        } else {
-          setNotFound(true)
+    // Warte auf Auth State Change (Magic Link Token wird verarbeitet)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event: string, session: any) => {
+        if (event === 'SIGNED_IN' && session) {
+          setStatus('Mieter wird gesucht...')
+          await loadTenantData(session.user.id, session.user.email)
         }
-        return
+        if (event === 'SIGNED_OUT') {
+          router.push('/login')
+        }
       }
+    )
 
+    // Prüfe ob bereits eingeloggt
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session) {
+        await loadTenantData(session.user.id, session.user.email)
+      } else {
+        router.push('/login')
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  const loadTenantData = async (uid: string, email: string | undefined) => {
+    // Prüfe tenant_users
+    const { data: tenantUser } = await supabase
+      .from('tenant_users')
+      .select('*, tenants(*, units(*, properties(*)))')
+      .eq('user_id', uid)
+      .single()
+
+    if (tenantUser?.tenants) {
       const tenantData = tenantUser.tenants
       setTenant(tenantData)
       setUnit(tenantData.units)
-      loadContractAndTickets(tenantData.id, tenantData.unit_id)
+      await loadContractAndTickets(tenantData.id, tenantData.unit_id)
+      return
     }
-    load()
-  }, [])
+
+    // Kein tenant_users Eintrag – suche per E-Mail
+    if (email) {
+      const { data: tenantData } = await supabase
+        .from('tenants')
+        .select('*, units(*, properties(*))')
+        .eq('email', email)
+        .single()
+
+      if (tenantData) {
+        // Erstelle tenant_users Eintrag
+        await supabase.from('tenant_users').insert({
+          user_id: uid,
+          tenant_id: tenantData.id,
+        })
+        setTenant(tenantData)
+        setUnit(tenantData.units)
+        await loadContractAndTickets(tenantData.id, tenantData.unit_id)
+        return
+      }
+    }
+
+    setNotFound(true)
+  }
 
   const loadContractAndTickets = async (tenantId: string, unitId: string) => {
     const { data: contractData } = await supabase
@@ -118,7 +142,7 @@ export default function TenantPortal() {
   if (!tenant) {
     return (
       <main style={{ backgroundColor: '#fafaf8', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ fontSize: '14px', color: '#999' }}>Laden...</p>
+        <p style={{ fontSize: '14px', color: '#999' }}>{status}</p>
       </main>
     )
   }
@@ -167,12 +191,6 @@ export default function TenantPortal() {
                 <p style={{ fontSize: '15px', color: '#1a1a1a', margin: 0, fontWeight: '500' }}>{unit.rooms}</p>
               </div>
             )}
-            {unit?.floor !== null && unit?.floor !== undefined && (
-              <div>
-                <p style={{ fontSize: '12px', color: '#bbb', margin: '0 0 4px' }}>Etage</p>
-                <p style={{ fontSize: '15px', color: '#1a1a1a', margin: 0, fontWeight: '500' }}>{unit.floor}. OG</p>
-              </div>
-            )}
           </div>
         </div>
 
@@ -216,7 +234,6 @@ export default function TenantPortal() {
 
           {showForm && (
             <div style={{ backgroundColor: '#fafaf8', borderRadius: '10px', padding: '20px', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '14px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 16px' }}>Neues Ticket</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
                 <div>
                   <label style={label}>Titel *</label>

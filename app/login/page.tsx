@@ -12,33 +12,26 @@ export default function LoginPage() {
   const router = useRouter()
 
   useEffect(() => {
-    // Prüfe ob bereits eingeloggt
     const check = async () => {
       const { data: { session } } = await supabase.auth.getSession()
-      if (session) {
-        redirectUser(session.user.id)
-      }
+      if (session) { redirectUser(session.user.id) }
     }
     check()
 
-    // Höre auf Auth-Änderungen (Magic Link)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        redirectUser(session.user.id)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event: string, session: any) => {
+        if (event === 'SIGNED_IN' && session) {
+          redirectUser(session.user.id)
+        }
       }
-    })
+    )
 
     return () => subscription.unsubscribe()
   }, [])
 
   const redirectUser = async (uid: string) => {
-    // Prüfe ob Mieter
     const { data: tenantUser } = await supabase
-      .from('tenant_users')
-      .select('id')
-      .eq('user_id', uid)
-      .single()
-
+      .from('tenant_users').select('id').eq('user_id', uid).single()
     if (tenantUser) {
       router.push('/tenant-portal')
     } else {
@@ -49,9 +42,7 @@ export default function LoginPage() {
   const handleLogin = async () => {
     setLoading(true)
     setError('')
-
     const { error } = await supabase.auth.signInWithPassword({ email, password })
-
     if (error) {
       setError('E-Mail oder Passwort falsch')
       setLoading(false)

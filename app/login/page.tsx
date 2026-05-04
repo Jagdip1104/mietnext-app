@@ -78,40 +78,42 @@ export default function LoginPage() {
             </div>
           )}
 
-          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
-            <div>
-              <label style={{ fontSize: '13px', color: '#666', marginBottom: '6px', display: 'block' }}>E-Mail-Adresse</label>
-              <input
-                type="email"
-                name="email"
-                autoComplete="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="name@email.de"
-                required
-                style={{ width: '100%', border: '1px solid #e8e6e0', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', outline: 'none', color: '#1a1a1a', backgroundColor: '#fff', boxSizing: 'border-box' as const }} />
-            </div>
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                <label style={{ fontSize: '13px', color: '#666' }}>Passwort</label>
-                <button type="button" onClick={() => router.push('/forgot-password')}
-                  style={{ background: 'none', border: 'none', color: '#888', fontSize: '13px', cursor: 'pointer', padding: 0 }}>
-                  Vergessen?
-                </button>
+          <form onSubmit={handleLogin} action="#" method="post">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
+              <div>
+                <label style={{ fontSize: '13px', color: '#666', marginBottom: '6px', display: 'block' }}>E-Mail-Adresse</label>
+                <input
+                  type="email"
+                  name="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="name@email.de"
+                  required
+                  style={{ width: '100%', border: '1px solid #e8e6e0', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', outline: 'none', color: '#1a1a1a', backgroundColor: '#fff', boxSizing: 'border-box' as const }} />
               </div>
-              <input
-                type="password"
-                name="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                style={{ width: '100%', border: '1px solid #e8e6e0', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', outline: 'none', color: '#1a1a1a', backgroundColor: '#fff', boxSizing: 'border-box' as const }} />
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '13px', color: '#666' }}>Passwort</label>
+                  <button type="button" onClick={() => router.push('/forgot-password')}
+                    style={{ background: 'none', border: 'none', color: '#888', fontSize: '13px', cursor: 'pointer', padding: 0 }}>
+                    Vergessen?
+                  </button>
+                </div>
+                <input
+                  type="password"
+                  name="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  style={{ width: '100%', border: '1px solid #e8e6e0', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', outline: 'none', color: '#1a1a1a', backgroundColor: '#fff', boxSizing: 'border-box' as const }} />
+              </div>
             </div>
 
             <button type="submit" disabled={loading || !email || !password}
-              style={{ width: '100%', backgroundColor: '#1a1a1a', color: '#fff', padding: '12px', borderRadius: '8px', border: 'none', fontSize: '14px', cursor: 'pointer', opacity: loading || !email || !password ? 0.5 : 1 }}>
+              style={{ width: '100%', backgroundColor: '#1a1a1a', color: '#fff', padding: '12px', borderRadius: '8px', border: 'none', fontSize: '14px', cursor: 'pointer', opacity: loading || !email || !password ? 0.5 : 1, marginBottom: '16px' }}>
               {loading ? 'Einloggen...' : 'Einloggen →'}
             </button>
           </form>

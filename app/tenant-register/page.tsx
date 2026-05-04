@@ -30,19 +30,42 @@ function TenantRegisterForm() {
     }
     setLoading(true)
 
-    const { error: signUpError } = await supabase.auth.signUp({ email, password })
+    // Erst registrieren
+    await supabase.auth.signUp({ email, password })
 
-    if (signUpError) {
-      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
-      if (signInError) {
-        setError('Fehler beim Einrichten des Zugangs. Bitte versuche es erneut.')
-        setLoading(false)
-        return
+    // Direkt einloggen – egal ob Registrierung geklappt hat oder User bereits existiert
+    const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+
+    if (signInError || !data.session) {
+      setError('Fehler beim Einloggen. Bitte versuche es erneut.')
+      setLoading(false)
+      return
+    }
+
+    // Prüfe ob tenant_users Eintrag existiert, wenn nicht erstelle ihn
+    const { data: tenantData } = await supabase
+      .from('tenants')
+      .select('*')
+      .eq('email', email)
+      .single()
+
+    if (tenantData) {
+      const { data: existingTU } = await supabase
+        .from('tenant_users')
+        .select('id')
+        .eq('user_id', data.session.user.id)
+        .single()
+
+      if (!existingTU) {
+        await supabase.from('tenant_users').insert({
+          user_id: data.session.user.id,
+          tenant_id: tenantData.id,
+        })
       }
     }
 
-    setTimeout(() => { router.push('/tenant-portal') }, 500)
     setLoading(false)
+    router.push('/tenant-portal')
   }
 
   return (

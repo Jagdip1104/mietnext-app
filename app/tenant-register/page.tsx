@@ -10,6 +10,7 @@ function TenantRegisterForm() {
   const [passwordConfirm, setPasswordConfirm] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [debugMsg, setDebugMsg] = useState('')
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -20,6 +21,7 @@ function TenantRegisterForm() {
 
   const handleRegister = async () => {
     setError('')
+    setDebugMsg('')
     if (password.length < 8) {
       setError('Passwort muss mindestens 8 Zeichen lang sein.')
       return
@@ -31,36 +33,27 @@ function TenantRegisterForm() {
     setLoading(true)
 
     // Registrieren
-    await supabase.auth.signUp({ email, password })
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({ email, password })
+    setDebugMsg(`SignUp: ${signUpError ? signUpError.message : 'OK'} / User: ${signUpData?.user?.id || 'none'}`)
+
+    if (signUpError && signUpError.message !== 'User already registered') {
+      setError('Fehler bei der Registrierung: ' + signUpError.message)
+      setLoading(false)
+      return
+    }
 
     // Direkt einloggen
     const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+    setDebugMsg(prev => prev + ` / SignIn: ${signInError ? signInError.message : 'OK'}`)
 
     if (signInError || !data.session) {
-      setError('Fehler beim Einloggen. Bitte versuche es erneut.')
+      setError('Fehler beim Einloggen: ' + (signInError?.message || 'Keine Session'))
       setLoading(false)
       return
     }
 
-    // API Route aufrufen um tenant_users zu erstellen
-    const res = await fetch('/api/tenant-register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email,
-        userId: data.session.user.id,
-      }),
-    })
-
-    if (!res.ok) {
-      setError('Kein Mieter mit dieser E-Mail gefunden. Bitte kontaktiere deinen Vermieter.')
-      await supabase.auth.signOut()
-      setLoading(false)
-      return
-    }
-
-    setLoading(false)
     router.push('/tenant-portal')
+    setLoading(false)
   }
 
   return (
@@ -79,6 +72,12 @@ function TenantRegisterForm() {
         {error && (
           <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '12px 16px', marginBottom: '20px', fontSize: '14px', color: '#dc2626' }}>
             {error}
+          </div>
+        )}
+
+        {debugMsg && (
+          <div style={{ backgroundColor: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px', padding: '12px 16px', marginBottom: '20px', fontSize: '12px', color: '#0369a1', wordBreak: 'break-all' }}>
+            Debug: {debugMsg}
           </div>
         )}
 

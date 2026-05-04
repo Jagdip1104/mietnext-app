@@ -33,7 +33,7 @@ export default function TenantPortal() {
     )
 
     // Prüfe ob bereits eingeloggt
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }: { data: { session: any } }) => {
       if (session) {
         await loadTenantData(session.user.id, session.user.email)
       } else {

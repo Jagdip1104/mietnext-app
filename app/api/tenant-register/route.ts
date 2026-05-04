@@ -9,7 +9,6 @@ export async function POST(req: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  // Mieter per E-Mail finden
   const { data: tenant } = await supabaseAdmin
     .from('tenants')
     .select('*')
@@ -20,7 +19,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Kein Mieter gefunden' }, { status: 404 })
   }
 
-  // tenant_users Eintrag erstellen
   const { data: existing } = await supabaseAdmin
     .from('tenant_users')
     .select('id')

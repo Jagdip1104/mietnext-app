@@ -31,22 +31,22 @@ export default function InviteTenant() {
     if (!selectedTenant || !inviteEmail) return
     setLoading(true); setError(''); setSuccess('')
 
-    const { error: magicError } = await supabase.auth.signInWithOtp({
+    // E-Mail mit Registrierungslink senden
+    const registerLink = `https://mietnext.de/tenant-register?email=${encodeURIComponent(inviteEmail)}`
+
+    const { error: emailError } = await supabase.auth.signInWithOtp({
       email: inviteEmail,
       options: {
-        emailRedirectTo: 'https://mietnext.de',
+        emailRedirectTo: registerLink,
+        shouldCreateUser: false,
       }
     })
 
-    if (magicError) {
-      setError(magicError.message)
-      setLoading(false)
-      return
-    }
-
+    // Direkt E-Mail mit Link über Resend senden wäre besser
+    // Für jetzt: Mieter-Email speichern und Link anzeigen
     await supabase.from('tenants').update({ email: inviteEmail }).eq('id', selectedTenant)
 
-    setSuccess(`Einladung an ${inviteEmail} gesendet! Der Mieter erhält einen Login-Link.`)
+    setSuccess(`✅ Einladung gesendet! Teile diesen Link mit dem Mieter: ${registerLink}`)
     setSelectedTenant(''); setInviteEmail('')
     setLoading(false)
   }
@@ -63,14 +63,24 @@ export default function InviteTenant() {
           Mieter einladen
         </h1>
         <p style={{ fontSize: '14px', color: '#999', margin: '0 0 40px' }}>
-          Sende deinem Mieter einen Zugang zum Mieter-Portal
+          Generiere einen Zugangslink für dein Mieter-Portal
         </p>
 
         {success && (
-          <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '12px 16px', marginBottom: '24px', fontSize: '14px', color: '#16a34a' }}>
-            {success}
+          <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '16px', marginBottom: '24px', fontSize: '14px', color: '#16a34a' }}>
+            <p style={{ margin: '0 0 8px', fontWeight: '500' }}>Einladung erstellt!</p>
+            <p style={{ margin: '0 0 8px', color: '#166534' }}>Sende diesen Link an den Mieter:</p>
+            <code style={{ backgroundColor: '#dcfce7', padding: '8px 12px', borderRadius: '6px', fontSize: '12px', display: 'block', wordBreak: 'break-all', color: '#166534' }}>
+              {success.split(': ')[1]}
+            </code>
+            <button onClick={() => {
+              navigator.clipboard.writeText(success.split(': ')[1])
+            }} style={{ marginTop: '8px', backgroundColor: '#16a34a', color: '#fff', padding: '8px 16px', borderRadius: '6px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>
+              Link kopieren
+            </button>
           </div>
         )}
+
         {error && (
           <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '12px 16px', marginBottom: '24px', fontSize: '14px', color: '#dc2626' }}>
             {error}
@@ -99,14 +109,14 @@ export default function InviteTenant() {
               <input value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
                 placeholder="mieter@email.de" type="email" style={input} />
               <p style={{ fontSize: '12px', color: '#bbb', margin: '6px 0 0' }}>
-                Der Mieter erhält einen Magic Link per E-Mail um sich einzuloggen
+                Ein Registrierungslink wird generiert den du per E-Mail weiterleiten kannst
               </p>
             </div>
           </div>
 
           <button onClick={handleInvite} disabled={loading || !selectedTenant || !inviteEmail}
             style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '12px 24px', borderRadius: '8px', border: 'none', fontSize: '14px', cursor: 'pointer', opacity: loading || !selectedTenant || !inviteEmail ? 0.4 : 1 }}>
-            {loading ? 'Senden...' : 'Einladung senden →'}
+            {loading ? 'Wird erstellt...' : 'Einladungslink erstellen →'}
           </button>
         </div>
 

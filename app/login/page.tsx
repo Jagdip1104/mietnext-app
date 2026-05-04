@@ -25,7 +25,6 @@ export default function LoginPage() {
         }
       }
     )
-
     return () => subscription.unsubscribe()
   }, [])
 
@@ -50,52 +49,75 @@ export default function LoginPage() {
   }
 
   return (
-    <main style={{ minHeight: '100vh', backgroundColor: '#fafaf8', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-      <div style={{ backgroundColor: '#fff', border: '1px solid #e8e6e0', borderRadius: '16px', padding: '40px', width: '100%', maxWidth: '380px' }}>
-        <div style={{ fontSize: '20px', fontWeight: '600', color: '#1a1a1a', textAlign: 'center', marginBottom: '4px', fontFamily: 'Georgia, serif' }}>
-          MietNext
+    <main style={{ minHeight: '100vh', backgroundColor: '#fafaf8', display: 'flex' }}>
+      {/* Linke Seite – Branding */}
+      <div style={{
+        flex: 1, backgroundColor: '#1a1a1a',
+        flexDirection: 'column', justifyContent: 'space-between',
+        padding: '48px', display: 'flex',
+      }}>
+        <div style={{ fontSize: '18px', fontWeight: '600', color: '#fff', fontFamily: 'Georgia, serif' }}>MietNext</div>
+        <div>
+          <p style={{ fontSize: '24px', fontWeight: '400', color: '#fff', fontFamily: 'Georgia, serif', lineHeight: '1.4', marginBottom: '24px' }}>
+            "Endlich habe ich alle meine Objekte und Mieter an einem Ort."
+          </p>
+          <p style={{ fontSize: '14px', color: '#888', margin: 0 }}>— Jagdip Singh, Vermieter aus Düsseldorf</p>
         </div>
-        <div style={{ fontSize: '14px', color: '#999', textAlign: 'center', marginBottom: '32px' }}>
-          Professionelle Immobilienverwaltung
-        </div>
+      </div>
 
-        {error && (
-          <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '12px 16px', marginBottom: '20px', fontSize: '14px', color: '#dc2626' }}>
-            {error}
+      {/* Rechte Seite – Login Form */}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 32px' }}>
+        <div style={{ width: '100%', maxWidth: '360px' }}>
+          <div style={{ marginBottom: '40px' }}>
+            <h1 style={{ fontSize: '24px', fontWeight: '400', color: '#1a1a1a', margin: '0 0 4px', fontFamily: 'Georgia, serif' }}>
+              Willkommen zurück
+            </h1>
+            <p style={{ fontSize: '14px', color: '#999', margin: 0 }}>
+              Logge dich in deinen Account ein
+            </p>
           </div>
-        )}
 
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{ fontSize: '12px', color: '#999', marginBottom: '6px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>E-Mail-Adresse</label>
-          <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-            placeholder="name@email.de"
-            style={{ width: '100%', border: '1px solid #e8e6e0', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', outline: 'none', color: '#1a1a1a', backgroundColor: '#fff' }} />
-        </div>
+          {error && (
+            <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '12px 16px', marginBottom: '20px', fontSize: '14px', color: '#dc2626' }}>
+              {error}
+            </div>
+          )}
 
-        <div style={{ marginBottom: '24px' }}>
-          <label style={{ fontSize: '12px', color: '#999', marginBottom: '6px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Passwort</label>
-          <input type="password" value={password} onChange={e => setPassword(e.target.value)}
-            placeholder="••••••••"
-            style={{ width: '100%', border: '1px solid #e8e6e0', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', outline: 'none', color: '#1a1a1a', backgroundColor: '#fff' }} />
-        </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
+            <div>
+              <label style={{ fontSize: '13px', color: '#666', marginBottom: '6px', display: 'block' }}>E-Mail-Adresse</label>
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+                placeholder="name@email.de"
+                onKeyDown={e => e.key === 'Enter' && handleLogin()}
+                style={{ width: '100%', border: '1px solid #e8e6e0', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', outline: 'none', color: '#1a1a1a', backgroundColor: '#fff', boxSizing: 'border-box' as const }} />
+            </div>
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <label style={{ fontSize: '13px', color: '#666' }}>Passwort</label>
+                <button onClick={() => router.push('/forgot-password')}
+                  style={{ background: 'none', border: 'none', color: '#888', fontSize: '13px', cursor: 'pointer', padding: 0 }}>
+                  Vergessen?
+                </button>
+              </div>
+              <input type="password" value={password} onChange={e => setPassword(e.target.value)}
+                placeholder="••••••••"
+                onKeyDown={e => e.key === 'Enter' && handleLogin()}
+                style={{ width: '100%', border: '1px solid #e8e6e0', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', outline: 'none', color: '#1a1a1a', backgroundColor: '#fff', boxSizing: 'border-box' as const }} />
+            </div>
+          </div>
 
-        <button onClick={handleLogin} disabled={loading}
-          style={{ width: '100%', backgroundColor: '#1a1a1a', color: '#fff', padding: '12px', borderRadius: '8px', border: 'none', fontSize: '14px', cursor: 'pointer', opacity: loading ? 0.5 : 1, marginBottom: '16px' }}>
-          {loading ? 'Laden...' : 'Einloggen →'}
-        </button>
-
-        <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-          <button onClick={() => router.push('/forgot-password')}
-            style={{ background: 'none', border: 'none', color: '#999', fontSize: '13px', cursor: 'pointer' }}>
-            Passwort vergessen?
+          <button onClick={handleLogin} disabled={loading || !email || !password}
+            style={{ width: '100%', backgroundColor: '#1a1a1a', color: '#fff', padding: '12px', borderRadius: '8px', border: 'none', fontSize: '14px', cursor: 'pointer', opacity: loading || !email || !password ? 0.5 : 1, marginBottom: '16px' }}>
+            {loading ? 'Einloggen...' : 'Einloggen →'}
           </button>
-        </div>
-        <div style={{ textAlign: 'center' }}>
-          <span style={{ fontSize: '13px', color: '#999' }}>Noch kein Konto? </span>
-          <button onClick={() => router.push('/register')}
-            style={{ background: 'none', border: 'none', color: '#1a1a1a', fontSize: '13px', cursor: 'pointer', textDecoration: 'underline' }}>
-            Jetzt registrieren
-          </button>
+
+          <p style={{ textAlign: 'center', fontSize: '14px', color: '#999', margin: 0 }}>
+            Noch kein Konto?{' '}
+            <button onClick={() => router.push('/register')}
+              style={{ background: 'none', border: 'none', color: '#1a1a1a', fontSize: '14px', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>
+              Kostenlos registrieren
+            </button>
+          </p>
         </div>
       </div>
     </main>

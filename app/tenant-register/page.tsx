@@ -30,10 +30,10 @@ function TenantRegisterForm() {
     }
     setLoading(true)
 
-    // Erst registrieren
+    // Registrieren
     await supabase.auth.signUp({ email, password })
 
-    // Direkt einloggen – egal ob Registrierung geklappt hat oder User bereits existiert
+    // Direkt einloggen
     const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
 
     if (signInError || !data.session) {
@@ -42,25 +42,36 @@ function TenantRegisterForm() {
       return
     }
 
-    // Prüfe ob tenant_users Eintrag existiert, wenn nicht erstelle ihn
+    const uid = data.session.user.id
+
+    // Mieter anhand E-Mail suchen
     const { data: tenantData } = await supabase
       .from('tenants')
       .select('*')
       .eq('email', email)
       .single()
 
-    if (tenantData) {
-      const { data: existingTU } = await supabase
-        .from('tenant_users')
-        .select('id')
-        .eq('user_id', data.session.user.id)
-        .single()
+    if (!tenantData) {
+      setError('Kein Mieter mit dieser E-Mail gefunden. Bitte kontaktiere deinen Vermieter.')
+      await supabase.auth.signOut()
+      setLoading(false)
+      return
+    }
 
-      if (!existingTU) {
-        await supabase.from('tenant_users').insert({
-          user_id: data.session.user.id,
-          tenant_id: tenantData.id,
-        })
+    // Prüfe ob tenant_users bereits existiert
+    const { data: existingTU } = await supabase
+      .from('tenant_users')
+      .select('id')
+      .eq('user_id', uid)
+      .single()
+
+    if (!existingTU) {
+      const { error: tuError } = await supabase.from('tenant_users').insert({
+        user_id: uid,
+        tenant_id: tenantData.id,
+      })
+      if (tuError) {
+        console.error('tenant_users Fehler:', tuError)
       }
     }
 

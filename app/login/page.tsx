@@ -86,7 +86,12 @@ export default function LoginPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
             <div>
               <label style={{ fontSize: '13px', color: '#666', marginBottom: '6px', display: 'block' }}>E-Mail-Adresse</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+              <input
+                type="email"
+                name="email"
+                autoComplete="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
                 placeholder="name@email.de"
                 onKeyDown={e => e.key === 'Enter' && handleLogin()}
                 style={{ width: '100%', border: '1px solid #e8e6e0', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', outline: 'none', color: '#1a1a1a', backgroundColor: '#fff', boxSizing: 'border-box' as const }} />
@@ -99,7 +104,12 @@ export default function LoginPage() {
                   Vergessen?
                 </button>
               </div>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)}
+              <input
+                type="password"
+                name="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
                 placeholder="••••••••"
                 onKeyDown={e => e.key === 'Enter' && handleLogin()}
                 style={{ width: '100%', border: '1px solid #e8e6e0', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', outline: 'none', color: '#1a1a1a', backgroundColor: '#fff', boxSizing: 'border-box' as const }} />

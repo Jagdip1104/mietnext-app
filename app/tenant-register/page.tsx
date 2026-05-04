@@ -31,14 +31,17 @@ function TenantRegisterForm() {
     }
     setLoading(true)
 
+    // Erst registrieren versuchen
     const { error: signUpError } = await supabase.auth.signUp({ email, password })
 
-    if (signUpError?.message === 'User already registered') {
+    if (signUpError) {
+      // Account existiert bereits → zeige Hinweis
       setAlreadyRegistered(true)
       setLoading(false)
       return
     }
 
+    // Direkt einloggen
     const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
 
     if (signInError || !data.session) {

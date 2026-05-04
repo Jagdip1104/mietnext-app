@@ -16,8 +16,25 @@ function TenantRegisterForm() {
 
   useEffect(() => {
     const emailParam = searchParams.get('email')
-    if (emailParam) setEmail(decodeURIComponent(emailParam))
+    if (emailParam) {
+      const decodedEmail = decodeURIComponent(emailParam)
+      setEmail(decodedEmail)
+      checkIfRegistered(decodedEmail)
+    }
   }, [searchParams])
+
+  const checkIfRegistered = async (emailToCheck: string) => {
+    // Prüfe ob User bereits in auth.users existiert via API Route
+    const res = await fetch('/api/check-tenant', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: emailToCheck }),
+    })
+    const data = await res.json()
+    if (data.exists) {
+      setAlreadyRegistered(true)
+    }
+  }
 
   const handleRegister = async () => {
     setError('')
@@ -31,17 +48,14 @@ function TenantRegisterForm() {
     }
     setLoading(true)
 
-    // Erst registrieren versuchen
     const { error: signUpError } = await supabase.auth.signUp({ email, password })
 
     if (signUpError) {
-      // Account existiert bereits → zeige Hinweis
-      setAlreadyRegistered(true)
+      setError('Fehler bei der Registrierung: ' + signUpError.message)
       setLoading(false)
       return
     }
 
-    // Direkt einloggen
     const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
 
     if (signInError || !data.session) {

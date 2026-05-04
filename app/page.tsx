@@ -10,24 +10,28 @@ export default function Home() {
   useEffect(() => {
     if (typeof window === 'undefined') return
     const hash = window.location.hash
+
     if (hash.includes('type=recovery')) {
       router.push('/reset-password' + hash)
       return
     }
+
     if (hash.includes('access_token')) {
-      setTimeout(async () => {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (session) {
-          const { data: tenantUser } = await supabase
-            .from('tenant_users').select('id')
-            .eq('user_id', session.user.id).single()
-          if (tenantUser) {
-            router.push('/tenant-portal')
-          } else {
-            router.push('/dashboard')
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        async (event: string, session: any) => {
+          if (event === 'SIGNED_IN' && session) {
+            subscription.unsubscribe()
+            const { data: tenantUser } = await supabase
+              .from('tenant_users').select('id')
+              .eq('user_id', session.user.id).single()
+            if (tenantUser) {
+              router.push('/tenant-portal')
+            } else {
+              router.push('/dashboard')
+            }
           }
         }
-      }, 1000)
+      )
     }
   }, [])
 

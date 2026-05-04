@@ -31,22 +31,30 @@ export default function InviteTenant() {
     if (!selectedTenant || !inviteEmail) return
     setLoading(true); setError(''); setSuccess('')
 
-    // E-Mail mit Registrierungslink senden
+    const tenant = tenants.find(t => t.id === selectedTenant)
     const registerLink = `https://mietnext.de/tenant-register?email=${encodeURIComponent(inviteEmail)}`
 
-    const { error: emailError } = await supabase.auth.signInWithOtp({
-      email: inviteEmail,
-      options: {
-        emailRedirectTo: registerLink,
-        shouldCreateUser: false,
-      }
-    })
-
-    // Direkt E-Mail mit Link über Resend senden wäre besser
-    // Für jetzt: Mieter-Email speichern und Link anzeigen
+    // E-Mail speichern
     await supabase.from('tenants').update({ email: inviteEmail }).eq('id', selectedTenant)
 
-    setSuccess(`✅ Einladung gesendet! Teile diesen Link mit dem Mieter: ${registerLink}`)
+    // E-Mail senden via Resend
+    const res = await fetch('/api/invite-tenant', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: inviteEmail,
+        tenantName: tenant?.full_name || 'Mieter',
+        registerLink,
+      }),
+    })
+
+    if (!res.ok) {
+      setError('E-Mail konnte nicht gesendet werden.')
+      setLoading(false)
+      return
+    }
+
+    setSuccess(`Link generiert: ${registerLink}`)
     setSelectedTenant(''); setInviteEmail('')
     setLoading(false)
   }
@@ -63,19 +71,18 @@ export default function InviteTenant() {
           Mieter einladen
         </h1>
         <p style={{ fontSize: '14px', color: '#999', margin: '0 0 40px' }}>
-          Generiere einen Zugangslink für dein Mieter-Portal
+          Sende deinem Mieter einen Zugang zum Mieter-Portal
         </p>
 
         {success && (
           <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '16px', marginBottom: '24px', fontSize: '14px', color: '#16a34a' }}>
-            <p style={{ margin: '0 0 8px', fontWeight: '500' }}>Einladung erstellt!</p>
-            <p style={{ margin: '0 0 8px', color: '#166534' }}>Sende diesen Link an den Mieter:</p>
+            <p style={{ margin: '0 0 8px', fontWeight: '500' }}>✅ Einladung gesendet!</p>
+            <p style={{ margin: '0 0 8px', color: '#166534' }}>Der Mieter hat eine E-Mail erhalten mit dem Zugangslink.</p>
             <code style={{ backgroundColor: '#dcfce7', padding: '8px 12px', borderRadius: '6px', fontSize: '12px', display: 'block', wordBreak: 'break-all', color: '#166534' }}>
               {success.split(': ')[1]}
             </code>
-            <button onClick={() => {
-              navigator.clipboard.writeText(success.split(': ')[1])
-            }} style={{ marginTop: '8px', backgroundColor: '#16a34a', color: '#fff', padding: '8px 16px', borderRadius: '6px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>
+            <button onClick={() => navigator.clipboard.writeText(success.split(': ')[1])}
+              style={{ marginTop: '8px', backgroundColor: '#16a34a', color: '#fff', padding: '8px 16px', borderRadius: '6px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>
               Link kopieren
             </button>
           </div>
@@ -109,14 +116,14 @@ export default function InviteTenant() {
               <input value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
                 placeholder="mieter@email.de" type="email" style={input} />
               <p style={{ fontSize: '12px', color: '#bbb', margin: '6px 0 0' }}>
-                Ein Registrierungslink wird generiert den du per E-Mail weiterleiten kannst
+                Der Mieter bekommt automatisch eine E-Mail mit dem Zugangslink
               </p>
             </div>
           </div>
 
           <button onClick={handleInvite} disabled={loading || !selectedTenant || !inviteEmail}
             style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '12px 24px', borderRadius: '8px', border: 'none', fontSize: '14px', cursor: 'pointer', opacity: loading || !selectedTenant || !inviteEmail ? 0.4 : 1 }}>
-            {loading ? 'Wird erstellt...' : 'Einladungslink erstellen →'}
+            {loading ? 'Wird gesendet...' : 'Einladung senden →'}
           </button>
         </div>
 
@@ -125,7 +132,7 @@ export default function InviteTenant() {
             <h2 style={{ fontSize: '13px', color: '#999', margin: '0 0 16px', textTransform: 'uppercase', letterSpacing: '1px' }}>
               Deine Mieter
             </h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
               {tenants.map(t => (
                 <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #f0ede6' }}>
                   <div>

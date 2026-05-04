@@ -42,37 +42,21 @@ function TenantRegisterForm() {
       return
     }
 
-    const uid = data.session.user.id
+    // API Route aufrufen um tenant_users zu erstellen
+    const res = await fetch('/api/tenant-register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email,
+        userId: data.session.user.id,
+      }),
+    })
 
-    // Mieter anhand E-Mail suchen
-    const { data: tenantData } = await supabase
-      .from('tenants')
-      .select('*')
-      .eq('email', email)
-      .single()
-
-    if (!tenantData) {
+    if (!res.ok) {
       setError('Kein Mieter mit dieser E-Mail gefunden. Bitte kontaktiere deinen Vermieter.')
       await supabase.auth.signOut()
       setLoading(false)
       return
-    }
-
-    // Prüfe ob tenant_users bereits existiert
-    const { data: existingTU } = await supabase
-      .from('tenant_users')
-      .select('id')
-      .eq('user_id', uid)
-      .single()
-
-    if (!existingTU) {
-      const { error: tuError } = await supabase.from('tenant_users').insert({
-        user_id: uid,
-        tenant_id: tenantData.id,
-      })
-      if (tuError) {
-        console.error('tenant_users Fehler:', tuError)
-      }
     }
 
     setLoading(false)

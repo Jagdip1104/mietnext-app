@@ -29,14 +29,27 @@ export default function LoginPage() {
   }, [])
 
   const redirectUser = async (uid: string) => {
-    const { data: tenantUser } = await supabase
-      .from('tenant_users').select('id').eq('user_id', uid).single()
-    if (tenantUser) {
-      router.push('/tenant-portal')
-    } else {
-      router.push('/dashboard')
-    }
+  // Prüfe ob Mieter
+  const { data: tenantUser } = await supabase
+    .from('tenant_users').select('id').eq('user_id', uid).single()
+
+  // Prüfe ob Vermieter (hat eigene Objekte)
+  const { count: propertyCount } = await supabase
+    .from('properties').select('*', { count: 'exact', head: true })
+    .eq('owner_id', uid)
+
+  const isTenant = !!tenantUser
+  const isLandlord = (propertyCount || 0) > 0
+
+  if (isTenant && isLandlord) {
+    // Beide Rollen → Auswahl zeigen
+    router.push('/role-select')
+  } else if (isTenant) {
+    router.push('/tenant-portal')
+  } else {
+    router.push('/dashboard')
   }
+}
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()

@@ -14,42 +14,58 @@ export default function LoginPage() {
   useEffect(() => {
     const check = async () => {
       const { data: { session } } = await supabase.auth.getSession()
-      if (session) { redirectUser(session.user.id) }
+      if (session) { redirectUser(session.user.id, session.user.email || '') }
     }
     check()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: string, session: any) => {
         if (event === 'SIGNED_IN' && session) {
-          redirectUser(session.user.id)
+          redirectUser(session.user.id, session.user.email || '')
         }
       }
     )
     return () => subscription.unsubscribe()
   }, [])
 
-  const redirectUser = async (uid: string) => {
-  // Prüfe ob Mieter
-  const { data: tenantUser } = await supabase
-    .from('tenant_users').select('id').eq('user_id', uid).single()
+  const redirectUser = async (uid: string, userEmail: string) => {
+    // Prüfe ob tenant_users existiert
+    const { data: tenantUser } = await supabase
+      .from('tenant_users').select('id').eq('user_id', uid).single()
 
-  // Prüfe ob Vermieter (hat eigene Objekte)
-  const { count: propertyCount } = await supabase
-    .from('properties').select('*', { count: 'exact', head: true })
-    .eq('owner_id', uid)
+    // Wenn nicht → prüfe ob E-Mail in tenants existiert → erstelle tenant_users
+    if (!tenantUser) {
+      const { data: tenant } = await supabase
+        .from('tenants').select('id').eq('email', userEmail).single()
 
-  const isTenant = !!tenantUser
-  const isLandlord = (propertyCount || 0) > 0
+      if (tenant) {
+        await supabase.from('tenant_users').insert({
+          user_id: uid,
+          tenant_id: tenant.id,
+        })
+      }
+    }
 
-  if (isTenant && isLandlord) {
-    // Beide Rollen → Auswahl zeigen
-    router.push('/role-select')
-  } else if (isTenant) {
-    router.push('/tenant-portal')
-  } else {
-    router.push('/dashboard')
+    // Nochmal prüfen ob tenant_users existiert
+    const { data: tenantUserFinal } = await supabase
+      .from('tenant_users').select('id').eq('user_id', uid).single()
+
+    // Prüfe ob Vermieter
+    const { count: propertyCount } = await supabase
+      .from('properties').select('*', { count: 'exact', head: true })
+      .eq('owner_id', uid)
+
+    const isTenant = !!tenantUserFinal
+    const isLandlord = (propertyCount || 0) > 0
+
+    if (isTenant && isLandlord) {
+      router.push('/role-select')
+    } else if (isTenant) {
+      router.push('/tenant-portal')
+    } else {
+      router.push('/dashboard')
+    }
   }
-}
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()

@@ -10,28 +10,14 @@ function TenantRegisterForm() {
   const [passwordConfirm, setPasswordConfirm] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [alreadyRegistered, setAlreadyRegistered] = useState(false)
+  const [success, setSuccess] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
 
   useEffect(() => {
     const emailParam = searchParams.get('email')
-    if (emailParam) {
-      const decodedEmail = decodeURIComponent(emailParam)
-      setEmail(decodedEmail)
-      checkIfRegistered(decodedEmail)
-    }
+    if (emailParam) setEmail(decodeURIComponent(emailParam))
   }, [searchParams])
-
-  const checkIfRegistered = async (emailToCheck: string) => {
-    const res = await fetch('/api/check-tenant', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: emailToCheck }),
-    })
-    const data = await res.json()
-    if (data.exists) setAlreadyRegistered(true)
-  }
 
   const handleRegister = async () => {
     setError('')
@@ -45,67 +31,35 @@ function TenantRegisterForm() {
     }
     setLoading(true)
 
-    // Registrieren
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({ email, password })
+    const { error: signUpError } = await supabase.auth.signUp({ email, password })
 
     if (signUpError) {
-      setError('Fehler bei der Registrierung: ' + signUpError.message)
+      if (signUpError.message.includes('already')) {
+        // Account existiert → direkt zum Login
+        router.push('/login')
+        return
+      }
+      setError('Fehler: ' + signUpError.message)
       setLoading(false)
       return
     }
 
-    const userId = signUpData.user?.id
-    if (!userId) {
-      setError('Fehler bei der Registrierung.')
-      setLoading(false)
-      return
-    }
-
-    // API Route: E-Mail bestätigen + tenant_users erstellen
-    const res = await fetch('/api/tenant-register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, userId }),
-    })
-
-    if (!res.ok) {
-      setError('Kein Mieter mit dieser E-Mail gefunden. Bitte kontaktiere deinen Vermieter.')
-      await supabase.auth.signOut()
-      setLoading(false)
-      return
-    }
-
-    // Direkt einloggen
-    const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
-
-    if (signInError || !data.session) {
-      setError('Fehler beim Einloggen. Bitte versuche es erneut.')
-      setLoading(false)
-      return
-    }
-
+    setSuccess(true)
     setLoading(false)
-    router.push('/tenant-portal')
   }
 
-  if (alreadyRegistered) {
+  if (success) {
     return (
       <main style={{ minHeight: '100vh', backgroundColor: '#fafaf8', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
         <div style={{ backgroundColor: '#fff', border: '1px solid #e8e6e0', borderRadius: '16px', padding: '40px', width: '100%', maxWidth: '380px', textAlign: 'center' }}>
-          <div style={{ fontSize: '40px', marginBottom: '16px' }}>👋</div>
+          <div style={{ fontSize: '40px', marginBottom: '16px' }}>🎉</div>
           <div style={{ fontSize: '20px', fontWeight: '600', color: '#1a1a1a', marginBottom: '8px', fontFamily: 'Georgia, serif' }}>
-            Du hast bereits ein Konto!
+            Konto erstellt!
           </div>
-          <p style={{ fontSize: '14px', color: '#999', marginBottom: '8px' }}>
-            Du bist bereits bei MietNext registriert.
-          </p>
           <p style={{ fontSize: '14px', color: '#999', marginBottom: '32px' }}>
-            Bitte logge dich mit deiner E-Mail-Adresse ein:
+            Du kannst dich jetzt einloggen und dein Mieter-Portal aufrufen.
           </p>
-          <div style={{ backgroundColor: '#f5f4f0', borderRadius: '8px', padding: '12px', marginBottom: '24px', fontSize: '14px', color: '#1a1a1a', fontWeight: '500' }}>
-            {email}
-          </div>
-          <button onClick={async () => { await supabase.auth.signOut(); router.push('/login') }}
+          <button onClick={() => router.push('/login')}
             style={{ width: '100%', backgroundColor: '#1a1a1a', color: '#fff', padding: '12px', borderRadius: '8px', border: 'none', fontSize: '14px', cursor: 'pointer' }}>
             Zum Login →
           </button>

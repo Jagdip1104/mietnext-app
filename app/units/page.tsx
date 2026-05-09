@@ -91,8 +91,18 @@ export default function Units() {
   }
 
   const handleDelete = async (id: string) => {
-    await supabase.from('units').delete().eq('id', id)
-    setDeleteConfirm(null); loadData(userId!)
+    const { error } = await supabase.from('units').delete().eq('id', id)
+    if (error) {
+      if (error.code === '23503') {
+        alert('Diese Einheit kann nicht gelöscht werden, da noch Mieter, Verträge oder andere Daten damit verknüpft sind.\n\nBitte entferne erst diese Verknüpfungen.')
+      } else {
+        alert('Fehler beim Löschen: ' + error.message)
+      }
+      setDeleteConfirm(null)
+      return
+    }
+    setDeleteConfirm(null)
+    loadData(userId!)
   }
 
   const computeTotalRent = () => {

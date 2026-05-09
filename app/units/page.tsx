@@ -17,6 +17,8 @@ export default function Units() {
   const [sizeSqm, setSizeSqm] = useState('')
   const [rooms, setRooms] = useState('')
   const [rentAmount, setRentAmount] = useState('')
+  const [utilitiesAmount, setUtilitiesAmount] = useState('')
+  const [vatRate, setVatRate] = useState('19')
   const [usageType, setUsageType] = useState('')
   const [parkingType, setParkingType] = useState('garage')
   const [vatApplicable, setVatApplicable] = useState(false)
@@ -50,7 +52,10 @@ export default function Units() {
     setEditingId(u.id); setType(u.type || 'wohnung'); setName(u.name)
     setSelectedProperty(u.property_id); setFloor(u.floor?.toString() || '')
     setSizeSqm(u.size_sqm?.toString() || ''); setRooms(u.rooms?.toString() || '')
-    setRentAmount(u.rent_amount?.toString() || ''); setUsageType(u.usage_type || '')
+    setRentAmount(u.rent_amount?.toString() || '')
+    setUtilitiesAmount(u.utilities_amount?.toString() || '')
+    setVatRate(u.vat_rate?.toString() || '19')
+    setUsageType(u.usage_type || '')
     setParkingType(u.parking_type || 'garage'); setVatApplicable(u.vat_applicable || false)
     setNotes(u.notes || ''); setShowForm(true)
   }
@@ -58,17 +63,27 @@ export default function Units() {
   const handleCancel = () => {
     setShowForm(false); setEditingId(null); setType('wohnung'); setName('')
     setSelectedProperty(''); setFloor(''); setSizeSqm(''); setRooms('')
-    setRentAmount(''); setUsageType(''); setParkingType('garage')
+    setRentAmount(''); setUtilitiesAmount(''); setVatRate('19')
+    setUsageType(''); setParkingType('garage')
     setVatApplicable(false); setNotes('')
   }
 
   const handleSave = async () => {
     if (!name || !selectedProperty) return
     setLoading(true)
-    const data: any = { name, property_id: selectedProperty, type, notes: notes || null,
-      size_sqm: sizeSqm ? parseFloat(sizeSqm) : null, rent_amount: rentAmount ? parseFloat(rentAmount) : null }
+    const data: any = {
+      name, property_id: selectedProperty, type, notes: notes || null,
+      size_sqm: sizeSqm ? parseFloat(sizeSqm) : null,
+      rent_amount: rentAmount ? parseFloat(rentAmount) : 0,
+      utilities_amount: utilitiesAmount ? parseFloat(utilitiesAmount) : 0,
+    }
     if (type === 'wohnung') { data.floor = floor ? parseInt(floor) : null; data.rooms = rooms ? parseFloat(rooms) : null }
-    if (type === 'gewerbe') { data.floor = floor ? parseInt(floor) : null; data.usage_type = usageType || null; data.vat_applicable = vatApplicable }
+    if (type === 'gewerbe') {
+      data.floor = floor ? parseInt(floor) : null
+      data.usage_type = usageType || null
+      data.vat_applicable = vatApplicable
+      data.vat_rate = vatApplicable ? (vatRate ? parseFloat(vatRate) : 19) : 19
+    }
     if (type === 'stellplatz') { data.parking_type = parkingType }
     if (editingId) { await supabase.from('units').update(data).eq('id', editingId) }
     else { await supabase.from('units').insert({ ...data, is_occupied: false }) }
@@ -78,6 +93,23 @@ export default function Units() {
   const handleDelete = async (id: string) => {
     await supabase.from('units').delete().eq('id', id)
     setDeleteConfirm(null); loadData(userId!)
+  }
+
+  const computeTotalRent = () => {
+    const base = parseFloat(rentAmount) || 0
+    const utils = parseFloat(utilitiesAmount) || 0
+    const subtotal = base + utils
+    if (type === 'gewerbe' && vatApplicable) {
+      const vat = parseFloat(vatRate) || 19
+      return subtotal * (1 + vat / 100)
+    }
+    return subtotal
+  }
+
+  const formatEur = (val: number | string | null | undefined) => {
+    if (val === null || val === undefined || val === '') return '0,00 €'
+    const n = typeof val === 'string' ? parseFloat(val) : val
+    return n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
   }
 
   const typeColor: any = { wohnung: '#3b82f6', gewerbe: '#8b5cf6', stellplatz: '#6b7280', sonstige: '#6b7280' }
@@ -136,6 +168,7 @@ export default function Units() {
                 <div><label style={label}>Zimmer</label><input value={rooms} onChange={e => setRooms(e.target.value)} placeholder="z.B. 3" type="number" style={input} /></div>
                 <div><label style={label}>Fläche (m²)</label><input value={sizeSqm} onChange={e => setSizeSqm(e.target.value)} placeholder="z.B. 75" type="number" style={input} /></div>
                 <div><label style={label}>Soll-Kaltmiete (€)</label><input value={rentAmount} onChange={e => setRentAmount(e.target.value)} placeholder="z.B. 950" type="number" style={input} /></div>
+                <div style={{ gridColumn: 'span 2' }}><label style={label}>Nebenkosten (€/Monat)</label><input value={utilitiesAmount} onChange={e => setUtilitiesAmount(e.target.value)} placeholder="z.B. 150" type="number" style={input} /></div>
               </>)}
 
               {type === 'gewerbe' && (<>
@@ -154,10 +187,17 @@ export default function Units() {
                   </select>
                 </div>
                 <div><label style={label}>Soll-Kaltmiete (€/Monat)</label><input value={rentAmount} onChange={e => setRentAmount(e.target.value)} placeholder="z.B. 2000" type="number" style={input} /></div>
+                <div style={{ gridColumn: 'span 2' }}><label style={label}>Nebenkosten (€/Monat)</label><input value={utilitiesAmount} onChange={e => setUtilitiesAmount(e.target.value)} placeholder="z.B. 300" type="number" style={input} /></div>
                 <div style={{ gridColumn: 'span 2', display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <input type="checkbox" id="vat" checked={vatApplicable} onChange={e => setVatApplicable(e.target.checked)} style={{ width: '16px', height: '16px' }} />
-                  <label htmlFor="vat" style={{ fontSize: '14px', color: '#666' }}>Umsatzsteuerpflichtig (19% MwSt.)</label>
+                  <label htmlFor="vat" style={{ fontSize: '14px', color: '#666' }}>Umsatzsteuerpflichtig (MwSt.)</label>
                 </div>
+                {vatApplicable && (
+                  <div style={{ gridColumn: 'span 2' }}>
+                    <label style={label}>MwSt-Satz (%)</label>
+                    <input value={vatRate} onChange={e => setVatRate(e.target.value)} placeholder="19" type="number" style={input} />
+                  </div>
+                )}
               </>)}
 
               {type === 'stellplatz' && (<>
@@ -170,13 +210,29 @@ export default function Units() {
                     <option value="tiefgarage">Tiefgarage</option>
                   </select>
                 </div>
-                <div style={{ gridColumn: 'span 2' }}><label style={label}>Miete (€/Monat)</label><input value={rentAmount} onChange={e => setRentAmount(e.target.value)} placeholder="z.B. 80" type="number" style={input} /></div>
+                <div><label style={label}>Miete (€/Monat)</label><input value={rentAmount} onChange={e => setRentAmount(e.target.value)} placeholder="z.B. 80" type="number" style={input} /></div>
+                <div><label style={label}>Nebenkosten (€/Monat)</label><input value={utilitiesAmount} onChange={e => setUtilitiesAmount(e.target.value)} placeholder="z.B. 0" type="number" style={input} /></div>
               </>)}
 
               {type === 'sonstige' && (<>
                 <div><label style={label}>Fläche (m²)</label><input value={sizeSqm} onChange={e => setSizeSqm(e.target.value)} placeholder="z.B. 20" type="number" style={input} /></div>
                 <div><label style={label}>Miete (€/Monat)</label><input value={rentAmount} onChange={e => setRentAmount(e.target.value)} placeholder="z.B. 50" type="number" style={input} /></div>
+                <div style={{ gridColumn: 'span 2' }}><label style={label}>Nebenkosten (€/Monat)</label><input value={utilitiesAmount} onChange={e => setUtilitiesAmount(e.target.value)} placeholder="z.B. 0" type="number" style={input} /></div>
               </>)}
+
+              {(rentAmount || utilitiesAmount) && (
+                <div style={{ gridColumn: 'span 2', backgroundColor: '#f5f4f0', borderRadius: '8px', padding: '14px 18px', marginTop: '4px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '13px', color: '#666' }}>
+                      Kaltmiete {formatEur(rentAmount)} + Nebenkosten {formatEur(utilitiesAmount)}
+                      {type === 'gewerbe' && vatApplicable && ` + ${vatRate}% MwSt.`}
+                    </span>
+                    <span style={{ fontSize: '16px', fontWeight: '600', color: '#1a1a1a', fontFamily: 'Georgia, serif' }}>
+                      Gesamt: {formatEur(computeTotalRent())}
+                    </span>
+                  </div>
+                </div>
+              )}
 
               <div style={{ gridColumn: 'span 2' }}>
                 <label style={label}>Notizen</label>
@@ -224,7 +280,7 @@ export default function Units() {
                         {u.size_sqm && ` · ${u.size_sqm} m²`}
                         {u.rooms && ` · ${u.rooms} Zimmer`}
                         {u.floor !== null && u.floor !== undefined && ` · ${u.floor}. OG`}
-                        {u.rent_amount && ` · ${u.rent_amount} €/Monat`}
+                        {u.total_rent && ` · ${formatEur(u.total_rent)}/Monat`}
                       </p>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

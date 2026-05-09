@@ -11,6 +11,7 @@ export default function Contracts() {
   const [units, setUnits] = useState<any[]>([])
   const [contracts, setContracts] = useState<any[]>([])
   const [paymentCounts, setPaymentCounts] = useState<{ [key: string]: number }>({})
+  const [paidCounts, setPaidCounts] = useState<{ [key: string]: number }>({})
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [selectedTenant, setSelectedTenant] = useState('')
@@ -22,6 +23,7 @@ export default function Contracts() {
   const [loading, setLoading] = useState(false)
   const [generatingId, setGeneratingId] = useState<string | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [endConfirm, setEndConfirm] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
   const router = useRouter()
 
@@ -49,12 +51,18 @@ export default function Contracts() {
       .order('created_at', { ascending: false })
     setContracts(contractsData || [])
 
-    // Zählen wie viele Zahlungen pro Vertrag existieren
+    // Gesamt- und bezahlte Zahlungen pro Vertrag zählen
     const counts: { [key: string]: number } = {}
+    const paidCountsTmp: { [key: string]: number } = {}
     for (const c of contractsData || []) {
       counts[c.id] = await countPaymentsForContract(c.id)
+      const { count: paid } = await supabase
+        .from('payments').select('*', { count: 'exact', head: true })
+        .eq('contract_id', c.id).eq('status', 'paid')
+      paidCountsTmp[c.id] = paid || 0
     }
     setPaymentCounts(counts)
+    setPaidCounts(paidCountsTmp)
   }
 
   const handleEdit = (c: any) => {
@@ -92,13 +100,8 @@ export default function Contracts() {
     } else {
       const { data: newContract } = await supabase.from('contracts').insert(data).select().single()
       if (newContract) {
-        // Automatisch 12 Zahlungen generieren
         const { error } = await generatePaymentsForContract(
-          newContract.id,
-          startDate,
-          parseFloat(rentAmount),
-          12,
-          0
+          newContract.id, startDate, parseFloat(rentAmount), 12, 0
         )
         if (error) {
           alert('Vertrag erstellt, aber Zahlungen konnten nicht generiert werden: ' + error.message)
@@ -108,14 +111,41 @@ export default function Contracts() {
     handleCancel(); setLoading(false); loadData(userId!)
   }
 
+  // Vertrag beenden (is_active = false, zukünftige Zahlungen entfernen)
+  const handleEndContract = async (id: string) => {
+    const today = new Date().toISOString().split('T')[0]
+    const { error: contractError } = await supabase.from('contracts')
+      .update({ is_active: false, end_date: today })
+      .eq('id', id)
+    if (contractError) {
+      alert('Fehler beim Beenden: ' + contractError.message)
+      setEndConfirm(null); return
+    }
+    // Zukünftige unbezahlte Zahlungen löschen (nicht bezahlte bleiben für Buchhaltung)
+    await supabase.from('payments').delete()
+      .eq('contract_id', id).eq('status', 'pending').gt('due_date', today)
+    setEndConfirm(null)
+    loadData(userId!)
+  }
+
+  // Vertrag löschen (nur erlaubt wenn keine bezahlten Zahlungen)
   const handleDelete = async (id: string) => {
+    const paid = paidCounts[id] || 0
+    if (paid > 0) {
+      alert(`Dieser Vertrag hat ${paid} bereits bezahlte Zahlung(en).\n\nAus Buchhaltungsgründen (10-Jahre-Aufbewahrung nach §147 AO) kann er nicht gelöscht werden.\n\nNutze stattdessen "Beenden" um den Vertrag zu archivieren – die Daten bleiben dabei erhalten.`)
+      setDeleteConfirm(null); return
+    }
+    // Alle pending Zahlungen löschen
+    const { error: paymentsError } = await supabase
+      .from('payments').delete().eq('contract_id', id)
+    if (paymentsError) {
+      alert('Fehler beim Löschen der Zahlungen: ' + paymentsError.message)
+      setDeleteConfirm(null); return
+    }
+    // Vertrag löschen
     const { error } = await supabase.from('contracts').delete().eq('id', id)
     if (error) {
-      if (error.code === '23503') {
-        alert('Dieser Vertrag kann nicht gelöscht werden, da noch Zahlungen damit verknüpft sind.\n\nBitte erst die Zahlungen entfernen.')
-      } else {
-        alert('Fehler beim Löschen: ' + error.message)
-      }
+      alert('Fehler beim Löschen: ' + error.message)
       setDeleteConfirm(null); return
     }
     setDeleteConfirm(null); loadData(userId!)
@@ -125,11 +155,7 @@ export default function Contracts() {
     setGeneratingId(c.id)
     const existingCount = paymentCounts[c.id] || 0
     const { error } = await generatePaymentsForContract(
-      c.id,
-      c.start_date,
-      parseFloat(c.rent_amount),
-      12,
-      existingCount
+      c.id, c.start_date, parseFloat(c.rent_amount), 12, existingCount
     )
     setGeneratingId(null)
     if (error) {
@@ -233,10 +259,22 @@ export default function Contracts() {
               <div key={c.id} style={card}>
                 {deleteConfirm === c.id ? (
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <p style={{ fontSize: '14px', color: '#dc2626', margin: 0 }}>Vertrag wirklich löschen?</p>
+                    <p style={{ fontSize: '14px', color: '#dc2626', margin: 0 }}>
+                      Vertrag inkl. {paymentCounts[c.id] || 0} Zahlungen wirklich löschen?
+                    </p>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <button onClick={() => handleDelete(c.id)} style={{ backgroundColor: '#dc2626', color: '#fff', padding: '8px 16px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>Ja, löschen</button>
                       <button onClick={() => setDeleteConfirm(null)} style={{ backgroundColor: '#fff', color: '#666', padding: '8px 16px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer' }}>Abbrechen</button>
+                    </div>
+                  </div>
+                ) : endConfirm === c.id ? (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <p style={{ fontSize: '14px', color: '#d97706', margin: 0 }}>
+                      Vertrag heute beenden? Zukünftige unbezahlte Zahlungen werden entfernt.
+                    </p>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button onClick={() => handleEndContract(c.id)} style={{ backgroundColor: '#d97706', color: '#fff', padding: '8px 16px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>Ja, beenden</button>
+                      <button onClick={() => setEndConfirm(null)} style={{ backgroundColor: '#fff', color: '#666', padding: '8px 16px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer' }}>Abbrechen</button>
                     </div>
                   </div>
                 ) : (
@@ -248,7 +286,7 @@ export default function Contracts() {
                         {c.end_date && ` bis ${new Date(c.end_date).toLocaleDateString('de-DE')}`}
                       </p>
                       <p style={{ fontSize: '12px', color: '#16a34a', margin: 0 }}>
-                        💶 {paymentCounts[c.id] || 0} Zahlungen erfasst
+                        💶 {paymentCounts[c.id] || 0} Zahlungen · {paidCounts[c.id] || 0} bezahlt
                       </p>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -259,11 +297,16 @@ export default function Contracts() {
                       <span style={{ fontSize: '12px', color: c.is_active ? '#16a34a' : '#999', backgroundColor: c.is_active ? '#f0fdf4' : '#f5f4f0', padding: '4px 12px', borderRadius: '20px' }}>
                         {c.is_active ? 'Aktiv' : 'Beendet'}
                       </span>
-                      <button onClick={() => handleGeneratePayments(c)} disabled={generatingId === c.id}
-                        style={{ backgroundColor: '#f0f9ff', color: '#0369a1', padding: '8px 14px', borderRadius: '8px', border: '1px solid #bae6fd', fontSize: '13px', cursor: 'pointer', opacity: generatingId === c.id ? 0.5 : 1 }}>
-                        {generatingId === c.id ? '...' : '+ 12 Zahlungen'}
-                      </button>
+                      {c.is_active && (
+                        <button onClick={() => handleGeneratePayments(c)} disabled={generatingId === c.id}
+                          style={{ backgroundColor: '#f0f9ff', color: '#0369a1', padding: '8px 14px', borderRadius: '8px', border: '1px solid #bae6fd', fontSize: '13px', cursor: 'pointer', opacity: generatingId === c.id ? 0.5 : 1 }}>
+                          {generatingId === c.id ? '...' : '+ 12 Zahlungen'}
+                        </button>
+                      )}
                       <button onClick={() => handleEdit(c)} style={{ backgroundColor: '#fff', color: '#666', padding: '8px 14px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer' }}>Bearbeiten</button>
+                      {c.is_active && (
+                        <button onClick={() => setEndConfirm(c.id)} style={{ backgroundColor: '#fff', color: '#d97706', padding: '8px 14px', borderRadius: '8px', border: '1px solid #fed7aa', fontSize: '13px', cursor: 'pointer' }}>Beenden</button>
+                      )}
                       <button onClick={() => setDeleteConfirm(c.id)} style={{ backgroundColor: '#fff', color: '#dc2626', padding: '8px 14px', borderRadius: '8px', border: '1px solid #fecaca', fontSize: '13px', cursor: 'pointer' }}>Löschen</button>
                     </div>
                   </div>

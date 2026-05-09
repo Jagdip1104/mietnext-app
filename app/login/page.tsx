@@ -29,33 +29,34 @@ export default function LoginPage() {
   }, [])
 
   const redirectUser = async (uid: string, userEmail: string) => {
-    // Prüfe ob tenant_users existiert
-    const { data: tenantUser } = await supabase
-      .from('tenant_users').select('id').eq('user_id', uid).single()
+    const emailLower = userEmail.toLowerCase().trim()
 
-    // Wenn nicht → prüfe ob E-Mail in tenants existiert → erstelle tenant_users
-    if (!tenantUser) {
-      const { data: tenant } = await supabase
-        .from('tenants').select('id').eq('email', userEmail).single()
+    // Hat User bereits einen tenant_users Eintrag?
+    const { data: existingTU } = await supabase
+      .from('tenant_users').select('id').eq('user_id', uid).limit(1)
 
-      if (tenant) {
+    // Wenn nicht → suche tenant per E-Mail (case-insensitive)
+    if (!existingTU || existingTU.length === 0) {
+      const { data: tenants } = await supabase
+        .from('tenants').select('id').ilike('email', emailLower).limit(1)
+
+      if (tenants && tenants.length > 0) {
         await supabase.from('tenant_users').insert({
           user_id: uid,
-          tenant_id: tenant.id,
+          tenant_id: tenants[0].id,
         })
       }
     }
 
-    // Nochmal prüfen ob tenant_users existiert
-    const { data: tenantUserFinal } = await supabase
-      .from('tenant_users').select('id').eq('user_id', uid).single()
+    // Final check (kein .single() mehr - sicher gegen Duplikate)
+    const { data: finalTU } = await supabase
+      .from('tenant_users').select('id').eq('user_id', uid).limit(1)
 
-    // Prüfe ob Vermieter
     const { count: propertyCount } = await supabase
       .from('properties').select('*', { count: 'exact', head: true })
       .eq('owner_id', uid)
 
-    const isTenant = !!tenantUserFinal
+    const isTenant = (finalTU?.length || 0) > 0
     const isLandlord = (propertyCount || 0) > 0
 
     if (isTenant && isLandlord) {
@@ -71,7 +72,10 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
     setError('')
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.toLowerCase().trim(),
+      password,
+    })
     if (error) {
       setError('E-Mail oder Passwort falsch')
       setLoading(false)

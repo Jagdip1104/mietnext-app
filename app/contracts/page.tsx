@@ -4,11 +4,13 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Nav from '@/components/Nav'
+import { generatePaymentsForContract, countPaymentsForContract } from '@/lib/payments'
 
 export default function Contracts() {
   const [tenants, setTenants] = useState<any[]>([])
   const [units, setUnits] = useState<any[]>([])
   const [contracts, setContracts] = useState<any[]>([])
+  const [paymentCounts, setPaymentCounts] = useState<{ [key: string]: number }>({})
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [selectedTenant, setSelectedTenant] = useState('')
@@ -18,6 +20,7 @@ export default function Contracts() {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [loading, setLoading] = useState(false)
+  const [generatingId, setGeneratingId] = useState<string | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
   const router = useRouter()
@@ -41,10 +44,17 @@ export default function Contracts() {
       .in('property_id', propertyIds.length > 0 ? propertyIds : ['none']).order('name')
     setUnits(unitsData || [])
     const { data: contractsData } = await supabase.from('contracts')
-      .select('*, tenants(full_name), units(name, properties(name))')
+      .select('*, tenants(full_name), units(name, total_rent, properties(name))')
       .in('tenant_id', (tenantsData || []).map((t: any) => t.id).length > 0 ? (tenantsData || []).map((t: any) => t.id) : ['none'])
       .order('created_at', { ascending: false })
     setContracts(contractsData || [])
+
+    // Zählen wie viele Zahlungen pro Vertrag existieren
+    const counts: { [key: string]: number } = {}
+    for (const c of contractsData || []) {
+      counts[c.id] = await countPaymentsForContract(c.id)
+    }
+    setPaymentCounts(counts)
   }
 
   const handleEdit = (c: any) => {
@@ -60,18 +70,80 @@ export default function Contracts() {
     setDeposit(''); setStartDate(''); setEndDate('')
   }
 
+  const handleUnitChange = (unitId: string) => {
+    setSelectedUnit(unitId)
+    const unit = units.find(u => u.id === unitId)
+    if (unit?.total_rent && !editingId) {
+      setRentAmount(parseFloat(unit.total_rent).toFixed(2))
+    }
+  }
+
   const handleSave = async () => {
     if (!selectedTenant || !selectedUnit || !rentAmount || !startDate) return
     setLoading(true)
-    const data = { tenant_id: selectedTenant, unit_id: selectedUnit, rent_amount: parseFloat(rentAmount), deposit: deposit ? parseFloat(deposit) : null, start_date: startDate, end_date: endDate || null, is_active: true }
-    if (editingId) { await supabase.from('contracts').update(data).eq('id', editingId) }
-    else { await supabase.from('contracts').insert(data) }
+    const data = {
+      tenant_id: selectedTenant, unit_id: selectedUnit,
+      rent_amount: parseFloat(rentAmount),
+      deposit: deposit ? parseFloat(deposit) : null,
+      start_date: startDate, end_date: endDate || null, is_active: true
+    }
+    if (editingId) {
+      await supabase.from('contracts').update(data).eq('id', editingId)
+    } else {
+      const { data: newContract } = await supabase.from('contracts').insert(data).select().single()
+      if (newContract) {
+        // Automatisch 12 Zahlungen generieren
+        const { error } = await generatePaymentsForContract(
+          newContract.id,
+          startDate,
+          parseFloat(rentAmount),
+          12,
+          0
+        )
+        if (error) {
+          alert('Vertrag erstellt, aber Zahlungen konnten nicht generiert werden: ' + error.message)
+        }
+      }
+    }
     handleCancel(); setLoading(false); loadData(userId!)
   }
 
   const handleDelete = async (id: string) => {
-    await supabase.from('contracts').delete().eq('id', id)
+    const { error } = await supabase.from('contracts').delete().eq('id', id)
+    if (error) {
+      if (error.code === '23503') {
+        alert('Dieser Vertrag kann nicht gelöscht werden, da noch Zahlungen damit verknüpft sind.\n\nBitte erst die Zahlungen entfernen.')
+      } else {
+        alert('Fehler beim Löschen: ' + error.message)
+      }
+      setDeleteConfirm(null); return
+    }
     setDeleteConfirm(null); loadData(userId!)
+  }
+
+  const handleGeneratePayments = async (c: any) => {
+    setGeneratingId(c.id)
+    const existingCount = paymentCounts[c.id] || 0
+    const { error } = await generatePaymentsForContract(
+      c.id,
+      c.start_date,
+      parseFloat(c.rent_amount),
+      12,
+      existingCount
+    )
+    setGeneratingId(null)
+    if (error) {
+      alert('Fehler: ' + error.message)
+    } else {
+      alert(`12 Zahlungen generiert! (Monat ${existingCount + 1} bis ${existingCount + 12})`)
+      loadData(userId!)
+    }
+  }
+
+  const formatEur = (val: number | string | null | undefined) => {
+    if (val === null || val === undefined || val === '') return '0,00 €'
+    const n = typeof val === 'string' ? parseFloat(val) : val
+    return n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
   }
 
   const card = { backgroundColor: '#fff', border: '1px solid #e8e6e0', borderRadius: '12px', padding: '24px' }
@@ -109,14 +181,14 @@ export default function Contracts() {
               </div>
               <div style={{ gridColumn: 'span 2' }}>
                 <label style={label}>Einheit *</label>
-                <select value={selectedUnit} onChange={e => setSelectedUnit(e.target.value)} style={input}>
+                <select value={selectedUnit} onChange={e => handleUnitChange(e.target.value)} style={input}>
                   <option value="">Einheit auswählen...</option>
-                  {units.map(u => <option key={u.id} value={u.id}>{u.properties?.name} – {u.name}</option>)}
+                  {units.map(u => <option key={u.id} value={u.id}>{u.properties?.name} – {u.name} ({formatEur(u.total_rent)})</option>)}
                 </select>
               </div>
               <div>
-                <label style={label}>Monatliche Miete (€) *</label>
-                <input value={rentAmount} onChange={e => setRentAmount(e.target.value)} placeholder="z.B. 950" type="number" style={input} />
+                <label style={label}>Monatliche Gesamtmiete (€) *</label>
+                <input value={rentAmount} onChange={e => setRentAmount(e.target.value)} placeholder="z.B. 950" type="number" step="0.01" style={input} />
               </div>
               <div>
                 <label style={label}>Kaution (€)</label>
@@ -131,10 +203,15 @@ export default function Contracts() {
                 <input value={endDate} onChange={e => setEndDate(e.target.value)} type="date" style={input} />
               </div>
             </div>
+            {!editingId && (
+              <div style={{ backgroundColor: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px', padding: '12px 16px', marginBottom: '16px', fontSize: '13px', color: '#0369a1' }}>
+                ℹ️ Beim Speichern werden automatisch <strong>12 monatliche Zahlungen</strong> generiert. Fälligkeit: {startDate && new Date(startDate + 'T00:00:00').getDate() === 1 ? '3. Werktag jeden Monats (BGB-Standard)' : 'Vertragstag + 3 Tage'}
+              </div>
+            )}
             <div style={{ display: 'flex', gap: '8px' }}>
               <button onClick={handleSave} disabled={loading || !selectedTenant || !selectedUnit || !rentAmount || !startDate}
                 style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer', opacity: loading ? 0.4 : 1 }}>
-                {loading ? 'Speichern...' : editingId ? 'Änderungen speichern' : 'Speichern'}
+                {loading ? 'Speichern...' : editingId ? 'Änderungen speichern' : 'Speichern & Zahlungen erstellen'}
               </button>
               <button onClick={handleCancel} style={{ backgroundColor: '#fff', color: '#666', padding: '10px 20px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer' }}>
                 Abbrechen
@@ -163,22 +240,29 @@ export default function Contracts() {
                     </div>
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                    <div style={{ flex: 1, minWidth: '200px' }}>
                       <p style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 4px' }}>{c.tenants?.full_name}</p>
-                      <p style={{ fontSize: '13px', color: '#bbb', margin: 0 }}>
+                      <p style={{ fontSize: '13px', color: '#bbb', margin: '0 0 4px' }}>
                         {c.units?.properties?.name} – {c.units?.name} · ab {new Date(c.start_date).toLocaleDateString('de-DE')}
                         {c.end_date && ` bis ${new Date(c.end_date).toLocaleDateString('de-DE')}`}
                       </p>
+                      <p style={{ fontSize: '12px', color: '#16a34a', margin: 0 }}>
+                        💶 {paymentCounts[c.id] || 0} Zahlungen erfasst
+                      </p>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                       <div style={{ textAlign: 'right' }}>
-                        <p style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 2px' }}>{c.rent_amount} €/Mo.</p>
-                        {c.deposit && <p style={{ fontSize: '12px', color: '#bbb', margin: 0 }}>Kaution: {c.deposit} €</p>}
+                        <p style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 2px' }}>{formatEur(c.rent_amount)}/Mo.</p>
+                        {c.deposit && <p style={{ fontSize: '12px', color: '#bbb', margin: 0 }}>Kaution: {formatEur(c.deposit)}</p>}
                       </div>
                       <span style={{ fontSize: '12px', color: c.is_active ? '#16a34a' : '#999', backgroundColor: c.is_active ? '#f0fdf4' : '#f5f4f0', padding: '4px 12px', borderRadius: '20px' }}>
                         {c.is_active ? 'Aktiv' : 'Beendet'}
                       </span>
+                      <button onClick={() => handleGeneratePayments(c)} disabled={generatingId === c.id}
+                        style={{ backgroundColor: '#f0f9ff', color: '#0369a1', padding: '8px 14px', borderRadius: '8px', border: '1px solid #bae6fd', fontSize: '13px', cursor: 'pointer', opacity: generatingId === c.id ? 0.5 : 1 }}>
+                        {generatingId === c.id ? '...' : '+ 12 Zahlungen'}
+                      </button>
                       <button onClick={() => handleEdit(c)} style={{ backgroundColor: '#fff', color: '#666', padding: '8px 14px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer' }}>Bearbeiten</button>
                       <button onClick={() => setDeleteConfirm(c.id)} style={{ backgroundColor: '#fff', color: '#dc2626', padding: '8px 14px', borderRadius: '8px', border: '1px solid #fecaca', fontSize: '13px', cursor: 'pointer' }}>Löschen</button>
                     </div>

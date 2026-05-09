@@ -8,6 +8,7 @@ export default function TenantPortal() {
   const [tenant, setTenant] = useState<any>(null)
   const [unit, setUnit] = useState<any>(null)
   const [contract, setContract] = useState<any>(null)
+  const [payments, setPayments] = useState<any[]>([])
   const [tickets, setTickets] = useState<any[]>([])
   const [showForm, setShowForm] = useState(false)
   const [title, setTitle] = useState('')
@@ -19,7 +20,6 @@ export default function TenantPortal() {
   const router = useRouter()
 
   useEffect(() => {
-    // Warte auf Auth State Change (Magic Link Token wird verarbeitet)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: string, session: any) => {
         if (event === 'SIGNED_IN' && session) {
@@ -32,7 +32,6 @@ export default function TenantPortal() {
       }
     )
 
-    // Prüfe ob bereits eingeloggt
     supabase.auth.getSession().then(async ({ data: { session } }: { data: { session: any } }) => {
       if (session) {
         await loadTenantData(session.user.id, session.user.email)
@@ -45,12 +44,11 @@ export default function TenantPortal() {
   }, [])
 
   const loadTenantData = async (uid: string, email: string | undefined) => {
-    // Prüfe tenant_users
     const { data: tenantUser } = await supabase
       .from('tenant_users')
       .select('*, tenants(*, units(*, properties(*)))')
       .eq('user_id', uid)
-      .single()
+      .maybeSingle()
 
     if (tenantUser?.tenants) {
       const tenantData = tenantUser.tenants
@@ -60,16 +58,14 @@ export default function TenantPortal() {
       return
     }
 
-    // Kein tenant_users Eintrag – suche per E-Mail
     if (email) {
       const { data: tenantData } = await supabase
         .from('tenants')
         .select('*, units(*, properties(*))')
-        .eq('email', email)
-        .single()
+        .eq('email', email.toLowerCase().trim())
+        .maybeSingle()
 
       if (tenantData) {
-        // Erstelle tenant_users Eintrag
         await supabase.from('tenant_users').insert({
           user_id: uid,
           tenant_id: tenantData.id,
@@ -85,11 +81,25 @@ export default function TenantPortal() {
   }
 
   const loadContractAndTickets = async (tenantId: string, unitId: string) => {
+    // Aktiver Vertrag
     const { data: contractData } = await supabase
       .from('contracts').select('*')
-      .eq('tenant_id', tenantId).eq('is_active', true).single()
+      .eq('tenant_id', tenantId).eq('is_active', true)
+      .maybeSingle()
     setContract(contractData)
 
+    // Zahlungen laden (nur wenn Vertrag existiert)
+    if (contractData) {
+      const { data: paymentsData } = await supabase
+        .from('payments').select('*')
+        .eq('contract_id', contractData.id)
+        .order('due_date', { ascending: true })
+      setPayments(paymentsData || [])
+    } else {
+      setPayments([])
+    }
+
+    // Tickets
     const { data: ticketsData } = await supabase
       .from('tickets').select('*')
       .eq('unit_id', unitId)
@@ -113,6 +123,20 @@ export default function TenantPortal() {
   const handleLogout = async () => {
     await supabase.auth.signOut()
     router.push('/login')
+  }
+
+  const formatEur = (val: number | string | null | undefined) => {
+    if (val === null || val === undefined || val === '') return '0,00 €'
+    const n = typeof val === 'string' ? parseFloat(val) : val
+    return n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
+  }
+
+  // Zahlungs-Status mit Überfälligkeit-Logik
+  const getPaymentStatus = (p: any) => {
+    if (p.status === 'paid') return { label: 'Bezahlt', color: '#16a34a', bg: '#f0fdf4' }
+    const today = new Date().toISOString().split('T')[0]
+    if (p.due_date < today) return { label: 'Überfällig', color: '#dc2626', bg: '#fef2f2' }
+    return { label: 'Offen', color: '#d97706', bg: '#fffbeb' }
   }
 
   const statusColor: any = { open: '#dc2626', in_progress: '#d97706', closed: '#16a34a' }
@@ -146,6 +170,14 @@ export default function TenantPortal() {
       </main>
     )
   }
+
+  // Nächste 6 Zahlungen für Anzeige
+  const upcomingPayments = payments.slice(0, 6)
+  const paidCount = payments.filter(p => p.status === 'paid').length
+  const overdueCount = payments.filter(p => {
+    const today = new Date().toISOString().split('T')[0]
+    return p.status !== 'paid' && p.due_date < today
+  }).length
 
   return (
     <main style={{ backgroundColor: '#fafaf8', minHeight: '100vh' }}>
@@ -195,18 +227,18 @@ export default function TenantPortal() {
         </div>
 
         {/* Vertrag */}
-        {contract && (
+        {contract ? (
           <div style={{ ...card, marginBottom: '16px' }}>
             <h2 style={{ fontSize: '13px', color: '#999', margin: '0 0 16px', textTransform: 'uppercase', letterSpacing: '1px' }}>Mein Mietvertrag</h2>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div>
                 <p style={{ fontSize: '12px', color: '#bbb', margin: '0 0 4px' }}>Monatliche Miete</p>
-                <p style={{ fontSize: '22px', color: '#1a1a1a', margin: 0, fontWeight: '300', fontFamily: 'Georgia, serif' }}>{contract.rent_amount} €</p>
+                <p style={{ fontSize: '22px', color: '#1a1a1a', margin: 0, fontWeight: '300', fontFamily: 'Georgia, serif' }}>{formatEur(contract.rent_amount)}</p>
               </div>
               {contract.deposit && (
                 <div>
                   <p style={{ fontSize: '12px', color: '#bbb', margin: '0 0 4px' }}>Kaution</p>
-                  <p style={{ fontSize: '22px', color: '#1a1a1a', margin: 0, fontWeight: '300', fontFamily: 'Georgia, serif' }}>{contract.deposit} €</p>
+                  <p style={{ fontSize: '22px', color: '#1a1a1a', margin: 0, fontWeight: '300', fontFamily: 'Georgia, serif' }}>{formatEur(contract.deposit)}</p>
                 </div>
               )}
               <div>
@@ -218,6 +250,50 @@ export default function TenantPortal() {
                 <p style={{ fontSize: '15px', color: '#1a1a1a', margin: 0, fontWeight: '500' }}>{contract.end_date ? `bis ${new Date(contract.end_date).toLocaleDateString('de-DE')}` : 'Unbefristet'}</p>
               </div>
             </div>
+          </div>
+        ) : (
+          <div style={{ ...card, marginBottom: '16px', backgroundColor: '#fffbeb', border: '1px solid #fde68a' }}>
+            <p style={{ fontSize: '14px', color: '#92400e', margin: 0 }}>
+              ℹ️ Noch kein aktiver Mietvertrag hinterlegt. Bitte kontaktiere deinen Vermieter.
+            </p>
+          </div>
+        )}
+
+        {/* Zahlungen */}
+        {contract && payments.length > 0 && (
+          <div style={{ ...card, marginBottom: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 style={{ fontSize: '13px', color: '#999', margin: 0, textTransform: 'uppercase', letterSpacing: '1px' }}>Meine Zahlungen</h2>
+              <div style={{ display: 'flex', gap: '12px', fontSize: '12px' }}>
+                <span style={{ color: '#16a34a' }}>✓ {paidCount} bezahlt</span>
+                {overdueCount > 0 && <span style={{ color: '#dc2626' }}>⚠ {overdueCount} überfällig</span>}
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {upcomingPayments.map(p => {
+                const ps = getPaymentStatus(p)
+                return (
+                  <div key={p.id} style={{ backgroundColor: '#fafaf8', borderRadius: '10px', padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <p style={{ fontSize: '14px', color: '#1a1a1a', margin: '0 0 2px', fontWeight: '500' }}>
+                        {formatEur(p.amount)}
+                      </p>
+                      <p style={{ fontSize: '12px', color: '#999', margin: 0 }}>
+                        Fällig: {new Date(p.due_date).toLocaleDateString('de-DE')}
+                      </p>
+                    </div>
+                    <span style={{ fontSize: '11px', color: ps.color, backgroundColor: ps.bg, padding: '4px 12px', borderRadius: '20px', fontWeight: '500' }}>
+                      {ps.label}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+            {payments.length > 6 && (
+              <p style={{ fontSize: '12px', color: '#bbb', margin: '12px 0 0', textAlign: 'center' }}>
+                + {payments.length - 6} weitere Zahlungen
+              </p>
+            )}
           </div>
         )}
 

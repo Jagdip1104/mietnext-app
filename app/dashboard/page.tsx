@@ -27,57 +27,91 @@ export default function Dashboard() {
   }, [])
 
   const loadData = async (uid: string) => {
-    const [
-      { count: propCount },
-      { count: unitCount },
-      { count: occupiedCount },
-      { count: tenantCount },
-    ] = await Promise.all([
-      supabase.from('properties').select('*', { count: 'exact', head: true }).eq('owner_id', uid),
-      supabase.from('units').select('*', { count: 'exact', head: true }).in('property_id',
-        (await supabase.from('properties').select('id').eq('owner_id', uid)).data?.map((p: any) => p.id) || []
-      ),
-      supabase.from('units').select('*', { count: 'exact', head: true }).eq('is_occupied', true).in('property_id',
-        (await supabase.from('properties').select('id').eq('owner_id', uid)).data?.map((p: any) => p.id) || []
-      ),
-      supabase.from('tenants').select('*', { count: 'exact', head: true }).eq('owner_id', uid),
-    ])
+    // 1. Eigene properties finden
+    const { data: ownProperties } = await supabase
+      .from('properties').select('id').eq('owner_id', uid)
+    const propertyIds = (ownProperties || []).map((p: any) => p.id)
 
+    // 2. Eigene units finden
+    const { data: ownUnits } = await supabase
+      .from('units').select('id, is_occupied')
+      .in('property_id', propertyIds.length > 0 ? propertyIds : ['none'])
+    const unitIds = (ownUnits || []).map((u: any) => u.id)
+    const occupiedCount = (ownUnits || []).filter((u: any) => u.is_occupied).length
+
+    // 3. Eigene tenants finden
+    const { count: tenantCount } = await supabase
+      .from('tenants').select('*', { count: 'exact', head: true }).eq('owner_id', uid)
+
+    // 4. Eigene contracts finden (über units)
+    const { data: ownContracts } = await supabase
+      .from('contracts').select('id')
+      .in('unit_id', unitIds.length > 0 ? unitIds : ['none'])
+    const contractIds = (ownContracts || []).map((c: any) => c.id)
+
+    // 5. Tickets nur für eigene units
     const { count: ticketCount } = await supabase
-      .from('tickets').select('*', { count: 'exact', head: true }).eq('status', 'open')
+      .from('tickets').select('*', { count: 'exact', head: true })
+      .eq('status', 'open')
+      .in('unit_id', unitIds.length > 0 ? unitIds : ['none'])
 
+    // 6. Payments nur für eigene contracts
     const now = new Date()
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
 
-    const { data: paidThisMonth } = await supabase
-      .from('payments').select('amount').eq('status', 'paid')
-      .gte('paid_date', firstDay).lte('paid_date', lastDay)
+    let monthlyIncome = 0
+    let pendingTotal = 0
+    let lateTotal = 0
+    let recentTicketsData: any[] = []
+    let recentPaymentsData: any[] = []
 
-    const { data: pendingPayments } = await supabase
-      .from('payments').select('amount').eq('status', 'pending')
+    if (contractIds.length > 0) {
+      const { data: paidThisMonth } = await supabase
+        .from('payments').select('amount').eq('status', 'paid')
+        .in('contract_id', contractIds)
+        .gte('paid_date', firstDay).lte('paid_date', lastDay)
 
-    const { data: latePayments } = await supabase
-      .from('payments').select('amount').eq('status', 'late')
+      const { data: pendingPayments } = await supabase
+        .from('payments').select('amount').eq('status', 'pending')
+        .in('contract_id', contractIds)
 
-    const { data: tickets } = await supabase
-      .from('tickets').select('*, units(name, properties(name))')
-      .eq('status', 'open').order('created_at', { ascending: false }).limit(3)
+      const { data: latePayments } = await supabase
+        .from('payments').select('amount').eq('status', 'late')
+        .in('contract_id', contractIds)
 
-    const { data: payments } = await supabase
-      .from('payments').select('*, contracts(tenants(full_name))')
-      .order('created_at', { ascending: false }).limit(4)
+      monthlyIncome = (paidThisMonth || []).reduce((s: number, p: any) => s + Number(p.amount || 0), 0)
+      pendingTotal = (pendingPayments || []).reduce((s: number, p: any) => s + Number(p.amount || 0), 0)
+      lateTotal = (latePayments || []).reduce((s: number, p: any) => s + Number(p.amount || 0), 0)
+
+      const { data: payments } = await supabase
+        .from('payments').select('*, contracts(tenants(full_name))')
+        .in('contract_id', contractIds)
+        .order('created_at', { ascending: false }).limit(4)
+      recentPaymentsData = payments || []
+    }
+
+    if (unitIds.length > 0) {
+      const { data: tickets } = await supabase
+        .from('tickets').select('*, units(name, properties(name))')
+        .eq('status', 'open')
+        .in('unit_id', unitIds)
+        .order('created_at', { ascending: false }).limit(3)
+      recentTicketsData = tickets || []
+    }
 
     setStats({
-      properties: propCount || 0, units: unitCount || 0,
-      occupiedUnits: occupiedCount || 0, tenants: tenantCount || 0,
+      properties: propertyIds.length,
+      units: unitIds.length,
+      occupiedUnits: occupiedCount,
+      tenants: tenantCount || 0,
       openTickets: ticketCount || 0,
-      monthlyIncome: (paidThisMonth || []).reduce((s: number, p: any) => s + p.amount, 0),
-      pendingPayments: (pendingPayments || []).reduce((s: number, p: any) => s + p.amount, 0),
-      latePayments: (latePayments || []).reduce((s: number, p: any) => s + p.amount, 0),
+      monthlyIncome,
+      pendingPayments: pendingTotal,
+      latePayments: lateTotal,
     })
-    setRecentTickets(tickets || [])
-    setRecentPayments(payments || [])
+    setRecentTickets(recentTicketsData)
+    setRecentPayments(recentPaymentsData)
   }
 
   const occupancyRate = stats.units > 0 ? Math.round((stats.occupiedUnits / stats.units) * 100) : 0
@@ -99,7 +133,6 @@ export default function Dashboard() {
       <Nav />
       <div style={{ maxWidth: '1040px', margin: '0 auto', padding: '48px 48px' }}>
 
-        {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '40px' }}>
           <div>
             <h1 style={{ fontSize: '28px', fontWeight: '400', color: '#1a1a1a', margin: '0 0 4px', fontFamily: 'Georgia, serif' }}>
@@ -120,7 +153,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Finanz-Karten */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '16px' }}>
           {[
             { label: 'Einnahmen diesen Monat', value: stats.monthlyIncome, color: '#16a34a' },
@@ -138,7 +170,6 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* Objekte Karten */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' }}>
           {[
             { label: 'Objekte', value: stats.properties, href: '/properties' },
@@ -158,7 +189,6 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* Tickets & Zahlungen */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
           <div style={card}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -172,7 +202,7 @@ export default function Dashboard() {
               <p style={{ fontSize: '13px', color: '#bbb', margin: 0 }}>Keine offenen Tickets</p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {recentTickets.map(t => (
+                {recentTickets.map((t: any) => (
                   <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                       <p style={{ fontSize: '13px', color: '#1a1a1a', margin: '0 0 2px' }}>{t.title}</p>
@@ -199,14 +229,14 @@ export default function Dashboard() {
               <p style={{ fontSize: '13px', color: '#bbb', margin: 0 }}>Noch keine Zahlungen</p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {recentPayments.map(p => (
+                {recentPayments.map((p: any) => (
                   <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                       <p style={{ fontSize: '13px', color: '#1a1a1a', margin: '0 0 2px' }}>{p.contracts?.tenants?.full_name || 'Unbekannt'}</p>
                       <p style={{ fontSize: '12px', color: '#bbb', margin: 0 }}>{new Date(p.due_date).toLocaleDateString('de-DE')}</p>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <p style={{ fontSize: '13px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 2px' }}>{p.amount.toLocaleString('de-DE')} €</p>
+                      <p style={{ fontSize: '13px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 2px' }}>{Number(p.amount).toLocaleString('de-DE')} €</p>
                       <p style={{ fontSize: '11px', color: statusColor[p.status], margin: 0, fontWeight: '500' }}>{statusLabel[p.status]}</p>
                     </div>
                   </div>
@@ -216,7 +246,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Schnellzugriff */}
         <div style={card}>
           <p style={{ fontSize: '13px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 16px' }}>Schnellzugriff</p>
           <div style={{ display: 'flex', gap: '8px' }}>

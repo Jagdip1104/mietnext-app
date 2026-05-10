@@ -34,14 +34,25 @@ interface PreviewStats {
   totalNebenkosten: number
 }
 
+interface ImportResult {
+  propertiesAdded: number
+  propertiesReused: number
+  unitsAdded: number
+  tenantsAdded: number
+  rowsSkipped: number
+  errors: string[]
+}
+
 export default function Import() {
   const [userId, setUserId] = useState<string | null>(null)
   const [file, setFile] = useState<File | null>(null)
   const [rows, setRows] = useState<ImportRow[]>([])
   const [stats, setStats] = useState<PreviewStats | null>(null)
   const [parsing, setParsing] = useState(false)
+  const [importing, setImporting] = useState(false)
   const [dragActive, setDragActive] = useState(false)
   const [error, setError] = useState('')
+  const [result, setResult] = useState<ImportResult | null>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -88,6 +99,7 @@ export default function Import() {
     setError('')
     setRows([])
     setStats(null)
+    setResult(null)
 
     if (!selectedFile.name.match(/\.(xlsx|xls|csv)$/i)) {
       setError('Bitte eine Excel- oder CSV-Datei hochladen (.xlsx, .xls, .csv)')
@@ -213,10 +225,176 @@ export default function Import() {
     setRows([])
     setStats(null)
     setError('')
+    setResult(null)
   }
 
+  // ==========================================
+  // ETAPPE 2: Echte Import-Logik
+  // ==========================================
   const handleImport = async () => {
-    alert('Import-Logik kommt in Etappe 2 – aktuell nur Vorschau!')
+    if (!userId) return
+    const validRows = rows.filter(r => r.errors.length === 0)
+    if (validRows.length === 0) return
+
+    setImporting(true)
+    setError('')
+
+    const importErrors: string[] = []
+    const createdPropertyIds: string[] = []
+    const createdUnitIds: string[] = []
+    const createdTenantIds: string[] = []
+    let propertiesAdded = 0
+    let propertiesReused = 0
+    let unitsAdded = 0
+    let tenantsAdded = 0
+
+    try {
+      // ─────────────────────────────────────
+      // 1) Bestehende Objekte des Owners laden
+      // ─────────────────────────────────────
+      const { data: existingProps } = await supabase
+        .from('properties').select('id, name').eq('owner_id', userId)
+      const propertyMap = new Map<string, string>()
+      ;(existingProps || []).forEach((p: any) => propertyMap.set(p.name.toLowerCase(), p.id))
+
+      // ─────────────────────────────────────
+      // 2) Eindeutige Objekte aus Zeilen bestimmen + neue anlegen
+      // ─────────────────────────────────────
+      const uniquePropsToCreate = new Map<string, { name: string; address: string; yearBuilt: number | null }>()
+      for (const row of validRows) {
+        const key = row.property.toLowerCase()
+        if (!propertyMap.has(key) && !uniquePropsToCreate.has(key)) {
+          uniquePropsToCreate.set(key, {
+            name: row.property,
+            address: row.address,
+            yearBuilt: row.yearBuilt
+          })
+        } else if (propertyMap.has(key)) {
+          // Zähle nur 1x pro eindeutigem Objekt
+          if (!uniquePropsToCreate.has(key + '__counted__')) {
+            propertiesReused++
+            uniquePropsToCreate.set(key + '__counted__', { name: '', address: '', yearBuilt: null })
+          }
+        }
+      }
+
+      // Neue Objekte einfügen
+      const propsToInsert = Array.from(uniquePropsToCreate.entries())
+        .filter(([k]) => !k.endsWith('__counted__'))
+        .map(([, p]) => ({
+          name: p.name,
+          address: p.address || null,
+          year_built: p.yearBuilt,
+          owner_id: userId
+        }))
+
+      if (propsToInsert.length > 0) {
+        const { data: insertedProps, error: propsError } = await supabase
+          .from('properties').insert(propsToInsert).select('id, name')
+
+        if (propsError) {
+          throw new Error('Objekte: ' + propsError.message)
+        }
+
+        ;(insertedProps || []).forEach((p: any) => {
+          propertyMap.set(p.name.toLowerCase(), p.id)
+          createdPropertyIds.push(p.id)
+          propertiesAdded++
+        })
+      }
+
+      // ─────────────────────────────────────
+      // 3) Einheiten anlegen
+      // ─────────────────────────────────────
+      const unitsToInsert = validRows.map(row => ({
+        property_id: propertyMap.get(row.property.toLowerCase()),
+        name: row.unit,
+        size_sqm: row.sizeSqm,
+        rooms: row.rooms,
+        rent_amount: row.rentAmount,
+        utilities_amount: row.utilities,
+        vat_rate: row.vatRate
+      }))
+
+      const { data: insertedUnits, error: unitsError } = await supabase
+        .from('units').insert(unitsToInsert).select('id, name, property_id')
+
+      if (unitsError) {
+        throw new Error('Einheiten: ' + unitsError.message)
+      }
+
+      // Map: "propertyId-unitName" → unitId (für Mieter-Verknüpfung)
+      const unitMap = new Map<string, string>()
+      ;(insertedUnits || []).forEach((u: any) => {
+        unitMap.set(`${u.property_id}-${u.name.toLowerCase()}`, u.id)
+        createdUnitIds.push(u.id)
+        unitsAdded++
+      })
+
+      // ─────────────────────────────────────
+      // 4) Mieter anlegen (nur wo Name vorhanden)
+      // ─────────────────────────────────────
+      const tenantsToInsert = validRows
+        .filter(row => row.tenantName)
+        .map(row => {
+          const propertyId = propertyMap.get(row.property.toLowerCase())
+          const unitId = unitMap.get(`${propertyId}-${row.unit.toLowerCase()}`)
+          return {
+            full_name: row.tenantName,
+            email: row.tenantEmail || null,
+            phone: row.tenantPhone || null,
+            unit_id: unitId || null,
+            owner_id: userId
+          }
+        })
+
+      if (tenantsToInsert.length > 0) {
+        const { data: insertedTenants, error: tenantsError } = await supabase
+          .from('tenants').insert(tenantsToInsert).select('id')
+
+        if (tenantsError) {
+          // Mieter-Fehler ist nicht-kritisch – wir loggen ihn nur
+          importErrors.push('Manche Mieter konnten nicht angelegt werden: ' + tenantsError.message)
+        } else {
+          ;(insertedTenants || []).forEach((t: any) => {
+            createdTenantIds.push(t.id)
+            tenantsAdded++
+          })
+        }
+      }
+
+      // ─────────────────────────────────────
+      // 5) Audit-Log schreiben
+      // ─────────────────────────────────────
+      await supabase.from('imports').insert({
+        owner_id: userId,
+        filename: file?.name || 'unbekannt',
+        properties_added: propertiesAdded,
+        units_added: unitsAdded,
+        tenants_added: tenantsAdded,
+        rows_skipped: rows.length - validRows.length,
+        errors: importErrors.length > 0 ? importErrors : null,
+        property_ids: createdPropertyIds,
+        unit_ids: createdUnitIds,
+        tenant_ids: createdTenantIds
+      })
+
+      // ─────────────────────────────────────
+      // 6) Ergebnis anzeigen
+      // ─────────────────────────────────────
+      setResult({
+        propertiesAdded,
+        propertiesReused,
+        unitsAdded,
+        tenantsAdded,
+        rowsSkipped: rows.length - validRows.length,
+        errors: importErrors
+      })
+    } catch (err: any) {
+      setError('Import fehlgeschlagen: ' + err.message)
+    }
+
+    setImporting(false)
   }
 
   const formatEur = (val: number) => val.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
@@ -236,7 +414,61 @@ export default function Import() {
           </p>
         </div>
 
-        {!file && (
+        {/* Erfolgs-Übersicht nach Import */}
+        {result && (
+          <div style={{ ...card, marginBottom: '16px', borderLeft: '4px solid #16a34a' }}>
+            <h2 style={{ fontSize: '20px', fontWeight: '500', color: '#16a34a', margin: '0 0 8px', fontFamily: 'Georgia, serif' }}>
+              ✓ Import erfolgreich!
+            </h2>
+            <p style={{ fontSize: '14px', color: '#666', margin: '0 0 20px' }}>
+              Datei <strong>{file?.name}</strong> wurde verarbeitet.
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '20px' }}>
+              <div style={{ backgroundColor: '#f0fdf4', borderRadius: '10px', padding: '16px' }}>
+                <p style={{ fontSize: '11px', color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 4px' }}>Neue Objekte</p>
+                <p style={{ fontSize: '24px', color: '#16a34a', fontWeight: '300', fontFamily: 'Georgia, serif', margin: 0 }}>{result.propertiesAdded}</p>
+                {result.propertiesReused > 0 && (
+                  <p style={{ fontSize: '11px', color: '#999', margin: '4px 0 0' }}>+{result.propertiesReused} bestehende</p>
+                )}
+              </div>
+              <div style={{ backgroundColor: '#eff6ff', borderRadius: '10px', padding: '16px' }}>
+                <p style={{ fontSize: '11px', color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 4px' }}>Neue Einheiten</p>
+                <p style={{ fontSize: '24px', color: '#2563eb', fontWeight: '300', fontFamily: 'Georgia, serif', margin: 0 }}>{result.unitsAdded}</p>
+              </div>
+              <div style={{ backgroundColor: '#fffbeb', borderRadius: '10px', padding: '16px' }}>
+                <p style={{ fontSize: '11px', color: '#d97706', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 4px' }}>Neue Mieter</p>
+                <p style={{ fontSize: '24px', color: '#d97706', fontWeight: '300', fontFamily: 'Georgia, serif', margin: 0 }}>{result.tenantsAdded}</p>
+              </div>
+              <div style={{ backgroundColor: result.rowsSkipped > 0 ? '#fef2f2' : '#fafaf8', borderRadius: '10px', padding: '16px' }}>
+                <p style={{ fontSize: '11px', color: result.rowsSkipped > 0 ? '#dc2626' : '#999', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 4px' }}>Übersprungen</p>
+                <p style={{ fontSize: '24px', color: result.rowsSkipped > 0 ? '#dc2626' : '#bbb', fontWeight: '300', fontFamily: 'Georgia, serif', margin: 0 }}>{result.rowsSkipped}</p>
+              </div>
+            </div>
+
+            {result.errors.length > 0 && (
+              <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '12px 16px', marginBottom: '16px' }}>
+                <p style={{ fontSize: '13px', color: '#dc2626', margin: 0, fontWeight: '500' }}>Hinweise:</p>
+                <ul style={{ fontSize: '13px', color: '#dc2626', margin: '4px 0 0', paddingLeft: '20px' }}>
+                  {result.errors.map((err, i) => <li key={i}>{err}</li>)}
+                </ul>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={() => router.push('/properties')}
+                style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>
+                Zu meinen Objekten →
+              </button>
+              <button onClick={handleReset}
+                style={{ backgroundColor: '#fff', color: '#666', padding: '10px 20px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer' }}>
+                Weiteren Import starten
+              </button>
+            </div>
+          </div>
+        )}
+
+        {!result && !file && (
           <div style={{ ...card, marginBottom: '16px' }}>
             <h2 style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 8px', fontFamily: 'Georgia, serif' }}>
               1. Vorlage herunterladen
@@ -251,7 +483,7 @@ export default function Import() {
           </div>
         )}
 
-        {!file && (
+        {!result && !file && (
           <div style={{ ...card, marginBottom: '16px' }}>
             <h2 style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 16px', fontFamily: 'Georgia, serif' }}>
               2. Datei hochladen
@@ -295,7 +527,7 @@ export default function Import() {
           </div>
         )}
 
-        {stats && file && (
+        {!result && stats && file && (
           <div style={{ ...card, marginBottom: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <div>
@@ -304,7 +536,8 @@ export default function Import() {
                 </h2>
                 <p style={{ fontSize: '13px', color: '#999', margin: 0 }}>{stats.totalRows} Zeilen erkannt</p>
               </div>
-              <button onClick={handleReset} style={{ backgroundColor: '#fff', color: '#666', padding: '8px 16px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer' }}>
+              <button onClick={handleReset} disabled={importing}
+                style={{ backgroundColor: '#fff', color: '#666', padding: '8px 16px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer', opacity: importing ? 0.5 : 1 }}>
                 Andere Datei
               </button>
             </div>
@@ -380,16 +613,17 @@ export default function Import() {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '20px' }}>
-              <button onClick={handleReset} style={{ backgroundColor: '#fff', color: '#666', padding: '12px 24px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer' }}>
+              <button onClick={handleReset} disabled={importing}
+                style={{ backgroundColor: '#fff', color: '#666', padding: '12px 24px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer', opacity: importing ? 0.5 : 1 }}>
                 Abbrechen
               </button>
-              <button onClick={handleImport} disabled={stats.validRows === 0}
+              <button onClick={handleImport} disabled={stats.validRows === 0 || importing}
                 style={{
-                  backgroundColor: stats.validRows === 0 ? '#ccc' : '#1a1a1a',
+                  backgroundColor: stats.validRows === 0 || importing ? '#ccc' : '#1a1a1a',
                   color: '#fff', padding: '12px 24px', borderRadius: '8px', border: 'none',
-                  fontSize: '13px', cursor: stats.validRows === 0 ? 'not-allowed' : 'pointer'
+                  fontSize: '13px', cursor: stats.validRows === 0 || importing ? 'not-allowed' : 'pointer'
                 }}>
-                {stats.validRows} Zeilen importieren →
+                {importing ? '⏳ Importiere...' : `${stats.validRows} Zeilen importieren →`}
               </button>
             </div>
           </div>

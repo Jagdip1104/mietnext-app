@@ -8,15 +8,26 @@ import * as XLSX from 'xlsx'
 
 interface ImportRow {
   rowNum: number
+  // Property
   property: string
-  address: string
+  street: string
+  zip: string
+  city: string
   yearBuilt: number | null
+  // Unit
   unit: string
+  floor: string
   sizeSqm: number | null
   rooms: number | null
+  type: string
+  usageType: string
+  parkingType: string
   rentAmount: number | null
   utilities: number | null
+  vatApplicable: boolean | null
   vatRate: number | null
+  notes: string
+  // Tenant
   tenantName: string
   tenantEmail: string
   tenantPhone: string
@@ -64,16 +75,25 @@ export default function Import() {
     check()
   }, [])
 
+  // Smart-Mapping: alle möglichen Spaltennamen-Varianten
   const columnMap: { [key: string]: string[] } = {
     property: ['objekt', 'objekt *', 'haus', 'gebäude', 'property'],
-    address: ['adresse', 'address', 'anschrift'],
-    yearBuilt: ['baujahr', 'jahr', 'year'],
+    street: ['straße', 'strasse', 'str', 'street', 'address', 'adresse'],
+    zip: ['plz', 'postleitzahl', 'zip', 'postal'],
+    city: ['stadt', 'ort', 'city'],
+    yearBuilt: ['baujahr', 'jahr', 'year', 'year built'],
     unit: ['einheit', 'einheit *', 'wohnung', 'unit'],
-    sizeSqm: ['fläche', 'fläche m²', 'qm', 'wohnfläche', 'size'],
+    floor: ['stockwerk', 'etage', 'floor', 'geschoss'],
+    sizeSqm: ['fläche', 'fläche m²', 'flaeche', 'qm', 'wohnfläche', 'size'],
     rooms: ['zimmer', 'rooms', 'räume'],
-    rentAmount: ['kaltmiete', 'kaltmiete €', 'miete', 'rent'],
-    utilities: ['nebenkosten', 'nebenkosten €', 'nk'],
-    vatRate: ['mwst', 'mwst %', 'ust', 'vat'],
+    type: ['typ', 'type', 'art'],
+    usageType: ['nutzungsart', 'nutzung', 'usage'],
+    parkingType: ['stellplatz', 'parkplatz', 'parking', 'garage'],
+    rentAmount: ['kaltmiete', 'kaltmiete €', 'miete', 'rent', 'nettomiete'],
+    utilities: ['nebenkosten', 'nebenkosten €', 'nk', 'utilities'],
+    vatApplicable: ['mwst-pflichtig', 'mwst pflichtig', 'umsatzsteuerpflichtig', 'vat applicable'],
+    vatRate: ['mwst', 'mwst %', 'ust', 'vat', 'mehrwertsteuer'],
+    notes: ['notizen', 'notiz', 'bemerkung', 'notes'],
     tenantName: ['mieter name', 'mieter', 'name'],
     tenantEmail: ['mieter e-mail', 'e-mail', 'email', 'mail'],
     tenantPhone: ['mieter telefon', 'telefon', 'phone', 'tel']
@@ -93,6 +113,14 @@ export default function Import() {
     if (val === null || val === undefined || val === '') return null
     const num = parseFloat(String(val).replace(',', '.'))
     return isNaN(num) ? null : num
+  }
+
+  const toBool = (val: any): boolean | null => {
+    if (val === null || val === undefined || val === '') return null
+    const s = String(val).toLowerCase().trim()
+    if (['ja', 'yes', '1', 'true', 'wahr', 'x'].includes(s)) return true
+    if (['nein', 'no', '0', 'false', 'falsch'].includes(s)) return false
+    return null
   }
 
   const handleFile = async (selectedFile: File) => {
@@ -146,26 +174,42 @@ export default function Import() {
         return
       }
 
+      // Alle Spalten mappen
+      const cols = {
+        property: propertyCol,
+        street: findColumn(headers, 'street'),
+        zip: findColumn(headers, 'zip'),
+        city: findColumn(headers, 'city'),
+        yearBuilt: findColumn(headers, 'yearBuilt'),
+        unit: unitCol,
+        floor: findColumn(headers, 'floor'),
+        sizeSqm: findColumn(headers, 'sizeSqm'),
+        rooms: findColumn(headers, 'rooms'),
+        type: findColumn(headers, 'type'),
+        usageType: findColumn(headers, 'usageType'),
+        parkingType: findColumn(headers, 'parkingType'),
+        rentAmount: findColumn(headers, 'rentAmount'),
+        utilities: findColumn(headers, 'utilities'),
+        vatApplicable: findColumn(headers, 'vatApplicable'),
+        vatRate: findColumn(headers, 'vatRate'),
+        notes: findColumn(headers, 'notes'),
+        tenantName: findColumn(headers, 'tenantName'),
+        tenantEmail: findColumn(headers, 'tenantEmail'),
+        tenantPhone: findColumn(headers, 'tenantPhone')
+      }
+
+      const get = (raw: any, col: string | null) =>
+        col ? String(raw[col] || '').trim() : ''
+
       const parsedRows: ImportRow[] = jsonData.map((raw, idx) => {
         const errors: string[] = []
-        const property = String(raw[propertyCol] || '').trim()
-        const unit = String(raw[unitCol] || '').trim()
+        const property = get(raw, cols.property)
+        const unit = get(raw, cols.unit)
 
         if (!property) errors.push('Objekt fehlt')
         if (!unit) errors.push('Einheit fehlt')
 
-        const addressCol = findColumn(headers, 'address')
-        const yearCol = findColumn(headers, 'yearBuilt')
-        const sizeCol = findColumn(headers, 'sizeSqm')
-        const roomsCol = findColumn(headers, 'rooms')
-        const rentCol = findColumn(headers, 'rentAmount')
-        const utilCol = findColumn(headers, 'utilities')
-        const vatCol = findColumn(headers, 'vatRate')
-        const nameCol = findColumn(headers, 'tenantName')
-        const emailCol = findColumn(headers, 'tenantEmail')
-        const phoneCol = findColumn(headers, 'tenantPhone')
-
-        const tenantEmail = String(raw[emailCol || ''] || '').toLowerCase().trim()
+        const tenantEmail = get(raw, cols.tenantEmail).toLowerCase()
         if (tenantEmail && !tenantEmail.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
           errors.push('Ungültige E-Mail')
         }
@@ -173,17 +217,25 @@ export default function Import() {
         return {
           rowNum: idx + 2,
           property,
-          address: String(raw[addressCol || ''] || '').trim(),
-          yearBuilt: toNumber(raw[yearCol || '']),
+          street: get(raw, cols.street),
+          zip: get(raw, cols.zip),
+          city: get(raw, cols.city),
+          yearBuilt: toNumber(cols.yearBuilt ? raw[cols.yearBuilt] : ''),
           unit,
-          sizeSqm: toNumber(raw[sizeCol || '']),
-          rooms: toNumber(raw[roomsCol || '']),
-          rentAmount: toNumber(raw[rentCol || '']),
-          utilities: toNumber(raw[utilCol || '']),
-          vatRate: toNumber(raw[vatCol || '']),
-          tenantName: String(raw[nameCol || ''] || '').trim(),
+          floor: get(raw, cols.floor),
+          sizeSqm: toNumber(cols.sizeSqm ? raw[cols.sizeSqm] : ''),
+          rooms: toNumber(cols.rooms ? raw[cols.rooms] : ''),
+          type: get(raw, cols.type),
+          usageType: get(raw, cols.usageType),
+          parkingType: get(raw, cols.parkingType),
+          rentAmount: toNumber(cols.rentAmount ? raw[cols.rentAmount] : ''),
+          utilities: toNumber(cols.utilities ? raw[cols.utilities] : ''),
+          vatApplicable: toBool(cols.vatApplicable ? raw[cols.vatApplicable] : ''),
+          vatRate: toNumber(cols.vatRate ? raw[cols.vatRate] : ''),
+          notes: get(raw, cols.notes),
+          tenantName: get(raw, cols.tenantName),
           tenantEmail,
-          tenantPhone: String(raw[phoneCol || ''] || '').trim(),
+          tenantPhone: get(raw, cols.tenantPhone),
           errors
         }
       })
@@ -228,9 +280,9 @@ export default function Import() {
     setResult(null)
   }
 
-  // ==========================================
-  // ETAPPE 2: Echte Import-Logik
-  // ==========================================
+  // ============================================
+  // ECHTE IMPORT-LOGIK
+  // ============================================
   const handleImport = async () => {
     if (!userId) return
     const validRows = rows.filter(r => r.errors.length === 0)
@@ -249,53 +301,40 @@ export default function Import() {
     let tenantsAdded = 0
 
     try {
-      // ─────────────────────────────────────
-      // 1) Bestehende Objekte des Owners laden
-      // ─────────────────────────────────────
+      // 1) Bestehende Objekte des Owners laden (für Duplikat-Check)
       const { data: existingProps } = await supabase
         .from('properties').select('id, name').eq('owner_id', userId)
       const propertyMap = new Map<string, string>()
       ;(existingProps || []).forEach((p: any) => propertyMap.set(p.name.toLowerCase(), p.id))
 
-      // ─────────────────────────────────────
-      // 2) Eindeutige Objekte aus Zeilen bestimmen + neue anlegen
-      // ─────────────────────────────────────
-      const uniquePropsToCreate = new Map<string, { name: string; address: string; yearBuilt: number | null }>()
+      // 2) Neue eindeutige Objekte sammeln
+      const seenInImport = new Set<string>()
+      const propsToInsert: any[] = []
       for (const row of validRows) {
         const key = row.property.toLowerCase()
-        if (!propertyMap.has(key) && !uniquePropsToCreate.has(key)) {
-          uniquePropsToCreate.set(key, {
-            name: row.property,
-            address: row.address,
-            yearBuilt: row.yearBuilt
-          })
-        } else if (propertyMap.has(key)) {
-          // Zähle nur 1x pro eindeutigem Objekt
-          if (!uniquePropsToCreate.has(key + '__counted__')) {
+        if (propertyMap.has(key)) {
+          if (!seenInImport.has(key)) {
             propertiesReused++
-            uniquePropsToCreate.set(key + '__counted__', { name: '', address: '', yearBuilt: null })
+            seenInImport.add(key)
           }
+        } else if (!seenInImport.has(key)) {
+          seenInImport.add(key)
+          propsToInsert.push({
+            name: row.property,
+            address: row.street || null,
+            zip: row.zip || null,
+            city: row.city || null,
+            year_built: row.yearBuilt,
+            owner_id: userId
+          })
         }
       }
 
-      // Neue Objekte einfügen
-      const propsToInsert = Array.from(uniquePropsToCreate.entries())
-        .filter(([k]) => !k.endsWith('__counted__'))
-        .map(([, p]) => ({
-          name: p.name,
-          address: p.address || null,
-          year_built: p.yearBuilt,
-          owner_id: userId
-        }))
-
+      // 3) Neue Objekte einfügen
       if (propsToInsert.length > 0) {
         const { data: insertedProps, error: propsError } = await supabase
           .from('properties').insert(propsToInsert).select('id, name')
-
-        if (propsError) {
-          throw new Error('Objekte: ' + propsError.message)
-        }
-
+        if (propsError) throw new Error('Objekte: ' + propsError.message)
         ;(insertedProps || []).forEach((p: any) => {
           propertyMap.set(p.name.toLowerCase(), p.id)
           createdPropertyIds.push(p.id)
@@ -303,27 +342,28 @@ export default function Import() {
         })
       }
 
-      // ─────────────────────────────────────
-      // 3) Einheiten anlegen
-      // ─────────────────────────────────────
+      // 4) Einheiten anlegen
       const unitsToInsert = validRows.map(row => ({
         property_id: propertyMap.get(row.property.toLowerCase()),
         name: row.unit,
+        floor: row.floor || null,
         size_sqm: row.sizeSqm,
         rooms: row.rooms,
+        type: row.type || null,
+        usage_type: row.usageType || null,
+        parking_type: row.parkingType || null,
         rent_amount: row.rentAmount,
         utilities_amount: row.utilities,
-        vat_rate: row.vatRate
+        vat_applicable: row.vatApplicable,
+        vat_rate: row.vatRate,
+        notes: row.notes || null,
+        is_occupied: !!row.tenantName
       }))
 
       const { data: insertedUnits, error: unitsError } = await supabase
         .from('units').insert(unitsToInsert).select('id, name, property_id')
+      if (unitsError) throw new Error('Einheiten: ' + unitsError.message)
 
-      if (unitsError) {
-        throw new Error('Einheiten: ' + unitsError.message)
-      }
-
-      // Map: "propertyId-unitName" → unitId (für Mieter-Verknüpfung)
       const unitMap = new Map<string, string>()
       ;(insertedUnits || []).forEach((u: any) => {
         unitMap.set(`${u.property_id}-${u.name.toLowerCase()}`, u.id)
@@ -331,9 +371,7 @@ export default function Import() {
         unitsAdded++
       })
 
-      // ─────────────────────────────────────
-      // 4) Mieter anlegen (nur wo Name vorhanden)
-      // ─────────────────────────────────────
+      // 5) Mieter anlegen (nur wenn Name vorhanden)
       const tenantsToInsert = validRows
         .filter(row => row.tenantName)
         .map(row => {
@@ -351,9 +389,7 @@ export default function Import() {
       if (tenantsToInsert.length > 0) {
         const { data: insertedTenants, error: tenantsError } = await supabase
           .from('tenants').insert(tenantsToInsert).select('id')
-
         if (tenantsError) {
-          // Mieter-Fehler ist nicht-kritisch – wir loggen ihn nur
           importErrors.push('Manche Mieter konnten nicht angelegt werden: ' + tenantsError.message)
         } else {
           ;(insertedTenants || []).forEach((t: any) => {
@@ -363,9 +399,7 @@ export default function Import() {
         }
       }
 
-      // ─────────────────────────────────────
-      // 5) Audit-Log schreiben
-      // ─────────────────────────────────────
+      // 6) Audit-Log
       await supabase.from('imports').insert({
         owner_id: userId,
         filename: file?.name || 'unbekannt',
@@ -379,9 +413,6 @@ export default function Import() {
         tenant_ids: createdTenantIds
       })
 
-      // ─────────────────────────────────────
-      // 6) Ergebnis anzeigen
-      // ─────────────────────────────────────
       setResult({
         propertiesAdded,
         propertiesReused,

@@ -31,11 +31,11 @@ export default function LoginPage() {
   const redirectUser = async (uid: string, userEmail: string) => {
     const emailLower = userEmail.toLowerCase().trim()
 
-    // Hat User bereits einen tenant_users Eintrag?
+    // 1. Hat User bereits einen tenant_users Eintrag?
     const { data: existingTU } = await supabase
       .from('tenant_users').select('id').eq('user_id', uid).limit(1)
 
-    // Wenn nicht → suche tenant per E-Mail (case-insensitive)
+    // 2. Wenn nicht → Auto-Linking per E-Mail
     if (!existingTU || existingTU.length === 0) {
       const { data: tenants } = await supabase
         .from('tenants').select('id').ilike('email', emailLower).limit(1)
@@ -48,22 +48,25 @@ export default function LoginPage() {
       }
     }
 
-    // Final check (kein .single() mehr - sicher gegen Duplikate)
+    // 3. Final check für Mieter
     const { data: finalTU } = await supabase
       .from('tenant_users').select('id').eq('user_id', uid).limit(1)
-
-    const { count: propertyCount } = await supabase
-      .from('properties').select('*', { count: 'exact', head: true })
-      .eq('owner_id', uid)
-
     const isTenant = (finalTU?.length || 0) > 0
-    const isLandlord = (propertyCount || 0) > 0
 
+    // 4. Vermieter-Check über profiles (Source of Truth, NICHT Properties-Count)
+    const { data: profile } = await supabase
+      .from('profiles').select('id').eq('id', uid).maybeSingle()
+    const isLandlord = !!profile
+
+    // 5. Routing-Logik
     if (isTenant && isLandlord) {
       router.push('/role-select')
     } else if (isTenant) {
       router.push('/tenant-portal')
+    } else if (isLandlord) {
+      router.push('/dashboard')
     } else {
+      // Edge case: weder noch (sollte nicht passieren)
       router.push('/dashboard')
     }
   }

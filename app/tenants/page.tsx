@@ -55,10 +55,12 @@ export default function Tenants() {
   const handleSave = async () => {
     if (!fullName) return
     setLoading(true)
+    // E-Mail normalisieren: lowercase + trim, leer → null
+    const normalizedEmail = email.toLowerCase().trim() || null
     if (editingId) {
-      await supabase.from('tenants').update({ full_name: fullName, email, phone, unit_id: selectedUnit || null }).eq('id', editingId)
+      await supabase.from('tenants').update({ full_name: fullName, email: normalizedEmail, phone, unit_id: selectedUnit || null }).eq('id', editingId)
     } else {
-      await supabase.from('tenants').insert({ full_name: fullName, email, phone, unit_id: selectedUnit || null, owner_id: userId })
+      await supabase.from('tenants').insert({ full_name: fullName, email: normalizedEmail, phone, unit_id: selectedUnit || null, owner_id: userId })
     }
     if (selectedUnit) await supabase.from('units').update({ is_occupied: true }).eq('id', selectedUnit)
     handleCancel(); setLoading(false); loadData(userId!)

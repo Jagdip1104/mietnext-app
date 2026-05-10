@@ -16,7 +16,8 @@ function TenantRegisterForm() {
 
   useEffect(() => {
     const emailParam = searchParams.get('email')
-    if (emailParam) setEmail(decodeURIComponent(emailParam))
+    // E-Mail aus URL direkt normalisieren (lowercase + trim)
+    if (emailParam) setEmail(decodeURIComponent(emailParam).toLowerCase().trim())
   }, [searchParams])
 
   const handleRegister = async () => {
@@ -31,7 +32,11 @@ function TenantRegisterForm() {
     }
     setLoading(true)
 
-    const { error: signUpError } = await supabase.auth.signUp({ email, password })
+    // Sicherheitshalber nochmal normalisieren beim Signup
+    const { error: signUpError } = await supabase.auth.signUp({
+      email: email.toLowerCase().trim(),
+      password
+    })
 
     if (signUpError) {
       if (signUpError.message.includes('already')) {

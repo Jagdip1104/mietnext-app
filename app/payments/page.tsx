@@ -5,6 +5,11 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Nav from '@/components/Nav'
 
+interface ConfirmAction {
+  paymentId: string
+  action: 'reset' | 'delete'
+}
+
 export default function Payments() {
   const [contracts, setContracts] = useState<any[]>([])
   const [payments, setPayments] = useState<any[]>([])
@@ -15,6 +20,7 @@ export default function Payments() {
   const [paidDate, setPaidDate] = useState('')
   const [status, setStatus] = useState('pending')
   const [loading, setLoading] = useState(false)
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
   const router = useRouter()
 
@@ -57,13 +63,41 @@ export default function Payments() {
   }
 
   const handleMarkPaid = async (id: string) => {
-    await supabase.from('payments').update({ status: 'paid', paid_date: new Date().toISOString().split('T')[0] }).eq('id', id)
+    await supabase.from('payments').update({
+      status: 'paid',
+      paid_date: new Date().toISOString().split('T')[0]
+    }).eq('id', id)
     loadData(userId!)
   }
 
-  const totalPaid = payments.filter(p => p.status === 'paid').reduce((s: number, p: any) => s + p.amount, 0)
-  const totalPending = payments.filter(p => p.status === 'pending').reduce((s: number, p: any) => s + p.amount, 0)
-  const totalLate = payments.filter(p => p.status === 'late').reduce((s: number, p: any) => s + p.amount, 0)
+  // Bezahlt → Ausstehend zurücksetzen
+  const handleResetToPending = async (id: string) => {
+    const { error } = await supabase.from('payments').update({
+      status: 'pending',
+      paid_date: null
+    }).eq('id', id)
+    if (error) {
+      alert('Fehler beim Zurücksetzen: ' + error.message)
+      return
+    }
+    setConfirmAction(null)
+    loadData(userId!)
+  }
+
+  // Pending/Late Zahlung löschen
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase.from('payments').delete().eq('id', id)
+    if (error) {
+      alert('Fehler beim Löschen: ' + error.message)
+      return
+    }
+    setConfirmAction(null)
+    loadData(userId!)
+  }
+
+  const totalPaid = payments.filter((p: any) => p.status === 'paid').reduce((s: number, p: any) => s + Number(p.amount || 0), 0)
+  const totalPending = payments.filter((p: any) => p.status === 'pending').reduce((s: number, p: any) => s + Number(p.amount || 0), 0)
+  const totalLate = payments.filter((p: any) => p.status === 'late').reduce((s: number, p: any) => s + Number(p.amount || 0), 0)
 
   const statusColor: any = { paid: '#16a34a', pending: '#d97706', late: '#dc2626' }
   const statusBg: any = { paid: '#f0fdf4', pending: '#fffbeb', late: '#fef2f2' }
@@ -113,11 +147,11 @@ export default function Payments() {
                 <label style={label}>Mietvertrag *</label>
                 <select value={selectedContract} onChange={e => {
                   setSelectedContract(e.target.value)
-                  const c = contracts.find(c => c.id === e.target.value)
+                  const c = contracts.find((c: any) => c.id === e.target.value)
                   if (c) setAmount(c.rent_amount.toString())
                 }} style={input}>
                   <option value="">Vertrag auswählen...</option>
-                  {contracts.map(c => (
+                  {contracts.map((c: any) => (
                     <option key={c.id} value={c.id}>{c.tenants?.full_name} – {c.units?.properties?.name} – {c.rent_amount} €</option>
                   ))}
                 </select>
@@ -164,32 +198,85 @@ export default function Payments() {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {payments.map(p => (
-              <div key={p.id} style={{ ...card, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <p style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 4px' }}>
-                    {p.contracts?.tenants?.full_name}
-                  </p>
-                  <p style={{ fontSize: '13px', color: '#bbb', margin: 0 }}>
-                    Fällig: {new Date(p.due_date).toLocaleDateString('de-DE')}
-                    {p.paid_date && ` · Bezahlt: ${new Date(p.paid_date).toLocaleDateString('de-DE')}`}
-                  </p>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <p style={{ fontSize: '16px', fontWeight: '500', color: '#1a1a1a', margin: 0, fontFamily: 'Georgia, serif' }}>
-                    {p.amount.toLocaleString('de-DE')} €
-                  </p>
-                  <span style={{ fontSize: '11px', color: statusColor[p.status], backgroundColor: statusBg[p.status], padding: '4px 12px', borderRadius: '20px', fontWeight: '500' }}>
-                    {statusLabel[p.status]}
-                  </span>
-                  {p.status !== 'paid' && (
-                    <button onClick={() => handleMarkPaid(p.id)} style={{ backgroundColor: '#f0fdf4', color: '#16a34a', padding: '8px 14px', borderRadius: '8px', border: '1px solid #bbf7d0', fontSize: '13px', cursor: 'pointer' }}>
-                      Als bezahlt markieren
-                    </button>
+            {payments.map((p: any) => {
+              const isConfirmingReset = confirmAction?.paymentId === p.id && confirmAction?.action === 'reset'
+              const isConfirmingDelete = confirmAction?.paymentId === p.id && confirmAction?.action === 'delete'
+
+              return (
+                <div key={p.id} style={card}>
+                  {isConfirmingReset ? (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                      <p style={{ fontSize: '14px', color: '#d97706', margin: 0 }}>
+                        Zahlung auf <strong>"Ausstehend"</strong> zurücksetzen? Bezahl-Datum wird entfernt.
+                      </p>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button onClick={() => handleResetToPending(p.id)} style={{ backgroundColor: '#d97706', color: '#fff', padding: '8px 16px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>
+                          Ja, zurücksetzen
+                        </button>
+                        <button onClick={() => setConfirmAction(null)} style={{ backgroundColor: '#fff', color: '#666', padding: '8px 16px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer' }}>
+                          Abbrechen
+                        </button>
+                      </div>
+                    </div>
+                  ) : isConfirmingDelete ? (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                      <p style={{ fontSize: '14px', color: '#dc2626', margin: 0 }}>
+                        Zahlung über <strong>{Number(p.amount).toLocaleString('de-DE')} €</strong> wirklich löschen?
+                      </p>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button onClick={() => handleDelete(p.id)} style={{ backgroundColor: '#dc2626', color: '#fff', padding: '8px 16px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>
+                          Ja, löschen
+                        </button>
+                        <button onClick={() => setConfirmAction(null)} style={{ backgroundColor: '#fff', color: '#666', padding: '8px 16px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer' }}>
+                          Abbrechen
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                      <div style={{ flex: 1, minWidth: '200px' }}>
+                        <p style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 4px' }}>
+                          {p.contracts?.tenants?.full_name}
+                        </p>
+                        <p style={{ fontSize: '13px', color: '#bbb', margin: 0 }}>
+                          Fällig: {new Date(p.due_date).toLocaleDateString('de-DE')}
+                          {p.paid_date && ` · Bezahlt: ${new Date(p.paid_date).toLocaleDateString('de-DE')}`}
+                        </p>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <p style={{ fontSize: '16px', fontWeight: '500', color: '#1a1a1a', margin: 0, fontFamily: 'Georgia, serif' }}>
+                          {Number(p.amount).toLocaleString('de-DE')} €
+                        </p>
+                        <span style={{ fontSize: '11px', color: statusColor[p.status], backgroundColor: statusBg[p.status], padding: '4px 12px', borderRadius: '20px', fontWeight: '500' }}>
+                          {statusLabel[p.status]}
+                        </span>
+
+                        {/* Aktions-Buttons je nach Status */}
+                        {p.status === 'paid' ? (
+                          <button onClick={() => setConfirmAction({ paymentId: p.id, action: 'reset' })}
+                            title="Falsch markiert? Zurück auf Ausstehend"
+                            style={{ backgroundColor: '#fffbeb', color: '#d97706', padding: '8px 14px', borderRadius: '8px', border: '1px solid #fed7aa', fontSize: '13px', cursor: 'pointer' }}>
+                            ↩ Zurücksetzen
+                          </button>
+                        ) : (
+                          <>
+                            <button onClick={() => handleMarkPaid(p.id)}
+                              style={{ backgroundColor: '#f0fdf4', color: '#16a34a', padding: '8px 14px', borderRadius: '8px', border: '1px solid #bbf7d0', fontSize: '13px', cursor: 'pointer' }}>
+                              Als bezahlt markieren
+                            </button>
+                            <button onClick={() => setConfirmAction({ paymentId: p.id, action: 'delete' })}
+                              title="Zahlung löschen"
+                              style={{ backgroundColor: '#fff', color: '#dc2626', padding: '8px 14px', borderRadius: '8px', border: '1px solid #fecaca', fontSize: '13px', cursor: 'pointer' }}>
+                              Löschen
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   )}
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>

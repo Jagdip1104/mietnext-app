@@ -20,6 +20,7 @@ export default function Nav() {
     { href: '/contracts', label: 'Verträge' },
     { href: '/payments', label: 'Zahlungen' },
     { href: '/tickets', label: 'Tickets' },
+    { href: '/nebenkostenabrechnung', label: 'Nebenkosten' },
     { href: '/invite-tenant', label: 'Einladen' },
   ]
 

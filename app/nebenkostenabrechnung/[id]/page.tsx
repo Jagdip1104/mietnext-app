@@ -32,18 +32,19 @@ const DISTRIBUTION_KEYS = [
 ]
 
 export default function NebenkostenabrechnungDetail() {
-  const router = useRouter()
-  const params = useParams()
-  const id = params?.id as string
+  const router  = useRouter()
+  const params  = useParams()
+  const id      = params?.id as string
 
-  const [statement, setStatement]     = useState<any>(null)
-  const [units, setUnits]             = useState<any[]>([])
-  const [contracts, setContracts]     = useState<any[]>([])
-  const [costItems, setCostItems]     = useState<any[]>([])
-  const [showAddForm, setShowAddForm] = useState(false)
+  const [statement, setStatement]         = useState<any>(null)
+  const [units, setUnits]                 = useState<any[]>([])
+  const [contracts, setContracts]         = useState<any[]>([])
+  const [costItems, setCostItems]         = useState<any[]>([])
+  const [showAddForm, setShowAddForm]     = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
-  const [saving, setSaving]           = useState(false)
-  const [newItem, setNewItem]         = useState({
+  const [saving, setSaving]               = useState(false)
+  const [pdfLoading, setPdfLoading]       = useState(false)
+  const [newItem, setNewItem]             = useState({
     category: '', description: '', total_amount: '',
     distribution_key: 'sqm', unit_amounts: {} as Record<string, string>,
   })
@@ -87,7 +88,7 @@ export default function NebenkostenabrechnungDetail() {
 
   const handleUnitAmountChange = (unitId: string, value: string) => {
     const updated = { ...newItem.unit_amounts, [unitId]: value }
-    const total = Object.values(updated).reduce((s: number, v: any) => s + (parseFloat(v) || 0), 0)
+    const total   = Object.values(updated).reduce((s: number, v: any) => s + (parseFloat(v) || 0), 0)
     setNewItem(prev => ({ ...prev, unit_amounts: updated, total_amount: total.toFixed(2) }))
   }
 
@@ -101,9 +102,7 @@ export default function NebenkostenabrechnungDetail() {
       total_amount: parseFloat(newItem.total_amount),
       distribution_key: newItem.distribution_key,
     }
-    if (newItem.distribution_key === 'per_unit') {
-      itemData.unit_amounts = newItem.unit_amounts
-    }
+    if (newItem.distribution_key === 'per_unit') itemData.unit_amounts = newItem.unit_amounts
     const { error } = await supabase.from('utility_cost_items').insert(itemData)
     if (error) { alert('Fehler: ' + error.message); setSaving(false); return }
     setNewItem({ category: '', description: '', total_amount: '', distribution_key: 'sqm', unit_amounts: {} })
@@ -123,28 +122,24 @@ export default function NebenkostenabrechnungDetail() {
     loadData()
   }
 
+  // ─── Berechnungen ────────────────────────────────────────────────────────────
   const totalSqm = units.reduce((s: number, u: any) => s + (Number(u.size_sqm) || 0), 0)
 
   const getUnitShare = (item: any, unit: any): number => {
     const total = Number(item.total_amount)
-    if (item.distribution_key === 'sqm') {
-      return totalSqm > 0 ? (Number(unit.size_sqm) || 0) / totalSqm * total : 0
-    } else if (item.distribution_key === 'equal') {
-      return units.length > 0 ? total / units.length : 0
-    } else if (item.distribution_key === 'per_unit') {
-      return Number((item.unit_amounts || {})[unit.id] || 0)
-    }
+    if (item.distribution_key === 'sqm')      return totalSqm > 0 ? (Number(unit.size_sqm) || 0) / totalSqm * total : 0
+    if (item.distribution_key === 'equal')    return units.length > 0 ? total / units.length : 0
+    if (item.distribution_key === 'per_unit') return Number((item.unit_amounts || {})[unit.id] || 0)
     return 0
   }
 
-  const getContractForUnit = (unitId: string) =>
-    contracts.find((c: any) => c.unit_id === unitId)
+  const getContractForUnit = (unitId: string) => contracts.find((c: any) => c.unit_id === unitId)
 
   const getPrepayments = (unit: any): number => {
     if (!statement || !unit.utilities_amount) return 0
     const contract = getContractForUnit(unit.id)
     if (!contract) return 0
-    const year = statement.year
+    const year     = statement.year
     const yearStart = new Date(`${year}-01-01`)
     const yearEnd   = new Date(`${year}-12-31`)
     const start     = new Date(contract.start_date)
@@ -152,26 +147,183 @@ export default function NebenkostenabrechnungDetail() {
     const effStart  = start > yearStart ? start : yearStart
     const effEnd    = end   < yearEnd   ? end   : yearEnd
     if (effStart > effEnd) return 0
-    const months = Math.min(
-      Math.round((effEnd.getTime() - effStart.getTime()) / (1000 * 60 * 60 * 24 * 30.44)) + 1,
-      12
-    )
+    const months = Math.min(Math.round((effEnd.getTime() - effStart.getTime()) / (1000 * 60 * 60 * 24 * 30.44)) + 1, 12)
     return Number(unit.utilities_amount) * months
   }
 
-  const getTotalAllocated = (unit: any) =>
-    costItems.reduce((s: number, item: any) => s + getUnitShare(item, unit), 0)
+  const getTotalAllocated = (unit: any) => costItems.reduce((s: number, item: any) => s + getUnitShare(item, unit), 0)
 
   const totalCosts       = costItems.reduce((s: number, i: any) => s + Number(i.total_amount), 0)
   const totalPrepayments = units.reduce((s: number, u: any) => s + getPrepayments(u), 0)
   const totalBalance     = totalCosts - totalPrepayments
 
-  const formatEur = (n: number) =>
-    n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
-
+  const formatEur  = (n: number) => n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
   const getCatLabel = (v: string) => BETRKV_CATEGORIES.find((c: any) => c.value === v)?.label || v
   const getKeyLabel = (v: string) => DISTRIBUTION_KEYS.find((d: any) => d.value === v)?.label || v
 
+  // ─── PDF Export ──────────────────────────────────────────────────────────────
+  const generatePDF = async () => {
+    setPdfLoading(true)
+    try {
+      const { jsPDF } = await import('jspdf')
+      const doc         = new jsPDF({ unit: 'mm', format: 'a4' })
+      const activeUnits = units.filter((u: any) => getContractForUnit(u.id))
+
+      if (activeUnits.length === 0) {
+        alert('Keine Mieter für den Abrechnungszeitraum gefunden.')
+        setPdfLoading(false)
+        return
+      }
+
+      activeUnits.forEach((unit: any, pageIndex: number) => {
+        if (pageIndex > 0) doc.addPage()
+
+        const contract  = getContractForUnit(unit.id)
+        const allocated = getTotalAllocated(unit)
+        const prepays   = getPrepayments(unit)
+        const balance   = allocated - prepays
+        const isNach    = balance > 0
+        const prop      = statement.properties
+        const tenant    = contract?.tenants
+
+        // ── Header ──────────────────────────────────────────
+        doc.setFillColor(26, 26, 26)
+        doc.rect(0, 0, 210, 20, 'F')
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(14)
+        doc.setTextColor(255, 255, 255)
+        doc.text('MietNext', 20, 13)
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(10)
+        doc.text('Nebenkostenabrechnung', 190, 13, { align: 'right' })
+
+        // ── Titel ──────────────────────────────────────────
+        doc.setTextColor(26, 26, 26)
+        doc.setFontSize(20)
+        doc.setFont('helvetica', 'bold')
+        doc.text(`Nebenkostenabrechnung ${statement.year}`, 105, 35, { align: 'center' })
+        doc.setFontSize(10)
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(120, 120, 120)
+        doc.text(`Abrechnungszeitraum: 01.01.${statement.year} – 31.12.${statement.year}`, 105, 43, { align: 'center' })
+        doc.setDrawColor(220, 218, 214)
+        doc.setLineWidth(0.4)
+        doc.line(20, 48, 190, 48)
+
+        // ── Objekt + Mieter ──────────────────────────────────────────
+        doc.setFontSize(7.5)
+        doc.setTextColor(150, 150, 150)
+        doc.setFont('helvetica', 'bold')
+        doc.text('OBJEKT', 20, 56)
+        doc.text('MIETER', 115, 56)
+        doc.setFontSize(11)
+        doc.setTextColor(26, 26, 26)
+        doc.setFont('helvetica', 'bold')
+        doc.text(prop?.name || '', 20, 63)
+        doc.text(tenant?.full_name || '', 115, 63)
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(9.5)
+        doc.setTextColor(100, 100, 100)
+        doc.text(`${prop?.address}, ${prop?.city}`, 20, 69)
+        doc.text(`Einheit: ${unit.name}${unit.size_sqm ? ` · ${unit.size_sqm} m²` : ''}`, 115, 69)
+
+        // ── Tabellen-Header ──────────────────────────────────────────
+        let y = 83
+        doc.setFillColor(245, 244, 241)
+        doc.rect(20, y - 5, 170, 8, 'F')
+        doc.setFontSize(8.5)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(26, 26, 26)
+        doc.text('Kostenposition', 22, y)
+        doc.text('Gesamtkosten', 130, y, { align: 'right' })
+        doc.text('Ihr Anteil', 190, y, { align: 'right' })
+        y += 5
+
+        // ── Kostenpositionen ──────────────────────────────────────────
+        costItems.forEach((item: any) => {
+          const share = getUnitShare(item, unit)
+          doc.setFont('helvetica', 'normal')
+          doc.setFontSize(9)
+          doc.setTextColor(30, 30, 30)
+          const label = getCatLabel(item.category)
+          doc.text(label.length > 55 ? label.slice(0, 52) + '…' : label, 22, y)
+          doc.setTextColor(120, 120, 120)
+          doc.text(formatEur(Number(item.total_amount)), 130, y, { align: 'right' })
+          doc.setTextColor(30, 30, 30)
+          doc.text(formatEur(share), 190, y, { align: 'right' })
+          y += 7
+          doc.setDrawColor(240, 238, 234)
+          doc.setLineWidth(0.2)
+          doc.line(20, y - 3, 190, y - 3)
+        })
+
+        // ── Zusammenfassung ──────────────────────────────────────────
+        y += 4
+        doc.setDrawColor(180, 178, 174)
+        doc.setLineWidth(0.4)
+        doc.line(20, y, 190, y)
+        y += 8
+
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(10)
+        doc.setTextColor(100, 100, 100)
+        doc.text('Gesamtkosten Ihr Anteil:', 22, y)
+        doc.setTextColor(26, 26, 26)
+        doc.text(formatEur(allocated), 190, y, { align: 'right' })
+        y += 7
+
+        doc.setTextColor(100, 100, 100)
+        doc.text('Geleistete Vorauszahlungen:', 22, y)
+        doc.setTextColor(26, 26, 26)
+        doc.text(`− ${formatEur(prepays)}`, 190, y, { align: 'right' })
+        y += 5
+
+        doc.setDrawColor(26, 26, 26)
+        doc.setLineWidth(0.8)
+        doc.line(20, y, 190, y)
+        y += 10
+
+        // ── Ergebnis (groß) ──────────────────────────────────────────
+        const [r, g, b] = isNach ? [185, 28, 28] : [21, 128, 61]
+        doc.setFontSize(13)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(80, 80, 80)
+        doc.text(isNach ? 'NACHZAHLUNG:' : 'GUTHABEN:', 22, y)
+        doc.setTextColor(r, g, b)
+        doc.text(`${isNach ? '+' : '−'} ${formatEur(Math.abs(balance))}`, 190, y, { align: 'right' })
+        y += 9
+
+        doc.setFontSize(8)
+        doc.setFont('helvetica', 'italic')
+        doc.setTextColor(160, 160, 160)
+        doc.text(
+          isNach
+            ? 'Bitte überweisen Sie den Nachzahlungsbetrag innerhalb von 30 Tagen nach Erhalt dieser Abrechnung.'
+            : 'Der Guthabenbetrag wird mit der nächsten Mietzahlung verrechnet oder auf Wunsch überwiesen.',
+          22, y
+        )
+
+        // ── Footer ──────────────────────────────────────────
+        doc.setDrawColor(220, 218, 214)
+        doc.setLineWidth(0.3)
+        doc.line(20, 275, 190, 275)
+        doc.setFontSize(8)
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(160, 160, 160)
+        doc.text(`Erstellt am ${new Date().toLocaleDateString('de-DE')} · MietNext`, 20, 281)
+        doc.text(`Seite ${pageIndex + 1} von ${activeUnits.length}`, 190, 281, { align: 'right' })
+      })
+
+      const safeName = (statement.properties?.name || 'Objekt').replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '')
+      doc.save(`NK_${safeName}_${statement.year}.pdf`)
+
+    } catch (err: any) {
+      alert('PDF-Fehler: ' + err.message)
+    }
+    setPdfLoading(false)
+  }
+
+  // ─── Styles ──────────────────────────────────────────────────────────────────
   const card = { backgroundColor: '#fff', border: '1px solid #e8e6e0', borderRadius: '12px', padding: '24px' }
   const inp  = { width: '100%', border: '1px solid #e8e6e0', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', outline: 'none', color: '#1a1a1a', backgroundColor: '#fff' }
   const lbl  = { fontSize: '12px', color: '#999', marginBottom: '6px', display: 'block', textTransform: 'uppercase' as const, letterSpacing: '0.5px' }
@@ -195,6 +347,7 @@ export default function NebenkostenabrechnungDetail() {
           ← Zurück zur Übersicht
         </button>
 
+        {/* ── Header ── */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px' }}>
           <div>
             <h1 style={{ fontSize: '28px', fontWeight: '400', color: '#1a1a1a', margin: '0 0 4px', fontFamily: 'Georgia, serif' }}>
@@ -213,11 +366,11 @@ export default function NebenkostenabrechnungDetail() {
           </span>
         </div>
 
-        {/* Summary Cards */}
+        {/* ── Summary Cards ── */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '32px' }}>
           {([
-            { label: 'Gesamtkosten',    value: totalCosts,            color: '#1a1a1a', sub: `${costItems.length} Positionen`          },
-            { label: 'Vorauszahlungen', value: totalPrepayments,      color: '#1a1a1a', sub: 'aus Nebenkostenvorauszahlung'            },
+            { label: 'Gesamtkosten',    value: totalCosts,       color: '#1a1a1a', sub: `${costItems.length} Positionen`          },
+            { label: 'Vorauszahlungen', value: totalPrepayments, color: '#1a1a1a', sub: 'aus Nebenkostenvorauszahlung'            },
             { label: totalBalance > 0 ? 'Nachzahlung gesamt' : 'Guthaben gesamt',
               value: Math.abs(totalBalance),
               color: totalBalance > 0 ? '#dc2626' : '#16a34a',
@@ -231,7 +384,7 @@ export default function NebenkostenabrechnungDetail() {
           ))}
         </div>
 
-        {/* Kostenpositionen */}
+        {/* ── Kostenpositionen ── */}
         <div style={{ marginBottom: '32px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h2 style={{ fontSize: '16px', fontWeight: '500', color: '#1a1a1a', margin: 0 }}>Kostenpositionen</h2>
@@ -291,8 +444,7 @@ export default function NebenkostenabrechnungDetail() {
                     {units.map((unit: any) => (
                       <div key={unit.id}>
                         <label style={{ fontSize: '13px', color: '#666', marginBottom: '4px', display: 'block' }}>{unit.name}</label>
-                        <input type="number"
-                          value={newItem.unit_amounts[unit.id] || ''}
+                        <input type="number" value={newItem.unit_amounts[unit.id] || ''}
                           onChange={e => handleUnitAmountChange(unit.id, e.target.value)}
                           placeholder="0.00" style={inp} />
                       </div>
@@ -307,8 +459,7 @@ export default function NebenkostenabrechnungDetail() {
               )}
 
               <div style={{ display: 'flex', gap: '8px' }}>
-                <button onClick={handleAddItem}
-                  disabled={saving || !newItem.category || !newItem.total_amount}
+                <button onClick={handleAddItem} disabled={saving || !newItem.category || !newItem.total_amount}
                   style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer', opacity: saving || !newItem.category || !newItem.total_amount ? 0.4 : 1 }}>
                   {saving ? 'Speichern...' : 'Speichern'}
                 </button>
@@ -368,12 +519,10 @@ export default function NebenkostenabrechnungDetail() {
           )}
         </div>
 
-        {/* Ergebnisse pro Einheit */}
+        {/* ── Ergebnisse pro Einheit ── */}
         {costItems.length > 0 && (
           <div>
-            <h2 style={{ fontSize: '16px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 16px' }}>
-              Ergebnis pro Einheit
-            </h2>
+            <h2 style={{ fontSize: '16px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 16px' }}>Ergebnis pro Einheit</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {units.map((unit: any) => {
                 const contract    = getContractForUnit(unit.id)
@@ -434,11 +583,11 @@ export default function NebenkostenabrechnungDetail() {
               <div style={{ marginTop: '24px', padding: '20px 24px', backgroundColor: '#eff6ff', borderRadius: '12px', border: '1px solid #bfdbfe', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <p style={{ fontSize: '14px', fontWeight: '500', color: '#1d4ed8', margin: '0 0 2px' }}>PDF-Export</p>
-                  <p style={{ fontSize: '13px', color: '#3b82f6', margin: 0 }}>Abrechnungsdokument pro Mieter generieren</p>
+                  <p style={{ fontSize: '13px', color: '#3b82f6', margin: 0 }}>Eine Seite pro Mieter mit allen Kostenpositionen und Ergebnis</p>
                 </div>
-                <button disabled
-                  style={{ backgroundColor: '#3b82f6', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'not-allowed', opacity: 0.5 }}>
-                  📄 PDF exportieren (Etappe 3)
+                <button onClick={generatePDF} disabled={pdfLoading}
+                  style={{ backgroundColor: '#3b82f6', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: pdfLoading ? 'wait' : 'pointer', opacity: pdfLoading ? 0.7 : 1 }}>
+                  {pdfLoading ? '⏳ PDF wird erstellt...' : '📄 PDF exportieren'}
                 </button>
               </div>
             )}

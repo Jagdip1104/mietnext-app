@@ -32,19 +32,22 @@ const DISTRIBUTION_KEYS = [
 ]
 
 export default function NebenkostenabrechnungDetail() {
-  const router  = useRouter()
-  const params  = useParams()
-  const id      = params?.id as string
+  const router = useRouter()
+  const params = useParams()
+  const id     = params?.id as string
 
-  const [statement, setStatement]         = useState<any>(null)
-  const [units, setUnits]                 = useState<any[]>([])
-  const [contracts, setContracts]         = useState<any[]>([])
-  const [costItems, setCostItems]         = useState<any[]>([])
-  const [showAddForm, setShowAddForm]     = useState(false)
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
-  const [saving, setSaving]               = useState(false)
-  const [pdfLoading, setPdfLoading]       = useState(false)
-  const [newItem, setNewItem]             = useState({
+  const [statement, setStatement]             = useState<any>(null)
+  const [units, setUnits]                     = useState<any[]>([])
+  const [contracts, setContracts]             = useState<any[]>([])
+  const [costItems, setCostItems]             = useState<any[]>([])
+  const [showAddForm, setShowAddForm]         = useState(false)
+  const [deleteConfirm, setDeleteConfirm]     = useState<string | null>(null)
+  const [saving, setSaving]                   = useState(false)
+  const [pdfLoading, setPdfLoading]           = useState(false)
+  const [manualPrepayments, setManualPrepayments] = useState<Record<string, number | null>>({})
+  const [editingPrepayment, setEditingPrepayment] = useState<string | null>(null)
+  const [editPrepaymentValue, setEditPrepaymentValue] = useState('')
+  const [newItem, setNewItem] = useState({
     category: '', description: '', total_amount: '',
     distribution_key: 'sqm', unit_amounts: {} as Record<string, string>,
   })
@@ -57,6 +60,7 @@ export default function NebenkostenabrechnungDetail() {
       .select('*, properties(id, name, address, city)')
       .eq('id', id).single()
     setStatement(stmt)
+    setManualPrepayments(stmt?.manual_prepayments || {})
     if (!stmt) return
 
     const { data: unitsData } = await supabase
@@ -121,17 +125,35 @@ export default function NebenkostenabrechnungDetail() {
     await supabase.from('utility_statements').update({ status: 'finalized' }).eq('id', id)
     loadData()
   }
-  
-const handleReopen = async () => {
-  await supabase.from('utility_statements').update({ status: 'draft' }).eq('id', id)
-  loadData()
-}
 
-const handleDeleteStatement = async () => {
-  const { error } = await supabase.from('utility_statements').delete().eq('id', id)
-  if (error) { alert('Fehler: ' + error.message); return }
-  router.push('/nebenkostenabrechnung')
-}
+  const handleReopen = async () => {
+    await supabase.from('utility_statements').update({ status: 'draft' }).eq('id', id)
+    loadData()
+  }
+
+  const handleDeleteStatement = async () => {
+    const { error } = await supabase.from('utility_statements').delete().eq('id', id)
+    if (error) { alert('Fehler: ' + error.message); return }
+    router.push('/nebenkostenabrechnung')
+  }
+
+  // ─── Manuelle Vorauszahlung speichern ───────────────────────────────────────
+  const saveManualPrepayment = async (unitId: string) => {
+    const value   = parseFloat(editPrepaymentValue)
+    const updated = { ...manualPrepayments, [unitId]: isNaN(value) ? null : value }
+    await supabase.from('utility_statements').update({ manual_prepayments: updated }).eq('id', id)
+    setManualPrepayments(updated)
+    setEditingPrepayment(null)
+    setEditPrepaymentValue('')
+  }
+
+  const resetManualPrepayment = async (unitId: string) => {
+    const updated = { ...manualPrepayments }
+    delete updated[unitId]
+    await supabase.from('utility_statements').update({ manual_prepayments: updated }).eq('id', id)
+    setManualPrepayments(updated)
+  }
+
   // ─── Berechnungen ────────────────────────────────────────────────────────────
   const totalSqm = units.reduce((s: number, u: any) => s + (Number(u.size_sqm) || 0), 0)
 
@@ -145,11 +167,12 @@ const handleDeleteStatement = async () => {
 
   const getContractForUnit = (unitId: string) => contracts.find((c: any) => c.unit_id === unitId)
 
-  const getPrepayments = (unit: any): number => {
+  // Berechnet Soll-Vorauszahlung aus Vertrag
+  const getCalculatedPrepayments = (unit: any): number => {
     if (!statement || !unit.utilities_amount) return 0
     const contract = getContractForUnit(unit.id)
     if (!contract) return 0
-    const year     = statement.year
+    const year      = statement.year
     const yearStart = new Date(`${year}-01-01`)
     const yearEnd   = new Date(`${year}-12-31`)
     const start     = new Date(contract.start_date)
@@ -161,13 +184,24 @@ const handleDeleteStatement = async () => {
     return Number(unit.utilities_amount) * months
   }
 
-  const getTotalAllocated = (unit: any) => costItems.reduce((s: number, item: any) => s + getUnitShare(item, unit), 0)
+  // Gibt manuelle Überschreibung zurück, sonst Soll-Berechnung
+  const getPrepayments = (unit: any): number => {
+    const manual = manualPrepayments[unit.id]
+    if (manual !== undefined && manual !== null) return Number(manual)
+    return getCalculatedPrepayments(unit)
+  }
+
+  const isManuallySet = (unitId: string) =>
+    manualPrepayments[unitId] !== undefined && manualPrepayments[unitId] !== null
+
+  const getTotalAllocated = (unit: any) =>
+    costItems.reduce((s: number, item: any) => s + getUnitShare(item, unit), 0)
 
   const totalCosts       = costItems.reduce((s: number, i: any) => s + Number(i.total_amount), 0)
   const totalPrepayments = units.reduce((s: number, u: any) => s + getPrepayments(u), 0)
   const totalBalance     = totalCosts - totalPrepayments
 
-  const formatEur  = (n: number) => n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
+  const formatEur   = (n: number) => n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
   const getCatLabel = (v: string) => BETRKV_CATEGORIES.find((c: any) => c.value === v)?.label || v
   const getKeyLabel = (v: string) => DISTRIBUTION_KEYS.find((d: any) => d.value === v)?.label || v
 
@@ -175,7 +209,7 @@ const handleDeleteStatement = async () => {
   const generatePDF = async () => {
     setPdfLoading(true)
     try {
-      const { jsPDF } = await import('jspdf')
+      const { jsPDF }   = await import('jspdf')
       const doc         = new jsPDF({ unit: 'mm', format: 'a4' })
       const activeUnits = units.filter((u: any) => getContractForUnit(u.id))
 
@@ -195,8 +229,8 @@ const handleDeleteStatement = async () => {
         const isNach    = balance > 0
         const prop      = statement.properties
         const tenant    = contract?.tenants
+        const isManual  = isManuallySet(unit.id)
 
-        // ── Header ──────────────────────────────────────────
         doc.setFillColor(26, 26, 26)
         doc.rect(0, 0, 210, 20, 'F')
         doc.setFont('helvetica', 'bold')
@@ -207,7 +241,6 @@ const handleDeleteStatement = async () => {
         doc.setFontSize(10)
         doc.text('Nebenkostenabrechnung', 190, 13, { align: 'right' })
 
-        // ── Titel ──────────────────────────────────────────
         doc.setTextColor(26, 26, 26)
         doc.setFontSize(20)
         doc.setFont('helvetica', 'bold')
@@ -220,7 +253,6 @@ const handleDeleteStatement = async () => {
         doc.setLineWidth(0.4)
         doc.line(20, 48, 190, 48)
 
-        // ── Objekt + Mieter ──────────────────────────────────────────
         doc.setFontSize(7.5)
         doc.setTextColor(150, 150, 150)
         doc.setFont('helvetica', 'bold')
@@ -237,7 +269,6 @@ const handleDeleteStatement = async () => {
         doc.text(`${prop?.address}, ${prop?.city}`, 20, 69)
         doc.text(`Einheit: ${unit.name}${unit.size_sqm ? ` · ${unit.size_sqm} m²` : ''}`, 115, 69)
 
-        // ── Tabellen-Header ──────────────────────────────────────────
         let y = 83
         doc.setFillColor(245, 244, 241)
         doc.rect(20, y - 5, 170, 8, 'F')
@@ -249,7 +280,6 @@ const handleDeleteStatement = async () => {
         doc.text('Ihr Anteil', 190, y, { align: 'right' })
         y += 5
 
-        // ── Kostenpositionen ──────────────────────────────────────────
         costItems.forEach((item: any) => {
           const share = getUnitShare(item, unit)
           doc.setFont('helvetica', 'normal')
@@ -267,7 +297,6 @@ const handleDeleteStatement = async () => {
           doc.line(20, y - 3, 190, y - 3)
         })
 
-        // ── Zusammenfassung ──────────────────────────────────────────
         y += 4
         doc.setDrawColor(180, 178, 174)
         doc.setLineWidth(0.4)
@@ -283,7 +312,7 @@ const handleDeleteStatement = async () => {
         y += 7
 
         doc.setTextColor(100, 100, 100)
-        doc.text('Geleistete Vorauszahlungen:', 22, y)
+        doc.text(`Geleistete Vorauszahlungen${isManual ? ' (tatsächlich)' : ''}:`, 22, y)
         doc.setTextColor(26, 26, 26)
         doc.text(`− ${formatEur(prepays)}`, 190, y, { align: 'right' })
         y += 5
@@ -293,7 +322,6 @@ const handleDeleteStatement = async () => {
         doc.line(20, y, 190, y)
         y += 10
 
-        // ── Ergebnis (groß) ──────────────────────────────────────────
         const [r, g, b] = isNach ? [185, 28, 28] : [21, 128, 61]
         doc.setFontSize(13)
         doc.setFont('helvetica', 'bold')
@@ -313,7 +341,6 @@ const handleDeleteStatement = async () => {
           22, y
         )
 
-        // ── Footer ──────────────────────────────────────────
         doc.setDrawColor(220, 218, 214)
         doc.setLineWidth(0.3)
         doc.line(20, 275, 190, 275)
@@ -380,7 +407,7 @@ const handleDeleteStatement = async () => {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '32px' }}>
           {([
             { label: 'Gesamtkosten',    value: totalCosts,       color: '#1a1a1a', sub: `${costItems.length} Positionen`          },
-            { label: 'Vorauszahlungen', value: totalPrepayments, color: '#1a1a1a', sub: 'aus Nebenkostenvorauszahlung'            },
+            { label: 'Vorauszahlungen', value: totalPrepayments, color: '#1a1a1a', sub: 'geleistete Vorauszahlungen'              },
             { label: totalBalance > 0 ? 'Nachzahlung gesamt' : 'Guthaben gesamt',
               value: Math.abs(totalBalance),
               color: totalBalance > 0 ? '#dc2626' : '#16a34a',
@@ -532,17 +559,24 @@ const handleDeleteStatement = async () => {
         {/* ── Ergebnisse pro Einheit ── */}
         {costItems.length > 0 && (
           <div>
-            <h2 style={{ fontSize: '16px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 16px' }}>Ergebnis pro Einheit</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 style={{ fontSize: '16px', fontWeight: '500', color: '#1a1a1a', margin: 0 }}>Ergebnis pro Einheit</h2>
+              <p style={{ fontSize: '12px', color: '#bbb', margin: 0 }}>✏️ Vorauszahlungen anpassen falls abweichend</p>
+            </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {units.map((unit: any) => {
-                const contract    = getContractForUnit(unit.id)
-                const allocated   = getTotalAllocated(unit)
-                const prepayments = getPrepayments(unit)
-                const balance     = allocated - prepayments
-                const isNach      = balance > 0
+                const contract      = getContractForUnit(unit.id)
+                const allocated     = getTotalAllocated(unit)
+                const prepayments   = getPrepayments(unit)
+                const calculated    = getCalculatedPrepayments(unit)
+                const balance       = allocated - prepayments
+                const isNach        = balance > 0
+                const isManual      = isManuallySet(unit.id)
+                const isEditing     = editingPrepayment === unit.id
+
                 return (
                   <div key={unit.id} style={{ ...card, padding: '20px 24px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
                       <div>
                         <p style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 2px' }}>
                           {unit.name}
@@ -552,16 +586,68 @@ const handleDeleteStatement = async () => {
                           {contract ? contract.tenants?.full_name : '⚠ Kein aktiver Mieter – Kosten trägt Vermieter'}
                         </p>
                       </div>
-                      <div style={{ display: 'flex', gap: '32px', textAlign: 'right' as const }}>
-                        <div>
-                          <p style={{ fontSize: '11px', color: '#999', margin: '0 0 2px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Anteil</p>
+
+                      <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start' }}>
+                        {/* Anteil */}
+                        <div style={{ textAlign: 'right' as const }}>
+                          <p style={{ fontSize: '11px', color: '#999', margin: '0 0 2px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Anteil Kosten</p>
                           <p style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: 0 }}>{formatEur(allocated)}</p>
                         </div>
-                        <div>
-                          <p style={{ fontSize: '11px', color: '#999', margin: '0 0 2px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Vorauszahlung</p>
-                          <p style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: 0 }}>− {formatEur(prepayments)}</p>
+
+                        {/* Vorauszahlung – editierbar */}
+                        <div style={{ textAlign: 'right' as const }}>
+                          <p style={{ fontSize: '11px', color: '#999', margin: '0 0 2px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                            Vorauszahlung
+                            {isManual && <span style={{ color: '#d97706', marginLeft: '4px' }}>● manuell</span>}
+                          </p>
+                          {isEditing ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <input
+                                type="number"
+                                value={editPrepaymentValue}
+                                onChange={e => setEditPrepaymentValue(e.target.value)}
+                                placeholder={calculated.toFixed(2)}
+                                autoFocus
+                                style={{ width: '100px', border: '1px solid #e8e6e0', borderRadius: '6px', padding: '4px 8px', fontSize: '13px', outline: 'none', textAlign: 'right' as const }}
+                              />
+                              <button onClick={() => saveManualPrepayment(unit.id)}
+                                style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '4px 10px', borderRadius: '6px', border: 'none', fontSize: '12px', cursor: 'pointer' }}>
+                                ✓
+                              </button>
+                              <button onClick={() => { setEditingPrepayment(null); setEditPrepaymentValue('') }}
+                                style={{ backgroundColor: '#fff', color: '#666', padding: '4px 8px', borderRadius: '6px', border: '1px solid #e8e6e0', fontSize: '12px', cursor: 'pointer' }}>
+                                ✕
+                              </button>
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <p style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: 0 }}>
+                                − {formatEur(prepayments)}
+                              </p>
+                              <button
+                                onClick={() => { setEditingPrepayment(unit.id); setEditPrepaymentValue(prepayments.toString()) }}
+                                title="Vorauszahlung manuell anpassen"
+                                style={{ background: 'none', border: 'none', color: '#bbb', fontSize: '14px', cursor: 'pointer', padding: '0 2px' }}>
+                                ✏️
+                              </button>
+                              {isManual && (
+                                <button onClick={() => resetManualPrepayment(unit.id)}
+                                  title="Zurück zur Berechnung"
+                                  style={{ background: 'none', border: 'none', color: '#bbb', fontSize: '12px', cursor: 'pointer', padding: '0 2px' }}>
+                                  ↩
+                                </button>
+                              )}
+                            </div>
+                          )}
+                          {isManual && !isEditing && (
+                            <p style={{ fontSize: '11px', color: '#bbb', margin: '2px 0 0' }}>
+                              berechnet: {formatEur(calculated)}
+                            </p>
+                          )}
                         </div>
-                        <div>
+
+                        {/* Ergebnis */}
+                        <div style={{ textAlign: 'right' as const }}>
                           <p style={{ fontSize: '11px', color: '#999', margin: '0 0 2px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                             {isNach ? 'Nachzahlung' : 'Guthaben'}
                           </p>
@@ -576,56 +662,51 @@ const handleDeleteStatement = async () => {
               })}
             </div>
 
-            {statement.status === 'draft' && (
-  <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-    <div style={{ padding: '20px 24px', backgroundColor: '#f0fdf4', borderRadius: '12px', border: '1px solid #bbf7d0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-      <div>
-        <p style={{ fontSize: '14px', fontWeight: '500', color: '#15803d', margin: '0 0 2px' }}>Abrechnung abschließen</p>
-        <p style={{ fontSize: '13px', color: '#16a34a', margin: 0 }}>Status auf "Abgeschlossen" setzen – danach PDF exportieren</p>
-      </div>
-      <button onClick={handleFinalize}
-        style={{ backgroundColor: '#16a34a', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>
-        ✓ Abrechnung abschließen
-      </button>
-    </div>
-    <div style={{ padding: '16px 24px', backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #fecaca', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-      <p style={{ fontSize: '13px', color: '#999', margin: 0 }}>Abrechnung und alle Kostenpositionen unwiderruflich löschen</p>
-      <button onClick={handleDeleteStatement}
-        style={{ backgroundColor: '#fff', color: '#dc2626', padding: '8px 16px', borderRadius: '8px', border: '1px solid #fecaca', fontSize: '13px', cursor: 'pointer' }}>
-        Abrechnung löschen
-      </button>
-    </div>
-  </div>
-)}
+            {/* ── Aktionen ── */}
+            <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {statement.status === 'draft' && (
+                <div style={{ padding: '20px 24px', backgroundColor: '#f0fdf4', borderRadius: '12px', border: '1px solid #bbf7d0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <p style={{ fontSize: '14px', fontWeight: '500', color: '#15803d', margin: '0 0 2px' }}>Abrechnung abschließen</p>
+                    <p style={{ fontSize: '13px', color: '#16a34a', margin: 0 }}>Status auf "Abgeschlossen" – danach PDF exportieren</p>
+                  </div>
+                  <button onClick={handleFinalize}
+                    style={{ backgroundColor: '#16a34a', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>
+                    ✓ Abrechnung abschließen
+                  </button>
+                </div>
+              )}
 
-        {statement.status === 'finalized' && (
-        <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ padding: '20px 24px', backgroundColor: '#eff6ff', borderRadius: '12px', border: '1px solid #bfdbfe', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-                <p style={{ fontSize: '14px', fontWeight: '500', color: '#1d4ed8', margin: '0 0 2px' }}>PDF-Export</p>
-                <p style={{ fontSize: '13px', color: '#3b82f6', margin: 0 }}>Eine Seite pro Mieter mit allen Kostenpositionen und Ergebnis</p>
+              {statement.status === 'finalized' && (
+                <>
+                  <div style={{ padding: '20px 24px', backgroundColor: '#eff6ff', borderRadius: '12px', border: '1px solid #bfdbfe', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <p style={{ fontSize: '14px', fontWeight: '500', color: '#1d4ed8', margin: '0 0 2px' }}>PDF-Export</p>
+                      <p style={{ fontSize: '13px', color: '#3b82f6', margin: 0 }}>Eine Seite pro Mieter mit allen Kostenpositionen und Ergebnis</p>
+                    </div>
+                    <button onClick={generatePDF} disabled={pdfLoading}
+                      style={{ backgroundColor: '#3b82f6', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: pdfLoading ? 'wait' : 'pointer', opacity: pdfLoading ? 0.7 : 1 }}>
+                      {pdfLoading ? '⏳ PDF wird erstellt...' : '📄 PDF exportieren'}
+                    </button>
+                  </div>
+                  <div style={{ padding: '16px 24px', backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e8e6e0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <p style={{ fontSize: '13px', color: '#999', margin: 0 }}>Abrechnung wieder bearbeiten (zurück auf Entwurf)</p>
+                    <button onClick={handleReopen}
+                      style={{ backgroundColor: '#fff', color: '#d97706', padding: '8px 16px', borderRadius: '8px', border: '1px solid #fed7aa', fontSize: '13px', cursor: 'pointer' }}>
+                      ↩ Wieder öffnen
+                    </button>
+                  </div>
+                </>
+              )}
+
+              <div style={{ padding: '16px 24px', backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #fecaca', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <p style={{ fontSize: '13px', color: '#999', margin: 0 }}>Abrechnung und alle Kostenpositionen unwiderruflich löschen</p>
+                <button onClick={handleDeleteStatement}
+                  style={{ backgroundColor: '#fff', color: '#dc2626', padding: '8px 16px', borderRadius: '8px', border: '1px solid #fecaca', fontSize: '13px', cursor: 'pointer' }}>
+                  Abrechnung löschen
+                </button>
+              </div>
             </div>
-            <button onClick={generatePDF} disabled={pdfLoading}
-                style={{ backgroundColor: '#3b82f6', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: pdfLoading ? 'wait' : 'pointer', opacity: pdfLoading ? 0.7 : 1 }}>
-                {pdfLoading ? '⏳ PDF wird erstellt...' : '📄 PDF exportieren'}
-            </button>
-            </div>
-            <div style={{ padding: '16px 24px', backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e8e6e0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <p style={{ fontSize: '13px', color: '#999', margin: 0 }}>Abrechnung wieder bearbeiten (zurück auf Entwurf setzen)</p>
-            <button onClick={handleReopen}
-                style={{ backgroundColor: '#fff', color: '#d97706', padding: '8px 16px', borderRadius: '8px', border: '1px solid #fed7aa', fontSize: '13px', cursor: 'pointer' }}>
-                ↩ Wieder öffnen
-            </button>
-            </div>
-            <div style={{ padding: '16px 24px', backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #fecaca', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <p style={{ fontSize: '13px', color: '#999', margin: 0 }}>Abrechnung und alle Kostenpositionen unwiderruflich löschen</p>
-            <button onClick={handleDeleteStatement}
-                style={{ backgroundColor: '#fff', color: '#dc2626', padding: '8px 16px', borderRadius: '8px', border: '1px solid #fecaca', fontSize: '13px', cursor: 'pointer' }}>
-                Abrechnung löschen
-            </button>
-            </div>
-        </div>
-        )}
           </div>
         )}
       </div>

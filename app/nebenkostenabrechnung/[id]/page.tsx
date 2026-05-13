@@ -2,48 +2,47 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useRouter, useParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import Nav from '@/components/Nav'
 
 const BETRKV_CATEGORIES = [
-  { value: 'grundsteuer',        label: '§2 Nr.1  – Grundsteuer',                           defaultKey: 'sqm'      },
-  { value: 'wasser',             label: '§2 Nr.2  – Wasserversorgung',                       defaultKey: 'sqm'      },
-  { value: 'entwasserung',       label: '§2 Nr.3  – Entwässerung / Abwasser',                defaultKey: 'sqm'      },
-  { value: 'heizung',            label: '§2 Nr.4  – Heizkosten (Ista/Techem)',               defaultKey: 'per_unit' },
-  { value: 'warmwasser',         label: '§2 Nr.5  – Warmwasser (Ista/Techem)',               defaultKey: 'per_unit' },
-  { value: 'heizung_warmwasser', label: '§2 Nr.6  – Heizung + Warmwasser (verbunden)',       defaultKey: 'per_unit' },
-  { value: 'aufzug',             label: '§2 Nr.7  – Aufzug',                                 defaultKey: 'equal'    },
-  { value: 'strassenreinigung',  label: '§2 Nr.8  – Straßenreinigung / Müllbeseitigung',     defaultKey: 'sqm'      },
-  { value: 'gebaeudereinigung',  label: '§2 Nr.9  – Gebäudereinigung / Ungezieferbekämpfung',defaultKey: 'sqm'      },
-  { value: 'gartenpflege',       label: '§2 Nr.10 – Gartenpflege',                           defaultKey: 'sqm'      },
-  { value: 'allgemeinstrom',     label: '§2 Nr.11 – Allgemeinstrom / Beleuchtung',            defaultKey: 'equal'    },
-  { value: 'schornstein',        label: '§2 Nr.12 – Schornsteinreinigung',                   defaultKey: 'equal'    },
-  { value: 'versicherung',       label: '§2 Nr.13 – Sach- und Haftpflichtversicherung',      defaultKey: 'sqm'      },
-  { value: 'hauswart',           label: '§2 Nr.14 – Hauswart / Hausmeister',                 defaultKey: 'sqm'      },
-  { value: 'antenne',            label: '§2 Nr.15 – Gemeinschaftsantenne / Kabel / Internet',defaultKey: 'equal'    },
-  { value: 'waeschepflege',      label: '§2 Nr.16 – Wäschepflege-Einrichtungen',             defaultKey: 'equal'    },
-  { value: 'sonstige',           label: '§2 Nr.17 – Sonstige Betriebskosten',                defaultKey: 'sqm'      },
+  { value: 'grundsteuer',        label: '§2 Nr.1  – Grundsteuer',                            defaultKey: 'sqm'      },
+  { value: 'wasser',             label: '§2 Nr.2  – Wasserversorgung',                        defaultKey: 'sqm'      },
+  { value: 'entwasserung',       label: '§2 Nr.3  – Entwässerung / Abwasser',                 defaultKey: 'sqm'      },
+  { value: 'heizung',            label: '§2 Nr.4  – Heizkosten (Ista/Techem)',                defaultKey: 'per_unit' },
+  { value: 'warmwasser',         label: '§2 Nr.5  – Warmwasser (Ista/Techem)',                defaultKey: 'per_unit' },
+  { value: 'heizung_warmwasser', label: '§2 Nr.6  – Heizung + Warmwasser (verbunden)',        defaultKey: 'per_unit' },
+  { value: 'aufzug',             label: '§2 Nr.7  – Aufzug',                                  defaultKey: 'equal'    },
+  { value: 'strassenreinigung',  label: '§2 Nr.8  – Straßenreinigung / Müllbeseitigung',      defaultKey: 'sqm'      },
+  { value: 'gebaeudereinigung',  label: '§2 Nr.9  – Gebäudereinigung / Ungezieferbekämpfung', defaultKey: 'sqm'      },
+  { value: 'gartenpflege',       label: '§2 Nr.10 – Gartenpflege',                            defaultKey: 'sqm'      },
+  { value: 'allgemeinstrom',     label: '§2 Nr.11 – Allgemeinstrom / Beleuchtung',             defaultKey: 'equal'    },
+  { value: 'schornstein',        label: '§2 Nr.12 – Schornsteinreinigung',                    defaultKey: 'equal'    },
+  { value: 'versicherung',       label: '§2 Nr.13 – Sach- und Haftpflichtversicherung',       defaultKey: 'sqm'      },
+  { value: 'hauswart',           label: '§2 Nr.14 – Hauswart / Hausmeister',                  defaultKey: 'sqm'      },
+  { value: 'antenne',            label: '§2 Nr.15 – Gemeinschaftsantenne / Kabel / Internet', defaultKey: 'equal'    },
+  { value: 'waeschepflege',      label: '§2 Nr.16 – Wäschepflege-Einrichtungen',              defaultKey: 'equal'    },
+  { value: 'sonstige',           label: '§2 Nr.17 – Sonstige Betriebskosten',                 defaultKey: 'sqm'      },
 ]
 
 const DISTRIBUTION_KEYS = [
-  { value: 'sqm',      label: 'Nach Wohnfläche m²'                         },
-  { value: 'equal',    label: 'Gleichmäßig pro Einheit'                    },
-  { value: 'per_unit', label: 'Einzelbeträge je Einheit (z.B. Ista/Techem)'},
+  { value: 'sqm',      label: 'Nach Wohnfläche m²'                          },
+  { value: 'equal',    label: 'Gleichmäßig pro Einheit'                     },
+  { value: 'per_unit', label: 'Einzelbeträge je Einheit (z.B. Ista/Techem)' },
 ]
 
-export default function NebenkostenabrechnungDetail() {
-  const params = useParams()
+export default function NebenkostenabrechnungDetail({ params }: { params: { id: string } }) {
   const router = useRouter()
-  const id = params.id as string
+  const id = params.id
 
-  const [statement, setStatement]   = useState<any>(null)
-  const [units, setUnits]           = useState<any[]>([])
-  const [contracts, setContracts]   = useState<any[]>([])
-  const [costItems, setCostItems]   = useState<any[]>([])
+  const [statement, setStatement]     = useState<any>(null)
+  const [units, setUnits]             = useState<any[]>([])
+  const [contracts, setContracts]     = useState<any[]>([])
+  const [costItems, setCostItems]     = useState<any[]>([])
   const [showAddForm, setShowAddForm] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
-  const [saving, setSaving]         = useState(false)
-  const [newItem, setNewItem]       = useState({
+  const [saving, setSaving]           = useState(false)
+  const [newItem, setNewItem]         = useState({
     category: '', description: '', total_amount: '',
     distribution_key: 'sqm', unit_amounts: {} as Record<string, string>,
   })
@@ -123,7 +122,6 @@ export default function NebenkostenabrechnungDetail() {
     loadData()
   }
 
-  // ─── Berechnungen ───────────────────────────────────────────────────────────
   const totalSqm = units.reduce((s: number, u: any) => s + (Number(u.size_sqm) || 0), 0)
 
   const getUnitShare = (item: any, unit: any): number => {
@@ -146,12 +144,12 @@ export default function NebenkostenabrechnungDetail() {
     const contract = getContractForUnit(unit.id)
     if (!contract) return 0
     const year = statement.year
-    const yearStart  = new Date(`${year}-01-01`)
-    const yearEnd    = new Date(`${year}-12-31`)
-    const start      = new Date(contract.start_date)
-    const end        = contract.end_date ? new Date(contract.end_date) : yearEnd
-    const effStart   = start > yearStart ? start : yearStart
-    const effEnd     = end   < yearEnd   ? end   : yearEnd
+    const yearStart = new Date(`${year}-01-01`)
+    const yearEnd   = new Date(`${year}-12-31`)
+    const start     = new Date(contract.start_date)
+    const end       = contract.end_date ? new Date(contract.end_date) : yearEnd
+    const effStart  = start > yearStart ? start : yearStart
+    const effEnd    = end   < yearEnd   ? end   : yearEnd
     if (effStart > effEnd) return 0
     const months = Math.min(
       Math.round((effEnd.getTime() - effStart.getTime()) / (1000 * 60 * 60 * 24 * 30.44)) + 1,
@@ -170,13 +168,12 @@ export default function NebenkostenabrechnungDetail() {
   const formatEur = (n: number) =>
     n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
 
-  const getCatLabel  = (v: string) => BETRKV_CATEGORIES.find((c: any) => c.value === v)?.label || v
-  const getKeyLabel  = (v: string) => DISTRIBUTION_KEYS.find((d: any) => d.value === v)?.label || v
+  const getCatLabel = (v: string) => BETRKV_CATEGORIES.find((c: any) => c.value === v)?.label || v
+  const getKeyLabel = (v: string) => DISTRIBUTION_KEYS.find((d: any) => d.value === v)?.label || v
 
-  // ─── Styles ─────────────────────────────────────────────────────────────────
-  const card  = { backgroundColor: '#fff', border: '1px solid #e8e6e0', borderRadius: '12px', padding: '24px' }
-  const inp   = { width: '100%', border: '1px solid #e8e6e0', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', outline: 'none', color: '#1a1a1a', backgroundColor: '#fff' }
-  const lbl   = { fontSize: '12px', color: '#999', marginBottom: '6px', display: 'block', textTransform: 'uppercase' as const, letterSpacing: '0.5px' }
+  const card = { backgroundColor: '#fff', border: '1px solid #e8e6e0', borderRadius: '12px', padding: '24px' }
+  const inp  = { width: '100%', border: '1px solid #e8e6e0', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', outline: 'none', color: '#1a1a1a', backgroundColor: '#fff' }
+  const lbl  = { fontSize: '12px', color: '#999', marginBottom: '6px', display: 'block', textTransform: 'uppercase' as const, letterSpacing: '0.5px' }
 
   if (!statement) return (
     <main style={{ backgroundColor: '#fafaf8', minHeight: '100vh' }}>
@@ -192,18 +189,18 @@ export default function NebenkostenabrechnungDetail() {
       <Nav />
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: '48px' }}>
 
-        {/* ── Header ── */}
         <button onClick={() => router.push('/nebenkostenabrechnung')}
           style={{ background: 'none', border: 'none', color: '#888', fontSize: '13px', cursor: 'pointer', marginBottom: '24px', padding: 0 }}>
           ← Zurück zur Übersicht
         </button>
+
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px' }}>
           <div>
             <h1 style={{ fontSize: '28px', fontWeight: '400', color: '#1a1a1a', margin: '0 0 4px', fontFamily: 'Georgia, serif' }}>
               {statement.properties?.name} · {statement.year}
             </h1>
             <p style={{ fontSize: '14px', color: '#999', margin: 0 }}>
-              {statement.properties?.address}, {statement.properties?.city} · Abrechnungszeitraum 01.01.{statement.year} – 31.12.{statement.year}
+              {statement.properties?.address}, {statement.properties?.city} · 01.01.{statement.year} – 31.12.{statement.year}
             </p>
           </div>
           <span style={{
@@ -215,13 +212,16 @@ export default function NebenkostenabrechnungDetail() {
           </span>
         </div>
 
-        {/* ── Summary Cards ── */}
+        {/* Summary Cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '32px' }}>
-          {[
-            { label: 'Gesamtkosten', value: totalCosts, color: '#1a1a1a', sub: `${costItems.length} Positionen` },
-            { label: 'Vorauszahlungen', value: totalPrepayments, color: '#1a1a1a', sub: 'aus Nebenkostenvorauszahlung' },
-            { label: totalBalance > 0 ? 'Nachzahlung gesamt' : 'Guthaben gesamt', value: Math.abs(totalBalance), color: totalBalance > 0 ? '#dc2626' : '#16a34a', sub: totalBalance > 0 ? 'Mieter zahlen nach' : 'Mieter erhalten zurück' },
-          ].map((s: any) => (
+          {([
+            { label: 'Gesamtkosten',    value: totalCosts,            color: '#1a1a1a', sub: `${costItems.length} Positionen`          },
+            { label: 'Vorauszahlungen', value: totalPrepayments,      color: '#1a1a1a', sub: 'aus Nebenkostenvorauszahlung'            },
+            { label: totalBalance > 0 ? 'Nachzahlung gesamt' : 'Guthaben gesamt',
+              value: Math.abs(totalBalance),
+              color: totalBalance > 0 ? '#dc2626' : '#16a34a',
+              sub: totalBalance > 0 ? 'Mieter zahlen nach' : 'Mieter erhalten zurück' },
+          ] as any[]).map((s: any) => (
             <div key={s.label} style={card}>
               <p style={{ fontSize: '12px', color: '#999', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{s.label}</p>
               <p style={{ fontSize: '26px', fontWeight: '300', color: s.color, margin: '0 0 4px', fontFamily: 'Georgia, serif' }}>{formatEur(s.value)}</p>
@@ -230,7 +230,7 @@ export default function NebenkostenabrechnungDetail() {
           ))}
         </div>
 
-        {/* ── Kostenpositionen ── */}
+        {/* Kostenpositionen */}
         <div style={{ marginBottom: '32px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h2 style={{ fontSize: '16px', fontWeight: '500', color: '#1a1a1a', margin: 0 }}>Kostenpositionen</h2>
@@ -367,7 +367,7 @@ export default function NebenkostenabrechnungDetail() {
           )}
         </div>
 
-        {/* ── Ergebnisse pro Einheit ── */}
+        {/* Ergebnisse pro Einheit */}
         {costItems.length > 0 && (
           <div>
             <h2 style={{ fontSize: '16px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 16px' }}>
@@ -380,7 +380,6 @@ export default function NebenkostenabrechnungDetail() {
                 const prepayments = getPrepayments(unit)
                 const balance     = allocated - prepayments
                 const isNach      = balance > 0
-
                 return (
                   <div key={unit.id} style={{ ...card, padding: '20px 24px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
@@ -393,7 +392,7 @@ export default function NebenkostenabrechnungDetail() {
                           {contract ? contract.tenants?.full_name : '⚠ Kein aktiver Mieter – Kosten trägt Vermieter'}
                         </p>
                       </div>
-                      <div style={{ display: 'flex', gap: '32px', textAlign: 'right' }}>
+                      <div style={{ display: 'flex', gap: '32px', textAlign: 'right' as const }}>
                         <div>
                           <p style={{ fontSize: '11px', color: '#999', margin: '0 0 2px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Anteil</p>
                           <p style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: 0 }}>{formatEur(allocated)}</p>
@@ -421,7 +420,7 @@ export default function NebenkostenabrechnungDetail() {
               <div style={{ marginTop: '24px', padding: '20px 24px', backgroundColor: '#f0fdf4', borderRadius: '12px', border: '1px solid #bbf7d0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <p style={{ fontSize: '14px', fontWeight: '500', color: '#15803d', margin: '0 0 2px' }}>Abrechnung abschließen</p>
-                  <p style={{ fontSize: '13px', color: '#16a34a', margin: 0 }}>Status auf "Abgeschlossen" setzen und PDF exportieren</p>
+                  <p style={{ fontSize: '13px', color: '#16a34a', margin: 0 }}>Status auf "Abgeschlossen" setzen – danach PDF exportieren</p>
                 </div>
                 <button onClick={handleFinalize}
                   style={{ backgroundColor: '#16a34a', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>

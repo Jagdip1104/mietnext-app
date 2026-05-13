@@ -121,7 +121,17 @@ export default function NebenkostenabrechnungDetail() {
     await supabase.from('utility_statements').update({ status: 'finalized' }).eq('id', id)
     loadData()
   }
+  
+const handleReopen = async () => {
+  await supabase.from('utility_statements').update({ status: 'draft' }).eq('id', id)
+  loadData()
+}
 
+const handleDeleteStatement = async () => {
+  const { error } = await supabase.from('utility_statements').delete().eq('id', id)
+  if (error) { alert('Fehler: ' + error.message); return }
+  router.push('/nebenkostenabrechnung')
+}
   // ─── Berechnungen ────────────────────────────────────────────────────────────
   const totalSqm = units.reduce((s: number, u: any) => s + (Number(u.size_sqm) || 0), 0)
 
@@ -567,30 +577,55 @@ export default function NebenkostenabrechnungDetail() {
             </div>
 
             {statement.status === 'draft' && (
-              <div style={{ marginTop: '24px', padding: '20px 24px', backgroundColor: '#f0fdf4', borderRadius: '12px', border: '1px solid #bbf7d0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <p style={{ fontSize: '14px', fontWeight: '500', color: '#15803d', margin: '0 0 2px' }}>Abrechnung abschließen</p>
-                  <p style={{ fontSize: '13px', color: '#16a34a', margin: 0 }}>Status auf "Abgeschlossen" setzen – danach PDF exportieren</p>
-                </div>
-                <button onClick={handleFinalize}
-                  style={{ backgroundColor: '#16a34a', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>
-                  ✓ Abrechnung abschließen
-                </button>
-              </div>
-            )}
+  <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+    <div style={{ padding: '20px 24px', backgroundColor: '#f0fdf4', borderRadius: '12px', border: '1px solid #bbf7d0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div>
+        <p style={{ fontSize: '14px', fontWeight: '500', color: '#15803d', margin: '0 0 2px' }}>Abrechnung abschließen</p>
+        <p style={{ fontSize: '13px', color: '#16a34a', margin: 0 }}>Status auf "Abgeschlossen" setzen – danach PDF exportieren</p>
+      </div>
+      <button onClick={handleFinalize}
+        style={{ backgroundColor: '#16a34a', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>
+        ✓ Abrechnung abschließen
+      </button>
+    </div>
+    <div style={{ padding: '16px 24px', backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #fecaca', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <p style={{ fontSize: '13px', color: '#999', margin: 0 }}>Abrechnung und alle Kostenpositionen unwiderruflich löschen</p>
+      <button onClick={handleDeleteStatement}
+        style={{ backgroundColor: '#fff', color: '#dc2626', padding: '8px 16px', borderRadius: '8px', border: '1px solid #fecaca', fontSize: '13px', cursor: 'pointer' }}>
+        Abrechnung löschen
+      </button>
+    </div>
+  </div>
+)}
 
-            {statement.status === 'finalized' && (
-              <div style={{ marginTop: '24px', padding: '20px 24px', backgroundColor: '#eff6ff', borderRadius: '12px', border: '1px solid #bfdbfe', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <p style={{ fontSize: '14px', fontWeight: '500', color: '#1d4ed8', margin: '0 0 2px' }}>PDF-Export</p>
-                  <p style={{ fontSize: '13px', color: '#3b82f6', margin: 0 }}>Eine Seite pro Mieter mit allen Kostenpositionen und Ergebnis</p>
-                </div>
-                <button onClick={generatePDF} disabled={pdfLoading}
-                  style={{ backgroundColor: '#3b82f6', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: pdfLoading ? 'wait' : 'pointer', opacity: pdfLoading ? 0.7 : 1 }}>
-                  {pdfLoading ? '⏳ PDF wird erstellt...' : '📄 PDF exportieren'}
-                </button>
-              </div>
-            )}
+        {statement.status === 'finalized' && (
+        <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ padding: '20px 24px', backgroundColor: '#eff6ff', borderRadius: '12px', border: '1px solid #bfdbfe', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+                <p style={{ fontSize: '14px', fontWeight: '500', color: '#1d4ed8', margin: '0 0 2px' }}>PDF-Export</p>
+                <p style={{ fontSize: '13px', color: '#3b82f6', margin: 0 }}>Eine Seite pro Mieter mit allen Kostenpositionen und Ergebnis</p>
+            </div>
+            <button onClick={generatePDF} disabled={pdfLoading}
+                style={{ backgroundColor: '#3b82f6', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: pdfLoading ? 'wait' : 'pointer', opacity: pdfLoading ? 0.7 : 1 }}>
+                {pdfLoading ? '⏳ PDF wird erstellt...' : '📄 PDF exportieren'}
+            </button>
+            </div>
+            <div style={{ padding: '16px 24px', backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e8e6e0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <p style={{ fontSize: '13px', color: '#999', margin: 0 }}>Abrechnung wieder bearbeiten (zurück auf Entwurf setzen)</p>
+            <button onClick={handleReopen}
+                style={{ backgroundColor: '#fff', color: '#d97706', padding: '8px 16px', borderRadius: '8px', border: '1px solid #fed7aa', fontSize: '13px', cursor: 'pointer' }}>
+                ↩ Wieder öffnen
+            </button>
+            </div>
+            <div style={{ padding: '16px 24px', backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #fecaca', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <p style={{ fontSize: '13px', color: '#999', margin: 0 }}>Abrechnung und alle Kostenpositionen unwiderruflich löschen</p>
+            <button onClick={handleDeleteStatement}
+                style={{ backgroundColor: '#fff', color: '#dc2626', padding: '8px 16px', borderRadius: '8px', border: '1px solid #fecaca', fontSize: '13px', cursor: 'pointer' }}>
+                Abrechnung löschen
+            </button>
+            </div>
+        </div>
+        )}
           </div>
         )}
       </div>

@@ -5,9 +5,9 @@ import { createClient } from '@supabase/supabase-js'
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
 const PRICE_TO_PLAN: Record<string, string> = {
-  'price_1TWjBLC2lxlY4GthiRV6tYo3': 'starter',
-  'price_1TWjDVC2lxlY4GthvtN0Jdxu': 'business',
-  'price_1TWjDqC2lxlY4GthwMqCklKB': 'enterprise',
+  'price_1TWjBLC2lxIY4GthiRV6tYo3': 'starter',
+  'price_1TWjDVC2lxIY4GthvtN0Jdxu': 'business',
+  'price_1TWjDqC2lxIY4GthwMqCklKB': 'enterprise',
 }
 
 export async function POST(req: NextRequest) {

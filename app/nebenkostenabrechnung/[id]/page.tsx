@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
+import { useRouter, useParams } from 'next/navigation'
 import Nav from '@/components/Nav'
 
 const BETRKV_CATEGORIES = [
@@ -31,9 +31,10 @@ const DISTRIBUTION_KEYS = [
   { value: 'per_unit', label: 'Einzelbeträge je Einheit (z.B. Ista/Techem)' },
 ]
 
-export default function NebenkostenabrechnungDetail({ params }: { params: { id: string } }) {
+export default function NebenkostenabrechnungDetail() {
   const router = useRouter()
-  const id = params.id
+  const params = useParams()
+  const id = params?.id as string
 
   const [statement, setStatement]     = useState<any>(null)
   const [units, setUnits]             = useState<any[]>([])

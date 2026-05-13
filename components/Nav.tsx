@@ -12,17 +12,18 @@ export default function Nav() {
     router.push('/login')
   }
 
-  const links = [
-    { href: '/dashboard', label: 'Dashboard' },
-    { href: '/properties', label: 'Objekte' },
-    { href: '/units', label: 'Einheiten' },
-    { href: '/tenants', label: 'Mieter' },
-    { href: '/contracts', label: 'Verträge' },
-    { href: '/payments', label: 'Zahlungen' },
-    { href: '/tickets', label: 'Tickets' },
-    { href: '/nebenkostenabrechnung', label: 'Nebenkosten' },
-    { href: '/invite-tenant', label: 'Einladen' },
-  ]
+    const links = [
+    { href: '/dashboard',              label: 'Dashboard'   },
+    { href: '/properties',             label: 'Objekte'     },
+    { href: '/units',                  label: 'Einheiten'   },
+    { href: '/tenants',                label: 'Mieter'      },
+    { href: '/contracts',              label: 'Verträge'    },
+    { href: '/payments',               label: 'Zahlungen'   },
+    { href: '/kosten',                 label: 'Kosten'      },
+    { href: '/nebenkostenabrechnung',  label: 'Nebenkosten' },
+    { href: '/tickets',                label: 'Tickets'     },
+    { href: '/invite-tenant',          label: 'Einladen'    },
+    ]
 
   return (
     <nav style={{

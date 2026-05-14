@@ -24,8 +24,7 @@ export default function Nav() {
     { href: '/nebenkostenabrechnung', label: 'Nebenkosten' },
     { href: '/tickets',               label: 'Tickets'     },
     { href: '/invite-tenant',         label: 'Einladen'    },
-    { href: '/impressum',             label: 'Impressum'   },
-    { href: '/datenschutz',           label: 'Datenschutz' },
+ 
     ]
 
   return (

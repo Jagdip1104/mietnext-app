@@ -110,20 +110,75 @@ export default function Units() {
     handleCancel(); setLoading(false); loadData(userId!)
   }
 
-  const handleDelete = async (id: string) => {
-    const { error } = await supabase.from('units').delete().eq('id', id)
-    if (error) {
-      if (error.code === '23503') {
-        alert('Diese Einheit kann nicht gelöscht werden, da noch Mieter, Verträge oder andere Daten damit verknüpft sind.\n\nBitte entferne erst diese Verknüpfungen.')
-      } else {
+    const handleDelete = async (id: string) => {
+        const unit = units.find((u: any) => u.id === id)
+        if (!unit) return
+
+        // 1. Connected data zählen
+        const { data: contracts } = await supabase
+        .from('contracts').select('id').eq('unit_id', id)
+        const contractIds = (contracts || []).map((c: any) => c.id)
+
+        const { data: tenants } = await supabase
+        .from('tenants').select('id, full_name').eq('unit_id', id)
+        const tenantIds = (tenants || []).map((t: any) => t.id)
+
+        let paidCount = 0
+        let pendingCount = 0
+        if (contractIds.length > 0) {
+        const { data: payments } = await supabase
+            .from('payments').select('id, status').in('contract_id', contractIds)
+        paidCount    = (payments || []).filter((p: any) => p.status === 'paid').length
+        pendingCount = (payments || []).filter((p: any) => p.status !== 'paid').length
+        }
+
+        // 2. BLOCK wenn bezahlte Zahlungen existieren (GoBD §147 AO)
+        if (paidCount > 0) {
+        alert(
+            `Diese Einheit kann nicht gelöscht werden!\n\n` +
+            `Es existieren ${paidCount} bezahlte Zahlungen.\n\n` +
+            `Gesetzliche Aufbewahrungspflicht (§147 AO): 10 Jahre.\n\n` +
+            `Bitte beende stattdessen den Vertrag und setze die Einheit auf "leer".`
+        )
+        setDeleteConfirm(null)
+        return
+        }
+
+        // 3. Bestätigung mit Übersicht
+        const summary = [
+        `Einheit: ${unit.name}`,
+        tenantIds.length > 0 ? `${tenantIds.length} Mieter` : null,
+        contractIds.length > 0 ? `${contractIds.length} Verträge` : null,
+        pendingCount > 0 ? `${pendingCount} ausstehende Zahlungen` : null,
+        ].filter(Boolean).join('\n• ')
+
+        if (!window.confirm(
+        `Folgende Daten werden GELÖSCHT:\n\n• ${summary}\n\n` +
+        `Diese Aktion kann nicht rückgängig gemacht werden!\n\nTrotzdem löschen?`
+        )) {
+        setDeleteConfirm(null)
+        return
+        }
+
+        // 4. Cascade-Delete in korrekter Reihenfolge
+        if (contractIds.length > 0) {
+        await supabase.from('payments').delete().in('contract_id', contractIds)
+        await supabase.from('contracts').delete().in('id', contractIds)
+        }
+        if (tenantIds.length > 0) {
+        await supabase.from('tenants').delete().in('id', tenantIds)
+        }
+
+        const { error } = await supabase.from('units').delete().eq('id', id)
+        if (error) {
         alert('Fehler beim Löschen: ' + error.message)
-      }
-      setDeleteConfirm(null)
-      return
+        setDeleteConfirm(null)
+        return
+        }
+
+        setDeleteConfirm(null)
+        loadData(userId!)
     }
-    setDeleteConfirm(null)
-    loadData(userId!)
-  }
 
   const computeTotalRent = () => {
     const base = parseFloat(rentAmount) || 0

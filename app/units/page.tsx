@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Nav from '@/components/Nav'
+import PlanUsageBanner from '@/components/PlanUsageBanner'
+import { getUserPlanInfo } from '@/lib/plans'
 
 export default function Units() {
   const [properties, setProperties] = useState<any[]>([])
@@ -26,6 +28,7 @@ export default function Units() {
   const [loading, setLoading] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
+  const [planInfo, setPlanInfo] = useState<any>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -42,10 +45,11 @@ export default function Units() {
     const { data: props } = await supabase.from('properties').select('*').eq('owner_id', uid).order('name')
     setProperties(props || [])
     const propertyIds = (props || []).map((p: any) => p.id)
-    if (propertyIds.length === 0) { setUnits([]); return }
+    if (propertyIds.length === 0) { setUnits([]); setPlanInfo(await getUserPlanInfo(uid)); return }
     const { data: unitsData } = await supabase.from('units').select('*, properties(name)')
       .in('property_id', propertyIds).order('created_at', { ascending: false })
     setUnits(unitsData || [])
+    setPlanInfo(await getUserPlanInfo(uid))
   }
 
   const handleEdit = (u: any) => {
@@ -68,8 +72,24 @@ export default function Units() {
     setVatApplicable(false); setNotes('')
   }
 
+  const handleNewUnit = () => {
+    if (planInfo && !editingId && !planInfo.canCreateMore) {
+      alert(`Limit erreicht!\n\nDu nutzt ${planInfo.currentUnits} von ${planInfo.limit} Einheiten (${planInfo.planName}).\n\nBitte upgrade auf einen höheren Plan um weitere Einheiten anzulegen.`)
+      router.push('/pricing')
+      return
+    }
+    setShowForm(true)
+  }
+
   const handleSave = async () => {
     if (!name || !selectedProperty) return
+
+    if (!editingId && planInfo && !planInfo.canCreateMore) {
+      alert(`Limit erreicht! Du nutzt ${planInfo.currentUnits} von ${planInfo.limit} Einheiten (${planInfo.planName}).`)
+      router.push('/pricing')
+      return
+    }
+
     setLoading(true)
     const data: any = {
       name, property_id: selectedProperty, type, notes: notes || null,
@@ -130,17 +150,31 @@ export default function Units() {
   const input = { width: '100%', border: '1px solid #e8e6e0', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', outline: 'none', color: '#1a1a1a', backgroundColor: '#fff' }
   const label = { fontSize: '12px', color: '#999', marginBottom: '6px', display: 'block', textTransform: 'uppercase' as const, letterSpacing: '0.5px' }
 
+  const atLimit = planInfo && !planInfo.canCreateMore && !editingId
+
   return (
     <main style={{ backgroundColor: '#fafaf8', minHeight: '100vh' }}>
       <Nav />
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: '48px' }}>
+
+        <PlanUsageBanner />
+
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '40px' }}>
           <div>
             <h1 style={{ fontSize: '28px', fontWeight: '400', color: '#1a1a1a', margin: '0 0 4px', fontFamily: 'Georgia, serif' }}>Einheiten</h1>
             <p style={{ fontSize: '14px', color: '#999', margin: 0 }}>{units.length} Einheiten gesamt</p>
           </div>
-          <button onClick={() => setShowForm(true)} style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>
-            + Einheit anlegen
+          <button onClick={handleNewUnit}
+            style={{
+              backgroundColor: atLimit ? '#fff' : '#1a1a1a',
+              color: atLimit ? '#dc2626' : '#fff',
+              padding: '10px 20px',
+              borderRadius: '8px',
+              border: atLimit ? '1px solid #fecaca' : 'none',
+              fontSize: '13px',
+              cursor: 'pointer'
+            }}>
+            {atLimit ? '⬆ Upgrade für mehr Einheiten' : '+ Einheit anlegen'}
           </button>
         </div>
 
@@ -265,7 +299,7 @@ export default function Units() {
         {units.length === 0 ? (
           <div style={{ ...card, textAlign: 'center', padding: '64px' }}>
             <p style={{ fontSize: '14px', color: '#bbb', margin: '0 0 12px' }}>Noch keine Einheiten angelegt.</p>
-            <button onClick={() => setShowForm(true)} style={{ background: 'none', border: 'none', color: '#1a1a1a', fontSize: '14px', cursor: 'pointer', textDecoration: 'underline' }}>
+            <button onClick={handleNewUnit} style={{ background: 'none', border: 'none', color: '#1a1a1a', fontSize: '14px', cursor: 'pointer', textDecoration: 'underline' }}>
               Erste Einheit anlegen →
             </button>
           </div>

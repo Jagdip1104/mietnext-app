@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Nav from '@/components/Nav'
+import PlanUsageBanner from '@/components/PlanUsageBanner'
 
 export default function Dashboard() {
   const [user, setUser] = useState<any>(null)
@@ -27,35 +28,29 @@ export default function Dashboard() {
   }, [])
 
   const loadData = async (uid: string) => {
-    // 1. Eigene properties finden
     const { data: ownProperties } = await supabase
       .from('properties').select('id').eq('owner_id', uid)
     const propertyIds = (ownProperties || []).map((p: any) => p.id)
 
-    // 2. Eigene units finden
     const { data: ownUnits } = await supabase
       .from('units').select('id, is_occupied')
       .in('property_id', propertyIds.length > 0 ? propertyIds : ['none'])
     const unitIds = (ownUnits || []).map((u: any) => u.id)
     const occupiedCount = (ownUnits || []).filter((u: any) => u.is_occupied).length
 
-    // 3. Eigene tenants finden
     const { count: tenantCount } = await supabase
       .from('tenants').select('*', { count: 'exact', head: true }).eq('owner_id', uid)
 
-    // 4. Eigene contracts finden (über units)
     const { data: ownContracts } = await supabase
       .from('contracts').select('id')
       .in('unit_id', unitIds.length > 0 ? unitIds : ['none'])
     const contractIds = (ownContracts || []).map((c: any) => c.id)
 
-    // 5. Tickets nur für eigene units
     const { count: ticketCount } = await supabase
       .from('tickets').select('*', { count: 'exact', head: true })
       .eq('status', 'open')
       .in('unit_id', unitIds.length > 0 ? unitIds : ['none'])
 
-    // 6. Payments nur für eigene contracts
     const now = new Date()
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
@@ -132,6 +127,8 @@ export default function Dashboard() {
     <main style={{ backgroundColor: '#fafaf8', minHeight: '100vh' }}>
       <Nav />
       <div style={{ maxWidth: '1040px', margin: '0 auto', padding: '48px 48px' }}>
+
+        <PlanUsageBanner />
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '40px' }}>
           <div>

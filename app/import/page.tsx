@@ -8,49 +8,24 @@ import * as XLSX from 'xlsx'
 
 interface ImportRow {
   rowNum: number
-  // Property
-  property: string
-  street: string
-  zip: string
-  city: string
-  yearBuilt: number | null
-  // Unit
-  unit: string
-  floor: string
-  sizeSqm: number | null
-  rooms: number | null
-  type: string
-  usageType: string
-  parkingType: string
-  rentAmount: number | null
-  utilities: number | null
-  vatApplicable: boolean | null
-  vatRate: number | null
-  notes: string
-  // Tenant
-  tenantName: string
-  tenantEmail: string
-  tenantPhone: string
+  property: string; street: string; zip: string; city: string; yearBuilt: number | null
+  unit: string; floor: string; sizeSqm: number | null; rooms: number | null
+  type: string; usageType: string; parkingType: string
+  rentAmount: number | null; utilities: number | null
+  vatApplicable: boolean | null; vatRate: number | null; notes: string
+  tenantName: string; tenantEmail: string; tenantPhone: string
   errors: string[]
 }
 
 interface PreviewStats {
-  totalRows: number
-  validRows: number
-  invalidRows: number
-  uniqueProperties: number
-  totalUnits: number
-  totalTenants: number
-  totalKaltmiete: number
-  totalNebenkosten: number
+  totalRows: number; validRows: number; invalidRows: number
+  uniqueProperties: number; totalUnits: number; totalTenants: number
+  totalKaltmiete: number; totalNebenkosten: number
 }
 
 interface ImportResult {
-  propertiesAdded: number
-  propertiesReused: number
-  unitsAdded: number
-  tenantsAdded: number
-  rowsSkipped: number
+  propertiesAdded: number; propertiesReused: number
+  unitsAdded: number; tenantsAdded: number; rowsSkipped: number
   errors: string[]
 }
 
@@ -64,6 +39,8 @@ export default function Import() {
   const [dragActive, setDragActive] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState<ImportResult | null>(null)
+  const [pastImports, setPastImports] = useState<any[]>([])
+  const [rollbackLoading, setRollbackLoading] = useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -71,11 +48,22 @@ export default function Import() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/login'); return }
       setUserId(session.user.id)
+      loadImports(session.user.id)
     }
     check()
   }, [])
 
-  // Smart-Mapping: alle möglichen Spaltennamen-Varianten
+  const loadImports = async (uid: string) => {
+    const { data } = await supabase
+      .from('imports')
+      .select('*')
+      .eq('owner_id', uid)
+      .order('created_at', { ascending: false })
+      .limit(20)
+    setPastImports(data || [])
+  }
+
+  // Smart-Mapping
   const columnMap: { [key: string]: string[] } = {
     property: ['objekt', 'objekt *', 'haus', 'gebäude', 'property'],
     street: ['straße', 'strasse', 'str', 'street', 'address', 'adresse'],
@@ -124,10 +112,7 @@ export default function Import() {
   }
 
   const handleFile = async (selectedFile: File) => {
-    setError('')
-    setRows([])
-    setStats(null)
-    setResult(null)
+    setError(''); setRows([]); setStats(null); setResult(null)
 
     if (!selectedFile.name.match(/\.(xlsx|xls|csv)$/i)) {
       setError('Bitte eine Excel- oder CSV-Datei hochladen (.xlsx, .xls, .csv)')
@@ -144,8 +129,7 @@ export default function Import() {
       let sheetName = wb.SheetNames[0]
       for (const name of wb.SheetNames) {
         if (!name.toLowerCase().includes('anleitung') && !name.toLowerCase().includes('hilfe')) {
-          sheetName = name
-          break
+          sheetName = name; break
         }
       }
 
@@ -153,15 +137,10 @@ export default function Import() {
       const jsonData: any[] = XLSX.utils.sheet_to_json(ws, { defval: '' })
 
       if (jsonData.length === 0) {
-        setError('Keine Daten in der Excel-Datei gefunden. Bitte die Vorlage verwenden.')
-        setParsing(false)
-        return
+        setError('Keine Daten in der Excel-Datei gefunden.'); setParsing(false); return
       }
-
       if (jsonData.length > 500) {
-        setError(`Maximal 500 Zeilen pro Upload erlaubt. Deine Datei hat ${jsonData.length} Zeilen. Bitte aufteilen.`)
-        setParsing(false)
-        return
+        setError(`Maximal 500 Zeilen pro Upload erlaubt. Deine Datei hat ${jsonData.length} Zeilen.`); setParsing(false); return
       }
 
       const headers = Object.keys(jsonData[0])
@@ -169,37 +148,24 @@ export default function Import() {
       const unitCol = findColumn(headers, 'unit')
 
       if (!propertyCol || !unitCol) {
-        setError('Pflichtspalten "Objekt" und "Einheit" nicht gefunden. Bitte die Vorlage verwenden.')
-        setParsing(false)
-        return
+        setError('Pflichtspalten "Objekt" und "Einheit" nicht gefunden.'); setParsing(false); return
       }
 
-      // Alle Spalten mappen
-      const cols = {
-        property: propertyCol,
-        street: findColumn(headers, 'street'),
-        zip: findColumn(headers, 'zip'),
-        city: findColumn(headers, 'city'),
-        yearBuilt: findColumn(headers, 'yearBuilt'),
-        unit: unitCol,
-        floor: findColumn(headers, 'floor'),
-        sizeSqm: findColumn(headers, 'sizeSqm'),
-        rooms: findColumn(headers, 'rooms'),
-        type: findColumn(headers, 'type'),
-        usageType: findColumn(headers, 'usageType'),
-        parkingType: findColumn(headers, 'parkingType'),
-        rentAmount: findColumn(headers, 'rentAmount'),
-        utilities: findColumn(headers, 'utilities'),
-        vatApplicable: findColumn(headers, 'vatApplicable'),
-        vatRate: findColumn(headers, 'vatRate'),
+      const cols: any = {
+        property: propertyCol, unit: unitCol,
+        street: findColumn(headers, 'street'), zip: findColumn(headers, 'zip'),
+        city: findColumn(headers, 'city'), yearBuilt: findColumn(headers, 'yearBuilt'),
+        floor: findColumn(headers, 'floor'), sizeSqm: findColumn(headers, 'sizeSqm'),
+        rooms: findColumn(headers, 'rooms'), type: findColumn(headers, 'type'),
+        usageType: findColumn(headers, 'usageType'), parkingType: findColumn(headers, 'parkingType'),
+        rentAmount: findColumn(headers, 'rentAmount'), utilities: findColumn(headers, 'utilities'),
+        vatApplicable: findColumn(headers, 'vatApplicable'), vatRate: findColumn(headers, 'vatRate'),
         notes: findColumn(headers, 'notes'),
-        tenantName: findColumn(headers, 'tenantName'),
-        tenantEmail: findColumn(headers, 'tenantEmail'),
+        tenantName: findColumn(headers, 'tenantName'), tenantEmail: findColumn(headers, 'tenantEmail'),
         tenantPhone: findColumn(headers, 'tenantPhone')
       }
 
-      const get = (raw: any, col: string | null) =>
-        col ? String(raw[col] || '').trim() : ''
+      const get = (raw: any, col: string | null) => col ? String(raw[col] || '').trim() : ''
 
       const parsedRows: ImportRow[] = jsonData.map((raw, idx) => {
         const errors: string[] = []
@@ -216,47 +182,33 @@ export default function Import() {
 
         return {
           rowNum: idx + 2,
-          property,
-          street: get(raw, cols.street),
-          zip: get(raw, cols.zip),
-          city: get(raw, cols.city),
-          yearBuilt: toNumber(cols.yearBuilt ? raw[cols.yearBuilt] : ''),
-          unit,
-          floor: get(raw, cols.floor),
+          property, street: get(raw, cols.street), zip: get(raw, cols.zip),
+          city: get(raw, cols.city), yearBuilt: toNumber(cols.yearBuilt ? raw[cols.yearBuilt] : ''),
+          unit, floor: get(raw, cols.floor),
           sizeSqm: toNumber(cols.sizeSqm ? raw[cols.sizeSqm] : ''),
           rooms: toNumber(cols.rooms ? raw[cols.rooms] : ''),
-          type: get(raw, cols.type),
-          usageType: get(raw, cols.usageType),
+          type: get(raw, cols.type), usageType: get(raw, cols.usageType),
           parkingType: get(raw, cols.parkingType),
           rentAmount: toNumber(cols.rentAmount ? raw[cols.rentAmount] : ''),
           utilities: toNumber(cols.utilities ? raw[cols.utilities] : ''),
           vatApplicable: toBool(cols.vatApplicable ? raw[cols.vatApplicable] : ''),
           vatRate: toNumber(cols.vatRate ? raw[cols.vatRate] : ''),
-          notes: get(raw, cols.notes),
-          tenantName: get(raw, cols.tenantName),
-          tenantEmail,
-          tenantPhone: get(raw, cols.tenantPhone),
-          errors
+          notes: get(raw, cols.notes), tenantName: get(raw, cols.tenantName),
+          tenantEmail, tenantPhone: get(raw, cols.tenantPhone), errors
         }
       })
 
       const validRows = parsedRows.filter(r => r.errors.length === 0)
-      const uniqueProperties = new Set(validRows.map(r => r.property)).size
-      const totalUnits = validRows.length
-      const totalTenants = validRows.filter(r => r.tenantName).length
-      const totalKaltmiete = validRows.reduce((sum, r) => sum + (r.rentAmount || 0), 0)
-      const totalNebenkosten = validRows.reduce((sum, r) => sum + (r.utilities || 0), 0)
-
       setRows(parsedRows)
       setStats({
         totalRows: parsedRows.length,
         validRows: validRows.length,
         invalidRows: parsedRows.length - validRows.length,
-        uniqueProperties,
-        totalUnits,
-        totalTenants,
-        totalKaltmiete,
-        totalNebenkosten
+        uniqueProperties: new Set(validRows.map(r => r.property)).size,
+        totalUnits: validRows.length,
+        totalTenants: validRows.filter(r => r.tenantName).length,
+        totalKaltmiete: validRows.reduce((s, r) => s + (r.rentAmount || 0), 0),
+        totalNebenkosten: validRows.reduce((s, r) => s + (r.utilities || 0), 0)
       })
     } catch (err: any) {
       setError('Fehler beim Lesen der Datei: ' + err.message)
@@ -265,99 +217,67 @@ export default function Import() {
   }
 
   const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    setDragActive(false)
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFile(e.dataTransfer.files[0])
-    }
+    e.preventDefault(); setDragActive(false)
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0])
   }
 
   const handleReset = () => {
-    setFile(null)
-    setRows([])
-    setStats(null)
-    setError('')
-    setResult(null)
+    setFile(null); setRows([]); setStats(null); setError(''); setResult(null)
   }
 
-  // ============================================
-  // ECHTE IMPORT-LOGIK
-  // ============================================
   const handleImport = async () => {
     if (!userId) return
     const validRows = rows.filter(r => r.errors.length === 0)
     if (validRows.length === 0) return
 
-    setImporting(true)
-    setError('')
-
+    setImporting(true); setError('')
     const importErrors: string[] = []
     const createdPropertyIds: string[] = []
     const createdUnitIds: string[] = []
     const createdTenantIds: string[] = []
-    let propertiesAdded = 0
-    let propertiesReused = 0
-    let unitsAdded = 0
-    let tenantsAdded = 0
+    let propertiesAdded = 0, propertiesReused = 0, unitsAdded = 0, tenantsAdded = 0
 
     try {
-      // 1) Bestehende Objekte des Owners laden (für Duplikat-Check)
       const { data: existingProps } = await supabase
         .from('properties').select('id, name').eq('owner_id', userId)
       const propertyMap = new Map<string, string>()
       ;(existingProps || []).forEach((p: any) => propertyMap.set(p.name.toLowerCase(), p.id))
 
-      // 2) Neue eindeutige Objekte sammeln
       const seenInImport = new Set<string>()
       const propsToInsert: any[] = []
       for (const row of validRows) {
         const key = row.property.toLowerCase()
         if (propertyMap.has(key)) {
-          if (!seenInImport.has(key)) {
-            propertiesReused++
-            seenInImport.add(key)
-          }
+          if (!seenInImport.has(key)) { propertiesReused++; seenInImport.add(key) }
         } else if (!seenInImport.has(key)) {
           seenInImport.add(key)
           propsToInsert.push({
-            name: row.property,
-            address: row.street || null,
-            zip: row.zip || null,
-            city: row.city || null,
-            year_built: row.yearBuilt,
-            owner_id: userId
+            name: row.property, address: row.street || null,
+            zip: row.zip || null, city: row.city || null,
+            year_built: row.yearBuilt, owner_id: userId
           })
         }
       }
 
-      // 3) Neue Objekte einfügen
       if (propsToInsert.length > 0) {
         const { data: insertedProps, error: propsError } = await supabase
           .from('properties').insert(propsToInsert).select('id, name')
         if (propsError) throw new Error('Objekte: ' + propsError.message)
         ;(insertedProps || []).forEach((p: any) => {
           propertyMap.set(p.name.toLowerCase(), p.id)
-          createdPropertyIds.push(p.id)
-          propertiesAdded++
+          createdPropertyIds.push(p.id); propertiesAdded++
         })
       }
 
-      // 4) Einheiten anlegen
       const unitsToInsert = validRows.map(row => ({
         property_id: propertyMap.get(row.property.toLowerCase()),
-        name: row.unit,
-        floor: row.floor || null,
-        size_sqm: row.sizeSqm,
-        rooms: row.rooms,
-        type: row.type || null,
-        usage_type: row.usageType || null,
+        name: row.unit, floor: row.floor || null,
+        size_sqm: row.sizeSqm, rooms: row.rooms,
+        type: row.type || null, usage_type: row.usageType || null,
         parking_type: row.parkingType || null,
-        rent_amount: row.rentAmount,
-        utilities_amount: row.utilities,
-        vat_applicable: row.vatApplicable,
-        vat_rate: row.vatRate,
-        notes: row.notes || null,
-        is_occupied: !!row.tenantName
+        rent_amount: row.rentAmount, utilities_amount: row.utilities,
+        vat_applicable: row.vatApplicable, vat_rate: row.vatRate,
+        notes: row.notes || null, is_occupied: !!row.tenantName
       }))
 
       const { data: insertedUnits, error: unitsError } = await supabase
@@ -367,22 +287,17 @@ export default function Import() {
       const unitMap = new Map<string, string>()
       ;(insertedUnits || []).forEach((u: any) => {
         unitMap.set(`${u.property_id}-${u.name.toLowerCase()}`, u.id)
-        createdUnitIds.push(u.id)
-        unitsAdded++
+        createdUnitIds.push(u.id); unitsAdded++
       })
 
-      // 5) Mieter anlegen (nur wenn Name vorhanden)
       const tenantsToInsert = validRows
         .filter(row => row.tenantName)
         .map(row => {
           const propertyId = propertyMap.get(row.property.toLowerCase())
           const unitId = unitMap.get(`${propertyId}-${row.unit.toLowerCase()}`)
           return {
-            full_name: row.tenantName,
-            email: row.tenantEmail || null,
-            phone: row.tenantPhone || null,
-            unit_id: unitId || null,
-            owner_id: userId
+            full_name: row.tenantName, email: row.tenantEmail || null,
+            phone: row.tenantPhone || null, unit_id: unitId || null, owner_id: userId
           }
         })
 
@@ -390,42 +305,119 @@ export default function Import() {
         const { data: insertedTenants, error: tenantsError } = await supabase
           .from('tenants').insert(tenantsToInsert).select('id')
         if (tenantsError) {
-          importErrors.push('Manche Mieter konnten nicht angelegt werden: ' + tenantsError.message)
+          importErrors.push('Manche Mieter: ' + tenantsError.message)
         } else {
           ;(insertedTenants || []).forEach((t: any) => {
-            createdTenantIds.push(t.id)
-            tenantsAdded++
+            createdTenantIds.push(t.id); tenantsAdded++
           })
         }
       }
 
-      // 6) Audit-Log
       await supabase.from('imports').insert({
-        owner_id: userId,
-        filename: file?.name || 'unbekannt',
-        properties_added: propertiesAdded,
-        units_added: unitsAdded,
-        tenants_added: tenantsAdded,
-        rows_skipped: rows.length - validRows.length,
+        owner_id: userId, filename: file?.name || 'unbekannt',
+        properties_added: propertiesAdded, units_added: unitsAdded,
+        tenants_added: tenantsAdded, rows_skipped: rows.length - validRows.length,
         errors: importErrors.length > 0 ? importErrors : null,
-        property_ids: createdPropertyIds,
-        unit_ids: createdUnitIds,
+        property_ids: createdPropertyIds, unit_ids: createdUnitIds,
         tenant_ids: createdTenantIds
       })
 
       setResult({
-        propertiesAdded,
-        propertiesReused,
-        unitsAdded,
-        tenantsAdded,
-        rowsSkipped: rows.length - validRows.length,
-        errors: importErrors
+        propertiesAdded, propertiesReused, unitsAdded, tenantsAdded,
+        rowsSkipped: rows.length - validRows.length, errors: importErrors
       })
+
+      loadImports(userId)
     } catch (err: any) {
       setError('Import fehlgeschlagen: ' + err.message)
     }
-
     setImporting(false)
+  }
+
+  // =====================================================
+  // ROLLBACK-LOGIK
+  // =====================================================
+  const handleRollback = async (imp: any) => {
+    if (!userId) return
+
+    setRollbackLoading(imp.id)
+
+    try {
+      const unitIds = imp.unit_ids || []
+      const tenantIds = imp.tenant_ids || []
+      const propertyIds = imp.property_ids || []
+
+      // 1. Verträge finden die auf importierte Units/Tenants verweisen
+      let allContractIds: string[] = []
+
+      if (unitIds.length > 0) {
+        const { data: c1 } = await supabase
+          .from('contracts').select('id').in('unit_id', unitIds)
+        allContractIds.push(...(c1 || []).map((x: any) => x.id))
+      }
+      if (tenantIds.length > 0) {
+        const { data: c2 } = await supabase
+          .from('contracts').select('id').in('tenant_id', tenantIds)
+        allContractIds.push(...(c2 || []).map((x: any) => x.id))
+      }
+      allContractIds = Array.from(new Set(allContractIds))
+
+      // 2. BLOCK bei bezahlten Zahlungen (GoBD §147 AO)
+      if (allContractIds.length > 0) {
+        const { data: paidPayments } = await supabase
+          .from('payments').select('id')
+          .in('contract_id', allContractIds).eq('status', 'paid')
+
+        if (paidPayments && paidPayments.length > 0) {
+          alert(
+            `Rollback nicht möglich!\n\n` +
+            `${paidPayments.length} bezahlte Zahlungen existieren auf den importierten Daten.\n\n` +
+            `Gesetzliche Aufbewahrungspflicht (§147 AO): 10 Jahre.`
+          )
+          setRollbackLoading(null)
+          return
+        }
+      }
+
+      // 3. Bestätigung
+      if (!window.confirm(
+        `Folgende Daten werden GELÖSCHT:\n\n` +
+        `• ${imp.tenants_added} Mieter\n` +
+        `• ${imp.units_added} Einheiten\n` +
+        `• ${imp.properties_added} Objekte\n` +
+        (allContractIds.length > 0 ? `• ${allContractIds.length} Verträge mit Zahlungen\n` : '') +
+        `\nDiese Aktion kann NICHT rückgängig gemacht werden!\n\nTrotzdem fortfahren?`
+      )) {
+        setRollbackLoading(null)
+        return
+      }
+
+      // 4. Cascade-Delete in korrekter Reihenfolge
+      if (allContractIds.length > 0) {
+        await supabase.from('payments').delete().in('contract_id', allContractIds)
+        await supabase.from('contracts').delete().in('id', allContractIds)
+      }
+      if (tenantIds.length > 0) {
+        await supabase.from('tenants').delete().in('id', tenantIds)
+      }
+      if (unitIds.length > 0) {
+        await supabase.from('units').delete().in('id', unitIds)
+      }
+      if (propertyIds.length > 0) {
+        await supabase.from('properties').delete().in('id', propertyIds)
+      }
+
+      // 5. Import als zurückgerollt markieren
+      await supabase.from('imports')
+        .update({ rolled_back_at: new Date().toISOString() })
+        .eq('id', imp.id)
+
+      loadImports(userId)
+    } catch (err: any) {
+      alert('Rollback fehlgeschlagen: ' + err.message)
+    }
+
+    setRollbackLoading(null)
   }
 
   const formatEur = (val: number) => val.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
@@ -445,7 +437,7 @@ export default function Import() {
           </p>
         </div>
 
-        {/* Erfolgs-Übersicht nach Import */}
+        {/* Erfolgs-Übersicht */}
         {result && (
           <div style={{ ...card, marginBottom: '16px', borderLeft: '4px solid #16a34a' }}>
             <h2 style={{ fontSize: '20px', fontWeight: '500', color: '#16a34a', margin: '0 0 8px', fontFamily: 'Georgia, serif' }}>
@@ -476,15 +468,6 @@ export default function Import() {
                 <p style={{ fontSize: '24px', color: result.rowsSkipped > 0 ? '#dc2626' : '#bbb', fontWeight: '300', fontFamily: 'Georgia, serif', margin: 0 }}>{result.rowsSkipped}</p>
               </div>
             </div>
-
-            {result.errors.length > 0 && (
-              <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '12px 16px', marginBottom: '16px' }}>
-                <p style={{ fontSize: '13px', color: '#dc2626', margin: 0, fontWeight: '500' }}>Hinweise:</p>
-                <ul style={{ fontSize: '13px', color: '#dc2626', margin: '4px 0 0', paddingLeft: '20px' }}>
-                  {result.errors.map((err, i) => <li key={i}>{err}</li>)}
-                </ul>
-              </div>
-            )}
 
             <div style={{ display: 'flex', gap: '8px' }}>
               <button onClick={() => router.push('/properties')}
@@ -525,18 +508,13 @@ export default function Import() {
               onDrop={handleDrop}
               style={{
                 border: `2px dashed ${dragActive ? '#1a1a1a' : '#e8e6e0'}`,
-                borderRadius: '12px',
-                padding: '64px 24px',
-                textAlign: 'center',
-                backgroundColor: dragActive ? '#fafaf8' : '#fff',
-                transition: 'all 0.2s'
+                borderRadius: '12px', padding: '64px 24px', textAlign: 'center',
+                backgroundColor: dragActive ? '#fafaf8' : '#fff', transition: 'all 0.2s'
               }}>
               <p style={{ fontSize: '16px', color: '#1a1a1a', margin: '0 0 8px' }}>
                 {parsing ? '⏳ Datei wird analysiert...' : '📂 Datei hier hineinziehen'}
               </p>
-              <p style={{ fontSize: '13px', color: '#999', margin: '0 0 16px' }}>
-                oder
-              </p>
+              <p style={{ fontSize: '13px', color: '#999', margin: '0 0 16px' }}>oder</p>
               <label style={{ display: 'inline-block', backgroundColor: '#fff', color: '#1a1a1a', padding: '10px 20px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer' }}>
                 Datei auswählen
                 <input type="file" accept=".xlsx,.xls,.csv" style={{ display: 'none' }}
@@ -592,17 +570,6 @@ export default function Import() {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
-              <div style={{ backgroundColor: '#fafaf8', borderRadius: '10px', padding: '16px' }}>
-                <p style={{ fontSize: '11px', color: '#999', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 4px' }}>Gesamt-Kaltmiete / Monat</p>
-                <p style={{ fontSize: '20px', color: '#1a1a1a', fontWeight: '500', margin: 0 }}>{formatEur(stats.totalKaltmiete)}</p>
-              </div>
-              <div style={{ backgroundColor: '#fafaf8', borderRadius: '10px', padding: '16px' }}>
-                <p style={{ fontSize: '11px', color: '#999', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 4px' }}>Gesamt-Nebenkosten / Monat</p>
-                <p style={{ fontSize: '20px', color: '#1a1a1a', fontWeight: '500', margin: 0 }}>{formatEur(stats.totalNebenkosten)}</p>
-              </div>
-            </div>
-
             <div style={{ overflowX: 'auto', border: '1px solid #e8e6e0', borderRadius: '10px' }}>
               <table style={{ width: '100%', fontSize: '12px', borderCollapse: 'collapse' }}>
                 <thead style={{ backgroundColor: '#fafaf8' }}>
@@ -626,11 +593,9 @@ export default function Import() {
                       </td>
                       <td style={{ padding: '10px', color: '#666' }}>{row.tenantName || '—'}</td>
                       <td style={{ padding: '10px' }}>
-                        {row.errors.length === 0 ? (
-                          <span style={{ color: '#16a34a' }}>✓ OK</span>
-                        ) : (
-                          <span style={{ color: '#dc2626' }}>⚠ {row.errors.join(', ')}</span>
-                        )}
+                        {row.errors.length === 0
+                          ? <span style={{ color: '#16a34a' }}>✓ OK</span>
+                          : <span style={{ color: '#dc2626' }}>⚠ {row.errors.join(', ')}</span>}
                       </td>
                     </tr>
                   ))}
@@ -638,7 +603,7 @@ export default function Import() {
               </table>
               {rows.length > 50 && (
                 <div style={{ padding: '12px', textAlign: 'center', backgroundColor: '#fafaf8', fontSize: '12px', color: '#999' }}>
-                  + {rows.length - 50} weitere Zeilen (alle werden importiert)
+                  + {rows.length - 50} weitere Zeilen
                 </div>
               )}
             </div>
@@ -659,6 +624,81 @@ export default function Import() {
             </div>
           </div>
         )}
+
+        {/* ===========================
+            IMPORT-HISTORIE mit Rollback
+            =========================== */}
+        {!file && pastImports.length > 0 && (
+          <div style={{ ...card, marginTop: '24px' }}>
+            <h2 style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 16px', fontFamily: 'Georgia, serif' }}>
+              Bisherige Importe
+            </h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {pastImports.map(imp => {
+                const isRolledBack = !!imp.rolled_back_at
+                const date = new Date(imp.created_at).toLocaleString('de-DE', {
+                  day: '2-digit', month: '2-digit', year: 'numeric',
+                  hour: '2-digit', minute: '2-digit'
+                })
+                return (
+                  <div key={imp.id} style={{
+                    padding: '14px 16px',
+                    border: '1px solid #e8e6e0',
+                    borderRadius: '10px',
+                    backgroundColor: isRolledBack ? '#fafaf8' : '#fff',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: '12px',
+                  }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        color: isRolledBack ? '#999' : '#1a1a1a',
+                        margin: '0 0 4px',
+                        textDecoration: isRolledBack ? 'line-through' : 'none',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap' as const,
+                      }}>
+                        {imp.filename || 'Unbenannt'}
+                      </p>
+                      <p style={{ fontSize: '12px', color: '#bbb', margin: 0 }}>
+                        {date} · {imp.properties_added || 0} Objekte · {imp.units_added || 0} Einheiten · {imp.tenants_added || 0} Mieter
+                        {isRolledBack && ` · zurückgerollt am ${new Date(imp.rolled_back_at).toLocaleDateString('de-DE')}`}
+                      </p>
+                    </div>
+                    {isRolledBack ? (
+                      <span style={{
+                        fontSize: '11px', color: '#999',
+                        backgroundColor: '#f5f4f0', padding: '4px 10px',
+                        borderRadius: '12px', fontWeight: '500',
+                      }}>
+                        Rückgängig gemacht
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => handleRollback(imp)}
+                        disabled={rollbackLoading === imp.id}
+                        style={{
+                          backgroundColor: '#fff', color: '#dc2626',
+                          padding: '8px 14px', borderRadius: '8px',
+                          border: '1px solid #fecaca', fontSize: '13px',
+                          cursor: rollbackLoading === imp.id ? 'not-allowed' : 'pointer',
+                          opacity: rollbackLoading === imp.id ? 0.5 : 1,
+                          whiteSpace: 'nowrap' as const,
+                        }}>
+                        {rollbackLoading === imp.id ? '⏳' : '↩ Rückgängig'}
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
       </div>
     </main>
   )

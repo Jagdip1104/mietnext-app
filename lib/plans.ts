@@ -21,10 +21,21 @@ export async function getUserPlanInfo(userId: string) {
   const plan = profile?.plan || 'free'
   const limit = PLAN_LIMITS[plan] ?? 3
 
-  const { count } = await supabase
-    .from('units').select('id', { count: 'exact', head: true })
+  // Einheiten zählen: nur die des aktuellen Users via property → owner
+  const { data: props } = await supabase
+    .from('properties').select('id').eq('owner_id', userId)
 
-  const currentUnits = count || 0
+  const propertyIds = (props || []).map(p => p.id)
+
+  let currentUnits = 0
+  if (propertyIds.length > 0) {
+    const { count } = await supabase
+      .from('units')
+      .select('id', { count: 'exact', head: true })
+      .in('property_id', propertyIds)
+    currentUnits = count ?? 0
+  }
+
   const canCreateMore = currentUnits < limit
   const percentUsed = limit === Infinity ? 0 : Math.min(100, (currentUnits / limit) * 100)
 

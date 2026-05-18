@@ -641,7 +641,7 @@ export default function Import() {
         {/* ===========================
             IMPORT-HISTORIE mit Rollback
             =========================== */}
-        {!file && pastImports.length > 0 && (
+        {(!file || result) && pastImports.length > 0 && (
           <div style={{ ...card, marginTop: '24px' }}>
             <h2 style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 16px', fontFamily: 'Georgia, serif' }}>
               Bisherige Importe

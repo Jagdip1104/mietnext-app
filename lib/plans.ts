@@ -25,7 +25,7 @@ export async function getUserPlanInfo(userId: string) {
   const { data: props } = await supabase
     .from('properties').select('id').eq('owner_id', userId)
 
-  const propertyIds = (props || []).map(p => p.id)
+  const propertyIds = (props || []).map((p: { id: string }) => p.id)
 
   let currentUnits = 0
   if (propertyIds.length > 0) {

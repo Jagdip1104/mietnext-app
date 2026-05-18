@@ -34,17 +34,15 @@ export default function InviteTenant() {
     const tenant = tenants.find(t => t.id === selectedTenant)
     const registerLink = `https://mietnext.de/tenant-register?email=${encodeURIComponent(inviteEmail)}`
 
-    // E-Mail speichern
-    await supabase.from('tenants').update({ email: inviteEmail }).eq('id', selectedTenant)
 
-    // E-Mail senden via Resend
+
+    // E-Mail senden via Resend (jetzt mit Ownership-Check)
     const res = await fetch('/api/invite-tenant', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        tenantId: selectedTenant, // ✅ statt email speichern auf Server
         email: inviteEmail,
-        tenantName: tenant?.full_name || 'Mieter',
-        registerLink,
       }),
     })
 

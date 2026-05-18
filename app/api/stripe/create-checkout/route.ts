@@ -1,30 +1,50 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
+import { getAuthedUser } from '@/lib/supabase-server'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
-export async function POST(req: NextRequest) {
-  try {
-    const { priceId, userId, userEmail } = await req.json()
+// Whitelist erlaubter Stripe Price IDs – verhindert Manipulation
+const ALLOWED_PRICE_IDS = new Set([
+  'price_1TWjBLC2lxIY4GthiRV6tYo3', // Starter
+  'price_1TWjDVC2lxIY4GthvtN0Jdxu', // Business
+  'price_1TWjDqC2lxIY4GthwMqCklKB', // Enterprise
+])
 
-    const supabase = createClient(
+export async function POST(req: NextRequest) {
+  // ✅ Auth via Cookie, NICHT aus Body
+  const user = await getAuthedUser()
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    const { priceId } = await req.json()
+
+    if (!priceId || !ALLOWED_PRICE_IDS.has(priceId)) {
+      return NextResponse.json({ error: 'Ungültiger Plan' }, { status: 400 })
+    }
+
+    const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    const { data: profile } = await supabase
-      .from('profiles').select('stripe_customer_id').eq('id', userId).single()
+    const { data: profile } = await supabaseAdmin
+      .from('profiles').select('stripe_customer_id').eq('id', user.id).single()
 
     let customerId = profile?.stripe_customer_id
 
     if (!customerId) {
       const customer = await stripe.customers.create({
-        email: userEmail,
-        metadata: { supabase_uid: userId }
+        email: user.email,
+        metadata: { supabase_uid: user.id }
       })
       customerId = customer.id
-      await supabase.from('profiles').update({ stripe_customer_id: customerId }).eq('id', userId)
+      await supabaseAdmin.from('profiles')
+        .update({ stripe_customer_id: customerId })
+        .eq('id', user.id)
     }
 
     const session = await stripe.checkout.sessions.create({
@@ -35,11 +55,12 @@ export async function POST(req: NextRequest) {
       success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?success=true`,
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/pricing?canceled=true`,
       locale: 'de',
-      metadata: { supabase_uid: userId }
+      metadata: { supabase_uid: user.id }
     })
 
     return NextResponse.json({ url: session.url })
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error('Stripe checkout error:', error)
+    return NextResponse.json({ error: 'Interner Fehler' }, { status: 500 })
   }
 }

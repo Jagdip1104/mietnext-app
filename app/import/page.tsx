@@ -313,14 +313,27 @@ export default function Import() {
         }
       }
 
-      await supabase.from('imports').insert({
-        owner_id: userId, filename: file?.name || 'unbekannt',
-        properties_added: propertiesAdded, units_added: unitsAdded,
-        tenants_added: tenantsAdded, rows_skipped: rows.length - validRows.length,
-        errors: importErrors.length > 0 ? importErrors : null,
-        property_ids: createdPropertyIds, unit_ids: createdUnitIds,
-        tenant_ids: createdTenantIds
-      })
+        const { data: importRec, error: impErr } = await supabase
+        .from('imports')
+        .insert({
+            owner_id: userId,
+            filename: file?.name || 'unbekannt',
+            properties_added: propertiesAdded,
+            units_added: unitsAdded,
+            tenants_added: tenantsAdded,
+            rows_skipped: rows.length - validRows.length,
+            errors: importErrors.length > 0 ? importErrors : null,
+            property_ids: createdPropertyIds,
+            unit_ids: createdUnitIds,
+            tenant_ids: createdTenantIds
+        })
+        .select()
+
+        console.log('IMPORT INSERT:', { importRec, impErr })
+
+        if (impErr) {
+        alert('Import-Tracking fehlgeschlagen: ' + impErr.message)
+        }
 
       setResult({
         propertiesAdded, propertiesReused, unitsAdded, tenantsAdded,

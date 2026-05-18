@@ -126,7 +126,7 @@ export default function PricingPage() {
     const res = await fetch('/api/stripe/create-checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ priceId, userId, userEmail }),
+      body: JSON.stringify({ priceId }),
     })
     const { url, error } = await res.json()
     if (error) { alert('Fehler: ' + error); setLoading(null); return }
@@ -139,7 +139,7 @@ export default function PricingPage() {
     const res = await fetch('/api/stripe/portal', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId }),
+      body: JSON.stringify({}),
     })
     const { url, error } = await res.json()
     if (error) { alert(error); setLoading(null); return }

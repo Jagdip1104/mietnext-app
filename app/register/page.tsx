@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
@@ -9,6 +10,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
@@ -28,10 +30,20 @@ export default function RegisterPage() {
       setError('Passwörter stimmen nicht überein.')
       return
     }
+    if (!acceptedTerms) {
+      setError('Bitte AGB und Datenschutzerklärung akzeptieren.')
+      return
+    }
     setLoading(true)
     const { error } = await supabase.auth.signUp({
-      email, password,
-      options: { data: { full_name: fullName } }
+      email: email.toLowerCase().trim(),
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+          terms_accepted_at: new Date().toISOString(),
+        }
+      }
     })
     if (error) {
       setError(error.message)
@@ -103,7 +115,7 @@ export default function RegisterPage() {
             </div>
           )}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '20px' }}>
             <div>
               <label style={{ fontSize: '13px', color: '#666', marginBottom: '6px', display: 'block' }}>Vollständiger Name *</label>
               <input value={fullName} onChange={e => setFullName(e.target.value)}
@@ -130,8 +142,38 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          <button onClick={handleRegister} disabled={loading || !fullName || !email || !password || !passwordConfirm}
-            style={{ width: '100%', backgroundColor: '#1a1a1a', color: '#fff', padding: '12px', borderRadius: '8px', border: 'none', fontSize: '14px', cursor: 'pointer', opacity: loading || !fullName || !email || !password || !passwordConfirm ? 0.5 : 1, marginBottom: '16px' }}>
+          {/* Datenschutz + AGB Checkbox */}
+          <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '20px', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={acceptedTerms}
+              onChange={e => setAcceptedTerms(e.target.checked)}
+              style={{
+                marginTop: '3px',
+                width: '16px', height: '16px',
+                cursor: 'pointer',
+                accentColor: '#1a1a1a',
+                flexShrink: 0,
+              }}
+            />
+            <span style={{ fontSize: '13px', color: '#666', lineHeight: '1.5' }}>
+              Ich akzeptiere die{' '}
+              <Link href="/agb" target="_blank" style={{ color: '#1a1a1a', textDecoration: 'underline' }}>AGB</Link>
+              {' '}und die{' '}
+              <Link href="/datenschutz" target="_blank" style={{ color: '#1a1a1a', textDecoration: 'underline' }}>Datenschutzerklärung</Link>.
+            </span>
+          </label>
+
+          <button onClick={handleRegister} disabled={loading || !fullName || !email || !password || !passwordConfirm || !acceptedTerms}
+            style={{
+              width: '100%',
+              backgroundColor: '#1a1a1a', color: '#fff',
+              padding: '12px', borderRadius: '8px', border: 'none',
+              fontSize: '14px',
+              cursor: loading || !acceptedTerms ? 'not-allowed' : 'pointer',
+              opacity: loading || !fullName || !email || !password || !passwordConfirm || !acceptedTerms ? 0.5 : 1,
+              marginBottom: '16px'
+            }}>
             {loading ? 'Wird erstellt...' : 'Kostenlos registrieren →'}
           </button>
 

@@ -329,7 +329,6 @@ export default function Import() {
         })
         .select()
 
-        console.log('IMPORT INSERT:', { importRec, impErr })
 
         if (impErr) {
         alert('Import-Tracking fehlgeschlagen: ' + impErr.message)

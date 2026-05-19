@@ -11,6 +11,7 @@ const PUBLIC_ROUTES = [
   '/tenant-register',
   '/impressum',
   '/datenschutz',
+  '/agb',
 ]
 
 const TENANT_ONLY_ROUTES = ['/tenant-portal']

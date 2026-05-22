@@ -5,10 +5,13 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Nav from '@/components/Nav'
 import { getUserPlanInfo } from '@/lib/plans'
+import { generateUnitCode, isValidUnitCode, makeUniqueCode } from '@/lib/unit-code'
 
 interface UnitInput {
   type: string
   name: string
+  unit_code: string
+  unit_code_auto: string
   floor: string
   size_sqm: string
   rooms: string
@@ -27,6 +30,8 @@ interface DeleteInfo {
 const emptyUnit = (): UnitInput => ({
   type: 'wohnung',
   name: '',
+  unit_code: '',
+  unit_code_auto: '',
   floor: '',
   size_sqm: '',
   rooms: '',
@@ -50,6 +55,7 @@ export default function Properties() {
   const [deleteInfo, setDeleteInfo] = useState<DeleteInfo | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
   const [planInfo, setPlanInfo] = useState<any>(null)
+  const [allUnitCodes, setAllUnitCodes] = useState<string[]>([])
   const router = useRouter()
 
   useEffect(() => {
@@ -69,19 +75,29 @@ export default function Properties() {
       .order('created_at', { ascending: false })
     setProperties(data || [])
     setPlanInfo(await getUserPlanInfo(uid))
+
+    const propertyIds = (data || []).map((p: any) => p.id)
+    if (propertyIds.length > 0) {
+      const { data: existingUnits } = await supabase
+        .from('units')
+        .select('unit_code')
+        .in('property_id', propertyIds)
+        .not('unit_code', 'is', null)
+      setAllUnitCodes((existingUnits || []).map((u: any) => u.unit_code).filter(Boolean))
+    }
   }
 
   const handleEdit = (p: any) => {
     setEditingId(p.id); setName(p.name)
     setAddress(p.address || ''); setCity(p.city || ''); setZip(p.zip || '')
-    setNewUnits([])  // Beim Bearbeiten KEINE Einheiten-Sektion
+    setNewUnits([])
     setShowForm(true)
   }
 
   const handleNewProperty = () => {
     setEditingId(null)
     setName(''); setAddress(''); setCity(''); setZip('')
-    setNewUnits([emptyUnit()])  // Eine leere Einheit als Startpunkt
+    setNewUnits([emptyUnit()])
     setShowForm(true)
   }
 
@@ -91,15 +107,29 @@ export default function Properties() {
     setNewUnits([emptyUnit()])
   }
 
-  // === Einheiten-Handling ===
+  // Auto-Code neu generieren wenn city/address sich ändern
+  useEffect(() => {
+    if (editingId || !showForm) return
+    setNewUnits(prev => {
+      const updated: UnitInput[] = []
+      const reservedCodes = [...allUnitCodes]
+      prev.forEach(unit => {
+        const auto = generateUnitCode({
+          city, address, type: unit.type, existingCodes: reservedCodes,
+        })
+        updated.push({ ...unit, unit_code_auto: auto })
+        reservedCodes.push(auto)
+      })
+      return updated
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [city, address, editingId, showForm, allUnitCodes.length])
 
   const addUnit = () => {
-    // Smart-Default: Nächste Wohnung hochzählen, wenn vorherige "Wohnung X" heißt
     const last = newUnits[newUnits.length - 1]
     const unit = emptyUnit()
     if (last) {
       unit.type = last.type
-      // Versuche aus letzter Bezeichnung Nummer zu extrahieren und hochzuzählen
       const match = last.name.match(/^(.*?)(\d+)\s*$/)
       if (match) {
         const prefix = match[1]
@@ -107,24 +137,34 @@ export default function Properties() {
         unit.name = `${prefix}${num}`
       }
     }
+    const usedInForm = newUnits.map(u => u.unit_code || u.unit_code_auto).filter(Boolean)
+    unit.unit_code_auto = generateUnitCode({
+      city, address, type: unit.type,
+      existingCodes: [...allUnitCodes, ...usedInForm],
+    })
     setNewUnits([...newUnits, unit])
   }
 
   const quickAdd = (count: number, type: string = 'wohnung') => {
     const base: UnitInput[] = []
+    const reservedCodes = [...allUnitCodes]
     for (let i = 1; i <= count; i++) {
-      base.push({
+      const u = {
         ...emptyUnit(),
         type,
-        name: `${typeLabel[type] || 'Einheit'} ${i}`
+        name: `${typeLabel[type] || 'Einheit'} ${i}`,
+      }
+      u.unit_code_auto = generateUnitCode({
+        city, address, type, existingCodes: reservedCodes,
       })
+      reservedCodes.push(u.unit_code_auto)
+      base.push(u)
     }
     setNewUnits(base)
   }
 
   const removeUnit = (idx: number) => {
     if (newUnits.length === 1) {
-      // Wenn nur eine übrig, zurück auf leer setzen
       setNewUnits([emptyUnit()])
       return
     }
@@ -134,16 +174,37 @@ export default function Properties() {
   const updateUnit = (idx: number, field: keyof UnitInput, value: string) => {
     const updated = [...newUnits]
     updated[idx] = { ...updated[idx], [field]: value }
+    if (field === 'type') {
+      const usedCodes = updated
+        .filter((_, i) => i !== idx)
+        .map(u => u.unit_code || u.unit_code_auto)
+        .filter(Boolean)
+      updated[idx].unit_code_auto = generateUnitCode({
+        city, address, type: value,
+        existingCodes: [...allUnitCodes, ...usedCodes],
+      })
+    }
     setNewUnits(updated)
   }
 
-  // === Speichern ===
+  const regenerateCode = (idx: number) => {
+    const updated = [...newUnits]
+    const usedCodes = updated
+      .filter((_, i) => i !== idx)
+      .map(u => u.unit_code || u.unit_code_auto)
+      .filter(Boolean)
+    updated[idx].unit_code_auto = generateUnitCode({
+      city, address, type: updated[idx].type,
+      existingCodes: [...allUnitCodes, ...usedCodes],
+    })
+    updated[idx].unit_code = ''
+    setNewUnits(updated)
+  }
 
   const handleSave = async () => {
     if (!name) return
     setLoading(true)
 
-    // EDIT-MODUS: Nur Property updaten, keine Einheiten
     if (editingId) {
       const { error } = await supabase.from('properties')
         .update({ name, address, city, zip })
@@ -159,27 +220,33 @@ export default function Properties() {
       return
     }
 
-    // NEU-MODUS: Property + Einheiten in einer Aktion
-
-    // Nur Einheiten mit Bezeichnung berücksichtigen
     const validUnits = newUnits.filter(u => u.name.trim())
 
-    // Plan-Limit prüfen
     if (validUnits.length > 0 && planInfo) {
       const remaining = (planInfo.limit === Infinity ? 999999 : planInfo.limit) - planInfo.currentUnits
       if (validUnits.length > remaining) {
         alert(
           `Plan-Limit überschritten!\n\n` +
           `Du nutzt ${planInfo.currentUnits} von ${planInfo.limit === Infinity ? '∞' : planInfo.limit} Einheiten (${planInfo.planName}).\n` +
-          `Du versuchst ${validUnits.length} weitere Einheiten anzulegen.\n\n` +
-          `Bitte reduziere die Anzahl oder upgrade deinen Plan.`
+          `Du versuchst ${validUnits.length} weitere Einheiten anzulegen.`
         )
         setLoading(false)
         return
       }
     }
 
-    // 1. Property anlegen
+    const finalCodes: string[] = []
+    for (const u of validUnits) {
+      let code = (u.unit_code.trim() || u.unit_code_auto).toUpperCase()
+      if (!isValidUnitCode(code)) {
+        alert(`Ungültiger Code für "${u.name}": "${code}"\nNur Buchstaben, Zahlen, Bindestriche erlaubt.`)
+        setLoading(false)
+        return
+      }
+      code = makeUniqueCode(code, [...allUnitCodes, ...finalCodes])
+      finalCodes.push(code)
+    }
+
     const { data: propData, error: propErr } = await supabase
       .from('properties')
       .insert({ name, address, city, zip, owner_id: userId })
@@ -192,13 +259,13 @@ export default function Properties() {
       return
     }
 
-    // 2. Einheiten anlegen (falls vorhanden)
     if (validUnits.length > 0) {
-      const unitsToInsert = validUnits.map(u => {
+      const unitsToInsert = validUnits.map((u, idx) => {
         const data: any = {
           property_id: propData.id,
           type: u.type,
           name: u.name.trim(),
+          unit_code: finalCodes[idx],
           is_occupied: false,
           rent_amount: u.rent_amount ? parseFloat(u.rent_amount) : 0,
           utilities_amount: u.utilities_amount ? parseFloat(u.utilities_amount) : 0,
@@ -218,7 +285,6 @@ export default function Properties() {
       const { error: unitsErr } = await supabase.from('units').insert(unitsToInsert)
 
       if (unitsErr) {
-        // Cleanup: Property wieder löschen wenn Einheiten fehlschlagen
         await supabase.from('properties').delete().eq('id', propData.id)
         alert('Fehler beim Anlegen der Einheiten: ' + unitsErr.message + '\n\nObjekt wurde zurückgesetzt.')
         setLoading(false)
@@ -231,28 +297,22 @@ export default function Properties() {
     loadProperties(userId!)
   }
 
-  // === Löschen (unverändert) ===
-
   const handleDeleteClick = async (propertyId: string) => {
     const { data: units } = await supabase
       .from('units').select('id').eq('property_id', propertyId)
     const unitIds = (units || []).map((u: any) => u.id)
-
     let tenantsCount = 0
     let contractsCount = 0
     let paidPaymentsCount = 0
-
     if (unitIds.length > 0) {
       const { count: tCount } = await supabase
         .from('tenants').select('*', { count: 'exact', head: true })
         .in('unit_id', unitIds)
       tenantsCount = tCount || 0
-
       const { data: contracts } = await supabase
         .from('contracts').select('id').in('unit_id', unitIds)
       const contractIds = (contracts || []).map((c: any) => c.id)
       contractsCount = contractIds.length
-
       if (contractIds.length > 0) {
         const { count: pCount } = await supabase
           .from('payments').select('*', { count: 'exact', head: true })
@@ -260,65 +320,50 @@ export default function Properties() {
         paidPaymentsCount = pCount || 0
       }
     }
-
-    setDeleteInfo({
-      propertyId,
-      unitsCount: unitIds.length,
-      tenantsCount,
-      contractsCount,
-      paidPaymentsCount
-    })
+    setDeleteInfo({ propertyId, unitsCount: unitIds.length, tenantsCount, contractsCount, paidPaymentsCount })
   }
 
   const handleConfirmDelete = async () => {
     if (!deleteInfo) return
     if (deleteInfo.paidPaymentsCount > 0) return
-
     setDeleting(true)
-
     try {
       const { data: units } = await supabase
         .from('units').select('id').eq('property_id', deleteInfo.propertyId)
       const unitIds = (units || []).map((u: any) => u.id)
-
       if (unitIds.length > 0) {
         const { data: contracts } = await supabase
           .from('contracts').select('id').in('unit_id', unitIds)
         const contractIds = (contracts || []).map((c: any) => c.id)
-
         if (contractIds.length > 0) {
           await supabase.from('payments').delete().in('contract_id', contractIds)
           await supabase.from('contracts').delete().in('id', contractIds)
         }
-
         await supabase.from('tenants').delete().in('unit_id', unitIds)
       }
-
       const { error } = await supabase.from('properties').delete().eq('id', deleteInfo.propertyId)
       if (error) throw error
-
       setDeleteInfo(null)
       loadProperties(userId!)
     } catch (err: any) {
       alert('Fehler beim Löschen: ' + err.message)
     }
-
     setDeleting(false)
   }
-
-  // === Styling ===
 
   const card = { backgroundColor: '#fff', border: '1px solid #e8e6e0', borderRadius: '12px', padding: '24px' }
   const input = { width: '100%', border: '1px solid #e8e6e0', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', outline: 'none', color: '#1a1a1a', backgroundColor: '#fff' }
   const inputSmall = { ...input, padding: '8px 10px', fontSize: '13px' }
+  const inputCode = { ...inputSmall, fontFamily: 'ui-monospace, monospace', fontSize: '12px', letterSpacing: '0.3px' }
   const label = { fontSize: '12px', color: '#999', marginBottom: '6px', display: 'block', textTransform: 'uppercase' as const, letterSpacing: '0.5px' }
 
   const validUnitsCount = newUnits.filter(u => u.name.trim()).length
+  const showCodeHint = !editingId && !!city && !!address
 
   return (
     <main style={{ backgroundColor: '#fafaf8', minHeight: '100vh' }}>
       <Nav />
-      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '48px' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '48px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '40px' }}>
           <div>
             <h1 style={{ fontSize: '28px', fontWeight: '400', color: '#1a1a1a', margin: '0 0 4px', fontFamily: 'Georgia, serif' }}>
@@ -334,11 +379,9 @@ export default function Properties() {
           </button>
         </div>
 
-        {/* Lösch-Dialog */}
         {deleteInfo && (
           <div style={{
-            ...card,
-            marginBottom: '24px',
+            ...card, marginBottom: '24px',
             borderLeft: deleteInfo.paidPaymentsCount > 0 ? '4px solid #dc2626' : '4px solid #d97706'
           }}>
             {deleteInfo.paidPaymentsCount > 0 ? (
@@ -355,9 +398,7 @@ export default function Properties() {
                 <button onClick={() => setDeleteInfo(null)} style={{
                   backgroundColor: '#fff', color: '#666', padding: '10px 20px',
                   borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer'
-                }}>
-                  Verstanden
-                </button>
+                }}>Verstanden</button>
               </>
             ) : (
               <>
@@ -383,9 +424,7 @@ export default function Properties() {
                   <button onClick={() => setDeleteInfo(null)} disabled={deleting} style={{
                     backgroundColor: '#fff', color: '#666', padding: '10px 20px',
                     borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer'
-                  }}>
-                    Abbrechen
-                  </button>
+                  }}>Abbrechen</button>
                 </div>
               </>
             )}
@@ -398,31 +437,29 @@ export default function Properties() {
               {editingId ? 'Objekt bearbeiten' : 'Neues Objekt anlegen'}
             </h2>
 
-            {/* === Objekt-Daten === */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: editingId ? '20px' : '32px' }}>
               <div style={{ gridColumn: 'span 2' }}>
                 <label style={label}>Name *</label>
                 <input value={name} onChange={e => setName(e.target.value)}
-                  placeholder="z.B. Mehrfamilienhaus Musterstraße" style={input} />
+                  placeholder="z.B. Mehrfamilienhaus Wielandstraße" style={input} />
               </div>
               <div style={{ gridColumn: 'span 2' }}>
-                <label style={label}>Adresse</label>
+                <label style={label}>Adresse (Straße + Hausnummer)</label>
                 <input value={address} onChange={e => setAddress(e.target.value)}
-                  placeholder="Musterstraße 1" style={input} />
+                  placeholder="z.B. Wielandstraße 11" style={input} />
               </div>
               <div>
                 <label style={label}>PLZ</label>
                 <input value={zip} onChange={e => setZip(e.target.value)}
-                  placeholder="12345" style={input} />
+                  placeholder="49134" style={input} />
               </div>
               <div>
                 <label style={label}>Stadt</label>
                 <input value={city} onChange={e => setCity(e.target.value)}
-                  placeholder="Berlin" style={input} />
+                  placeholder="Wallenhorst" style={input} />
               </div>
             </div>
 
-            {/* === Einheiten-Sektion: NUR beim Neuanlegen === */}
             {!editingId && (
               <div style={{ borderTop: '1px solid #f0eee8', paddingTop: '24px', marginBottom: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
@@ -431,7 +468,9 @@ export default function Properties() {
                       Einheiten <span style={{ color: '#bbb', fontWeight: '400' }}>(optional)</span>
                     </h3>
                     <p style={{ fontSize: '12px', color: '#999', margin: 0 }}>
-                      Du kannst direkt die Einheiten dieses Objekts anlegen — oder später nachholen.
+                      {showCodeHint
+                        ? `Codes werden automatisch generiert (z.B. ${generateUnitCode({ city, address, type: 'wohnung', existingCodes: [] })}). Du kannst sie überschreiben.`
+                        : 'Fülle erst Stadt + Adresse aus, dann werden Codes automatisch erzeugt.'}
                     </p>
                   </div>
                   <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
@@ -451,17 +490,15 @@ export default function Properties() {
                   </div>
                 </div>
 
-                {/* Tabellen-Kopf */}
                 <div style={{
                   display: 'grid',
-                  gridTemplateColumns: '110px 1fr 60px 70px 60px 90px 90px 32px',
-                  gap: '8px',
-                  padding: '0 4px 8px',
-                  borderBottom: '1px solid #f0eee8',
-                  marginBottom: '8px'
+                  gridTemplateColumns: '100px 1fr 130px 50px 60px 50px 75px 75px 28px',
+                  gap: '6px', padding: '0 4px 8px',
+                  borderBottom: '1px solid #f0eee8', marginBottom: '8px'
                 }}>
                   <div style={{ fontSize: '11px', color: '#999', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Typ</div>
                   <div style={{ fontSize: '11px', color: '#999', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Bezeichnung *</div>
+                  <div style={{ fontSize: '11px', color: '#999', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Code</div>
                   <div style={{ fontSize: '11px', color: '#999', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Etage</div>
                   <div style={{ fontSize: '11px', color: '#999', textTransform: 'uppercase', letterSpacing: '0.5px' }}>m²</div>
                   <div style={{ fontSize: '11px', color: '#999', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Zi.</div>
@@ -470,83 +507,68 @@ export default function Properties() {
                   <div></div>
                 </div>
 
-                {/* Einheiten-Zeilen */}
-                {newUnits.map((unit, idx) => (
-                  <div key={idx} style={{
-                    display: 'grid',
-                    gridTemplateColumns: '110px 1fr 60px 70px 60px 90px 90px 32px',
-                    gap: '8px',
-                    padding: '4px',
-                    marginBottom: '4px'
-                  }}>
-                    <select
-                      value={unit.type}
-                      onChange={e => updateUnit(idx, 'type', e.target.value)}
-                      style={inputSmall}
-                    >
-                      <option value="wohnung">Wohnung</option>
-                      <option value="gewerbe">Gewerbe</option>
-                      <option value="stellplatz">Stellplatz</option>
-                      <option value="sonstige">Sonstige</option>
-                    </select>
-                    <input
-                      value={unit.name}
-                      onChange={e => updateUnit(idx, 'name', e.target.value)}
-                      placeholder={unit.type === 'wohnung' ? 'z.B. Wohnung 1' : unit.type === 'gewerbe' ? 'z.B. Ladenlokal EG' : unit.type === 'stellplatz' ? 'z.B. Stellplatz 1' : 'z.B. Lagerraum'}
-                      style={inputSmall}
-                    />
-                    <input
-                      value={unit.floor}
-                      onChange={e => updateUnit(idx, 'floor', e.target.value)}
-                      placeholder="-"
-                      type="number"
-                      style={inputSmall}
-                      disabled={unit.type === 'stellplatz'}
-                    />
-                    <input
-                      value={unit.size_sqm}
-                      onChange={e => updateUnit(idx, 'size_sqm', e.target.value)}
-                      placeholder="-"
-                      type="number"
-                      style={inputSmall}
-                    />
-                    <input
-                      value={unit.rooms}
-                      onChange={e => updateUnit(idx, 'rooms', e.target.value)}
-                      placeholder="-"
-                      type="number"
-                      style={inputSmall}
-                      disabled={unit.type !== 'wohnung'}
-                    />
-                    <input
-                      value={unit.rent_amount}
-                      onChange={e => updateUnit(idx, 'rent_amount', e.target.value)}
-                      placeholder="0"
-                      type="number"
-                      style={inputSmall}
-                    />
-                    <input
-                      value={unit.utilities_amount}
-                      onChange={e => updateUnit(idx, 'utilities_amount', e.target.value)}
-                      placeholder="0"
-                      type="number"
-                      style={inputSmall}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeUnit(idx)}
-                      title="Zeile entfernen"
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#bbb',
-                        cursor: 'pointer',
-                        fontSize: '18px',
-                        padding: '4px'
-                      }}
-                    >×</button>
-                  </div>
-                ))}
+                {newUnits.map((unit, idx) => {
+                  const codeShown = unit.unit_code || unit.unit_code_auto
+                  const isCustom = !!unit.unit_code.trim()
+                  return (
+                    <div key={idx} style={{
+                      display: 'grid',
+                      gridTemplateColumns: '100px 1fr 130px 50px 60px 50px 75px 75px 28px',
+                      gap: '6px', padding: '4px', marginBottom: '4px'
+                    }}>
+                      <select value={unit.type} onChange={e => updateUnit(idx, 'type', e.target.value)} style={inputSmall}>
+                        <option value="wohnung">Wohnung</option>
+                        <option value="gewerbe">Gewerbe</option>
+                        <option value="stellplatz">Stellplatz</option>
+                        <option value="sonstige">Sonstige</option>
+                      </select>
+                      <input value={unit.name} onChange={e => updateUnit(idx, 'name', e.target.value)}
+                        placeholder={unit.type === 'wohnung' ? 'z.B. Wohnung 1' : unit.type === 'gewerbe' ? 'z.B. Ladenlokal EG' : unit.type === 'stellplatz' ? 'z.B. Stellplatz 1' : 'z.B. Lagerraum'}
+                        style={inputSmall} />
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          value={codeShown}
+                          onChange={e => updateUnit(idx, 'unit_code', e.target.value.toUpperCase())}
+                          placeholder="auto"
+                          style={{
+                            ...inputCode,
+                            color: isCustom ? '#1a1a1a' : '#666',
+                            backgroundColor: isCustom ? '#fff' : '#f9f8f5',
+                            paddingRight: isCustom ? '26px' : '10px',
+                          }}
+                          title={isCustom ? 'Manuell überschrieben' : 'Automatisch generiert'}
+                        />
+                        {isCustom && (
+                          <button type="button" onClick={() => regenerateCode(idx)}
+                            title="Auf Auto-Code zurücksetzen"
+                            style={{
+                              position: 'absolute', right: '4px', top: '50%', transform: 'translateY(-50%)',
+                              background: 'none', border: 'none', color: '#999',
+                              cursor: 'pointer', fontSize: '14px', padding: '2px 4px'
+                            }}
+                          >↺</button>
+                        )}
+                      </div>
+                      <input value={unit.floor} onChange={e => updateUnit(idx, 'floor', e.target.value)}
+                        placeholder="-" type="number" style={inputSmall}
+                        disabled={unit.type === 'stellplatz'} />
+                      <input value={unit.size_sqm} onChange={e => updateUnit(idx, 'size_sqm', e.target.value)}
+                        placeholder="-" type="number" style={inputSmall} />
+                      <input value={unit.rooms} onChange={e => updateUnit(idx, 'rooms', e.target.value)}
+                        placeholder="-" type="number" style={inputSmall}
+                        disabled={unit.type !== 'wohnung'} />
+                      <input value={unit.rent_amount} onChange={e => updateUnit(idx, 'rent_amount', e.target.value)}
+                        placeholder="0" type="number" style={inputSmall} />
+                      <input value={unit.utilities_amount} onChange={e => updateUnit(idx, 'utilities_amount', e.target.value)}
+                        placeholder="0" type="number" style={inputSmall} />
+                      <button type="button" onClick={() => removeUnit(idx)} title="Zeile entfernen"
+                        style={{
+                          background: 'none', border: 'none', color: '#bbb',
+                          cursor: 'pointer', fontSize: '18px', padding: '4px'
+                        }}>×</button>
+                    </div>
+                  )
+                })}
 
                 <button type="button" onClick={addUnit} style={{
                   marginTop: '8px',
@@ -558,9 +580,7 @@ export default function Properties() {
                   borderRadius: '8px',
                   fontSize: '13px',
                   cursor: 'pointer'
-                }}>
-                  + Einheit hinzufügen
-                </button>
+                }}>+ Einheit hinzufügen</button>
 
                 {validUnitsCount > 0 && (
                   <p style={{ fontSize: '12px', color: '#666', marginTop: '12px', marginBottom: 0 }}>
@@ -571,7 +591,6 @@ export default function Properties() {
               </div>
             )}
 
-            {/* === Speichern / Abbrechen === */}
             <div style={{ display: 'flex', gap: '8px' }}>
               <button onClick={handleSave} disabled={loading || !name} style={{
                 backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 20px',
@@ -590,9 +609,7 @@ export default function Properties() {
               <button onClick={handleCancel} style={{
                 backgroundColor: '#fff', color: '#666', padding: '10px 20px',
                 borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer',
-              }}>
-                Abbrechen
-              </button>
+              }}>Abbrechen</button>
             </div>
           </div>
         )}
@@ -603,9 +620,7 @@ export default function Properties() {
             <button onClick={handleNewProperty} style={{
               background: 'none', border: 'none', color: '#1a1a1a',
               fontSize: '14px', cursor: 'pointer', textDecoration: 'underline',
-            }}>
-              Erstes Objekt anlegen →
-            </button>
+            }}>Erstes Objekt anlegen →</button>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

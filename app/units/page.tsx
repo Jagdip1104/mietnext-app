@@ -10,11 +10,14 @@ import { getUserPlanInfo } from '@/lib/plans'
 export default function Units() {
   const [properties, setProperties] = useState<any[]>([])
   const [units, setUnits] = useState<any[]>([])
+  const [allUnitCodes, setAllUnitCodes] = useState<string[]>([])
+  const [search, setSearch] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [selectedProperty, setSelectedProperty] = useState('')
   const [type, setType] = useState('wohnung')
   const [name, setName] = useState('')
+  const [unitCode, setUnitCode] = useState('')
   const [floor, setFloor] = useState('')
   const [sizeSqm, setSizeSqm] = useState('')
   const [rooms, setRooms] = useState('')
@@ -46,14 +49,16 @@ export default function Units() {
     setProperties(props || [])
     const propertyIds = (props || []).map((p: any) => p.id)
     if (propertyIds.length === 0) { setUnits([]); setPlanInfo(await getUserPlanInfo(uid)); return }
-    const { data: unitsData } = await supabase.from('units').select('*, properties(name)')
-      .in('property_id', propertyIds).order('created_at', { ascending: false })
+    const { data: unitsData } = await supabase.from('units').select('*, properties(name, address, city)')
+      .in('property_id', propertyIds).order('unit_code', { ascending: true, nullsFirst: false })
     setUnits(unitsData || [])
+    setAllUnitCodes((unitsData || []).map((u: any) => u.unit_code).filter(Boolean))
     setPlanInfo(await getUserPlanInfo(uid))
   }
 
   const handleEdit = (u: any) => {
     setEditingId(u.id); setType(u.type || 'wohnung'); setName(u.name)
+    setUnitCode(u.unit_code || '')
     setSelectedProperty(u.property_id); setFloor(u.floor?.toString() || '')
     setSizeSqm(u.size_sqm?.toString() || ''); setRooms(u.rooms?.toString() || '')
     setRentAmount(u.rent_amount?.toString() || '')
@@ -66,6 +71,7 @@ export default function Units() {
 
   const handleCancel = () => {
     setShowForm(false); setEditingId(null); setType('wohnung'); setName('')
+    setUnitCode('')
     setSelectedProperty(''); setFloor(''); setSizeSqm(''); setRooms('')
     setRentAmount(''); setUtilitiesAmount(''); setVatRate('19')
     setUsageType(''); setParkingType('garage')
@@ -90,9 +96,20 @@ export default function Units() {
       return
     }
 
+    // Code-Eindeutigkeit prüfen (außer bei eigenem Edit)
+    const codeTrimmed = unitCode.trim().toUpperCase()
+    if (codeTrimmed) {
+      const conflictUnit = units.find(u => u.unit_code === codeTrimmed && u.id !== editingId)
+      if (conflictUnit) {
+        alert(`Der Code "${codeTrimmed}" existiert bereits für eine andere Einheit (${conflictUnit.name}).\n\nBitte wähle einen anderen Code.`)
+        return
+      }
+    }
+
     setLoading(true)
     const data: any = {
       name, property_id: selectedProperty, type, notes: notes || null,
+      unit_code: codeTrimmed || null,
       size_sqm: sizeSqm ? parseFloat(sizeSqm) : null,
       rent_amount: rentAmount ? parseFloat(rentAmount) : 0,
       utilities_amount: utilitiesAmount ? parseFloat(utilitiesAmount) : 0,
@@ -110,75 +127,68 @@ export default function Units() {
     handleCancel(); setLoading(false); loadData(userId!)
   }
 
-    const handleDelete = async (id: string) => {
-        const unit = units.find((u: any) => u.id === id)
-        if (!unit) return
+  const handleDelete = async (id: string) => {
+    const unit = units.find((u: any) => u.id === id)
+    if (!unit) return
 
-        // 1. Connected data zählen
-        const { data: contracts } = await supabase
-        .from('contracts').select('id').eq('unit_id', id)
-        const contractIds = (contracts || []).map((c: any) => c.id)
+    const { data: contracts } = await supabase.from('contracts').select('id').eq('unit_id', id)
+    const contractIds = (contracts || []).map((c: any) => c.id)
 
-        const { data: tenants } = await supabase
-        .from('tenants').select('id, full_name').eq('unit_id', id)
-        const tenantIds = (tenants || []).map((t: any) => t.id)
+    const { data: tenants } = await supabase.from('tenants').select('id, full_name').eq('unit_id', id)
+    const tenantIds = (tenants || []).map((t: any) => t.id)
 
-        let paidCount = 0
-        let pendingCount = 0
-        if (contractIds.length > 0) {
-        const { data: payments } = await supabase
-            .from('payments').select('id, status').in('contract_id', contractIds)
-        paidCount    = (payments || []).filter((p: any) => p.status === 'paid').length
-        pendingCount = (payments || []).filter((p: any) => p.status !== 'paid').length
-        }
-
-        // 2. BLOCK wenn bezahlte Zahlungen existieren (GoBD §147 AO)
-        if (paidCount > 0) {
-        alert(
-            `Diese Einheit kann nicht gelöscht werden!\n\n` +
-            `Es existieren ${paidCount} bezahlte Zahlungen.\n\n` +
-            `Gesetzliche Aufbewahrungspflicht (§147 AO): 10 Jahre.\n\n` +
-            `Bitte beende stattdessen den Vertrag und setze die Einheit auf "leer".`
-        )
-        setDeleteConfirm(null)
-        return
-        }
-
-        // 3. Bestätigung mit Übersicht
-        const summary = [
-        `Einheit: ${unit.name}`,
-        tenantIds.length > 0 ? `${tenantIds.length} Mieter` : null,
-        contractIds.length > 0 ? `${contractIds.length} Verträge` : null,
-        pendingCount > 0 ? `${pendingCount} ausstehende Zahlungen` : null,
-        ].filter(Boolean).join('\n• ')
-
-        if (!window.confirm(
-        `Folgende Daten werden GELÖSCHT:\n\n• ${summary}\n\n` +
-        `Diese Aktion kann nicht rückgängig gemacht werden!\n\nTrotzdem löschen?`
-        )) {
-        setDeleteConfirm(null)
-        return
-        }
-
-        // 4. Cascade-Delete in korrekter Reihenfolge
-        if (contractIds.length > 0) {
-        await supabase.from('payments').delete().in('contract_id', contractIds)
-        await supabase.from('contracts').delete().in('id', contractIds)
-        }
-        if (tenantIds.length > 0) {
-        await supabase.from('tenants').delete().in('id', tenantIds)
-        }
-
-        const { error } = await supabase.from('units').delete().eq('id', id)
-        if (error) {
-        alert('Fehler beim Löschen: ' + error.message)
-        setDeleteConfirm(null)
-        return
-        }
-
-        setDeleteConfirm(null)
-        loadData(userId!)
+    let paidCount = 0
+    let pendingCount = 0
+    if (contractIds.length > 0) {
+      const { data: payments } = await supabase.from('payments').select('id, status').in('contract_id', contractIds)
+      paidCount = (payments || []).filter((p: any) => p.status === 'paid').length
+      pendingCount = (payments || []).filter((p: any) => p.status !== 'paid').length
     }
+
+    if (paidCount > 0) {
+      alert(
+        `Diese Einheit kann nicht gelöscht werden!\n\n` +
+        `Es existieren ${paidCount} bezahlte Zahlungen.\n\n` +
+        `Gesetzliche Aufbewahrungspflicht (§147 AO): 10 Jahre.\n\n` +
+        `Bitte beende stattdessen den Vertrag und setze die Einheit auf "leer".`
+      )
+      setDeleteConfirm(null)
+      return
+    }
+
+    const summary = [
+      `Einheit: ${unit.name}${unit.unit_code ? ` (${unit.unit_code})` : ''}`,
+      tenantIds.length > 0 ? `${tenantIds.length} Mieter` : null,
+      contractIds.length > 0 ? `${contractIds.length} Verträge` : null,
+      pendingCount > 0 ? `${pendingCount} ausstehende Zahlungen` : null,
+    ].filter(Boolean).join('\n• ')
+
+    if (!window.confirm(
+      `Folgende Daten werden GELÖSCHT:\n\n• ${summary}\n\n` +
+      `Diese Aktion kann nicht rückgängig gemacht werden!\n\nTrotzdem löschen?`
+    )) {
+      setDeleteConfirm(null)
+      return
+    }
+
+    if (contractIds.length > 0) {
+      await supabase.from('payments').delete().in('contract_id', contractIds)
+      await supabase.from('contracts').delete().in('id', contractIds)
+    }
+    if (tenantIds.length > 0) {
+      await supabase.from('tenants').delete().in('id', tenantIds)
+    }
+
+    const { error } = await supabase.from('units').delete().eq('id', id)
+    if (error) {
+      alert('Fehler beim Löschen: ' + error.message)
+      setDeleteConfirm(null)
+      return
+    }
+
+    setDeleteConfirm(null)
+    loadData(userId!)
+  }
 
   const computeTotalRent = () => {
     const base = parseFloat(rentAmount) || 0
@@ -197,12 +207,25 @@ export default function Units() {
     return n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
   }
 
+  // === Suche/Filter ===
+  const searchLower = search.trim().toLowerCase()
+  const filteredUnits = searchLower
+    ? units.filter(u =>
+        (u.unit_code || '').toLowerCase().includes(searchLower) ||
+        (u.name || '').toLowerCase().includes(searchLower) ||
+        (u.properties?.name || '').toLowerCase().includes(searchLower) ||
+        (u.properties?.address || '').toLowerCase().includes(searchLower) ||
+        (u.properties?.city || '').toLowerCase().includes(searchLower)
+      )
+    : units
+
   const typeColor: any = { wohnung: '#3b82f6', gewerbe: '#8b5cf6', stellplatz: '#6b7280', sonstige: '#6b7280' }
   const typeBg: any = { wohnung: '#eff6ff', gewerbe: '#f5f3ff', stellplatz: '#f5f4f0', sonstige: '#f5f4f0' }
   const typeLabel: any = { wohnung: 'Wohnung', gewerbe: 'Gewerbe', stellplatz: 'Stellplatz', sonstige: 'Sonstige' }
 
   const card = { backgroundColor: '#fff', border: '1px solid #e8e6e0', borderRadius: '12px', padding: '24px' }
   const input = { width: '100%', border: '1px solid #e8e6e0', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', outline: 'none', color: '#1a1a1a', backgroundColor: '#fff' }
+  const inputCode = { ...input, fontFamily: 'ui-monospace, monospace', letterSpacing: '0.3px' }
   const label = { fontSize: '12px', color: '#999', marginBottom: '6px', display: 'block', textTransform: 'uppercase' as const, letterSpacing: '0.5px' }
 
   const atLimit = planInfo && !planInfo.canCreateMore && !editingId
@@ -214,10 +237,12 @@ export default function Units() {
 
         <PlanUsageBanner />
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '40px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
           <div>
             <h1 style={{ fontSize: '28px', fontWeight: '400', color: '#1a1a1a', margin: '0 0 4px', fontFamily: 'Georgia, serif' }}>Einheiten</h1>
-            <p style={{ fontSize: '14px', color: '#999', margin: 0 }}>{units.length} Einheiten gesamt</p>
+            <p style={{ fontSize: '14px', color: '#999', margin: 0 }}>
+              {searchLower ? `${filteredUnits.length} von ${units.length}` : `${units.length}`} Einheiten gesamt
+            </p>
           </div>
           <button onClick={handleNewUnit}
             style={{
@@ -232,6 +257,18 @@ export default function Units() {
             {atLimit ? '⬆ Upgrade für mehr Einheiten' : '+ Einheit anlegen'}
           </button>
         </div>
+
+        {/* === Such-Feld === */}
+        {units.length > 0 && (
+          <div style={{ marginBottom: '24px' }}>
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="🔍 Suchen nach Code (WAL-WIE11-W01), Bezeichnung, Objekt, Adresse, Stadt..."
+              style={{ ...input, fontSize: '14px' }}
+            />
+          </div>
+        )}
 
         {showForm && (
           <div style={{ ...card, marginBottom: '24px' }}>
@@ -255,11 +292,16 @@ export default function Units() {
                   {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
               </div>
-              <div style={{ gridColumn: 'span 2' }}>
+              <div>
                 <label style={label}>Bezeichnung *</label>
                 <input value={name} onChange={e => setName(e.target.value)}
                   placeholder={type === 'wohnung' ? 'z.B. Wohnung 1. OG links' : type === 'gewerbe' ? 'z.B. Ladenlokal EG' : type === 'stellplatz' ? 'z.B. Stellplatz 3' : 'z.B. Lagerraum'}
                   style={input} />
+              </div>
+              <div>
+                <label style={label}>Einheit-Code</label>
+                <input value={unitCode} onChange={e => setUnitCode(e.target.value.toUpperCase())}
+                  placeholder="z.B. WAL-WIE11-W01" style={inputCode} />
               </div>
 
               {type === 'wohnung' && (<>
@@ -358,13 +400,19 @@ export default function Units() {
               Erste Einheit anlegen →
             </button>
           </div>
+        ) : filteredUnits.length === 0 ? (
+          <div style={{ ...card, textAlign: 'center', padding: '32px' }}>
+            <p style={{ fontSize: '14px', color: '#bbb', margin: 0 }}>Keine Einheit gefunden für "{search}".</p>
+          </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {units.map(u => (
+            {filteredUnits.map(u => (
               <div key={u.id} style={card}>
                 {deleteConfirm === u.id ? (
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <p style={{ fontSize: '14px', color: '#dc2626', margin: 0 }}>Einheit wirklich löschen?</p>
+                    <p style={{ fontSize: '14px', color: '#dc2626', margin: 0 }}>
+                      Einheit {u.unit_code ? `(${u.unit_code})` : ''} wirklich löschen?
+                    </p>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <button onClick={() => handleDelete(u.id)} style={{ backgroundColor: '#dc2626', color: '#fff', padding: '8px 16px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>Ja, löschen</button>
                       <button onClick={() => setDeleteConfirm(null)} style={{ backgroundColor: '#fff', color: '#666', padding: '8px 16px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer' }}>Abbrechen</button>
@@ -372,17 +420,33 @@ export default function Units() {
                   </div>
                 ) : (
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <p style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 4px' }}>{u.name}</p>
-                      <p style={{ fontSize: '13px', color: '#bbb', margin: 0 }}>
-                        {u.properties?.name}
-                        {u.size_sqm && ` · ${u.size_sqm} m²`}
-                        {u.rooms && ` · ${u.rooms} Zimmer`}
-                        {u.floor !== null && u.floor !== undefined && ` · ${u.floor}. OG`}
-                        {u.total_rent && ` · ${formatEur(u.total_rent)}/Monat`}
-                      </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
+                      {u.unit_code && (
+                        <span style={{
+                          fontSize: '11px',
+                          fontFamily: 'ui-monospace, monospace',
+                          color: '#1a1a1a',
+                          backgroundColor: '#f5f4f0',
+                          padding: '5px 10px',
+                          borderRadius: '6px',
+                          fontWeight: '500',
+                          letterSpacing: '0.3px',
+                          whiteSpace: 'nowrap',
+                          flexShrink: 0,
+                        }}>{u.unit_code}</span>
+                      )}
+                      <div style={{ minWidth: 0 }}>
+                        <p style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 4px' }}>{u.name}</p>
+                        <p style={{ fontSize: '13px', color: '#bbb', margin: 0 }}>
+                          {u.properties?.name}
+                          {u.size_sqm && ` · ${u.size_sqm} m²`}
+                          {u.rooms && ` · ${u.rooms} Zimmer`}
+                          {u.floor !== null && u.floor !== undefined && ` · ${u.floor}. OG`}
+                          {u.total_rent && ` · ${formatEur(u.total_rent)}/Monat`}
+                        </p>
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                       <span style={{ fontSize: '11px', color: typeColor[u.type] || '#6b7280', backgroundColor: typeBg[u.type] || '#f5f4f0', padding: '4px 10px', borderRadius: '20px', fontWeight: '500' }}>
                         {typeLabel[u.type] || 'Sonstige'}
                       </span>

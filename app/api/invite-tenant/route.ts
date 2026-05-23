@@ -5,17 +5,29 @@ import { getAuthedUser } from '@/lib/supabase-server'
 export async function POST(req: NextRequest) {
   const user = await getAuthedUser()
   if (!user) {
+    console.error('[invite-tenant] No authed user')
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+  console.log('[invite-tenant] User authed:', user.id, user.email)
 
   const { tenantId, email } = await req.json()
+  console.log('[invite-tenant] Request:', { tenantId, email })
 
   if (!tenantId || !email) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
   }
-
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return NextResponse.json({ error: 'Invalid email' }, { status: 400 })
+  }
+
+  // ENV-Check
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.error('[invite-tenant] SUPABASE_SERVICE_ROLE_KEY missing!')
+    return NextResponse.json({ error: 'Server misconfigured: missing service role' }, { status: 500 })
+  }
+  if (!process.env.RESEND_API_KEY) {
+    console.error('[invite-tenant] RESEND_API_KEY missing!')
+    return NextResponse.json({ error: 'Server misconfigured: missing resend key' }, { status: 500 })
   }
 
   const supabaseAdmin = createClient(
@@ -30,21 +42,29 @@ export async function POST(req: NextRequest) {
     .eq('id', tenantId)
     .single()
 
-  if (tenantErr || !tenant || tenant.owner_id !== user.id) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  console.log('[invite-tenant] Tenant query:', { tenant, tenantErr })
+
+  if (tenantErr) {
+    console.error('[invite-tenant] DB error:', tenantErr)
+    return NextResponse.json({ error: 'DB error', details: tenantErr.message }, { status: 500 })
   }
+  if (!tenant) {
+    console.error('[invite-tenant] Tenant not found:', tenantId)
+    return NextResponse.json({ error: 'Tenant not found' }, { status: 404 })
+  }
+  if (tenant.owner_id !== user.id) {
+    console.error('[invite-tenant] Owner mismatch:', { tenant_owner: tenant.owner_id, user_id: user.id })
+    return NextResponse.json({ 
+      error: 'Forbidden', 
+      details: `Tenant owner: ${tenant.owner_id}, your user: ${user.id}` 
+    }, { status: 403 })
+  }
+
+  console.log('[invite-tenant] Ownership OK, sending email...')
 
   const normalizedEmail = email.toLowerCase().trim()
-
-  // Resend Key check
-  if (!process.env.RESEND_API_KEY) {
-    console.error('RESEND_API_KEY is missing!')
-    return NextResponse.json({ error: 'Mail service not configured' }, { status: 500 })
-  }
-
   const registerLink = `https://mietnext.de/tenant-register?email=${encodeURIComponent(normalizedEmail)}`
 
-  // E-Mail senden
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
@@ -80,15 +100,15 @@ export async function POST(req: NextRequest) {
 
   if (!res.ok) {
     const errBody = await res.text()
-    console.error('Resend Error:', res.status, errBody)
+    console.error('[invite-tenant] Resend error:', res.status, errBody)
     return NextResponse.json({ 
       error: 'Mail-Versand fehlgeschlagen', 
-      details: errBody,
-      status: res.status 
+      details: `Resend ${res.status}: ${errBody}`,
     }, { status: 500 })
   }
 
-  // ✅ ERST nach erfolgreichem Versand: email + invited_at speichern
+  console.log('[invite-tenant] Email sent successfully')
+
   await supabaseAdmin
     .from('tenants')
     .update({ 

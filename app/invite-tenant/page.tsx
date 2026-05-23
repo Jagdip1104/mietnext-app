@@ -18,43 +18,58 @@ export default function InviteTenant() {
     const load = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/login'); return }
-      const { data } = await supabase.from('tenants')
-        .select('*, units(name, properties(name))')
-        .eq('owner_id', session.user.id)
-        .order('full_name')
-      setTenants(data || [])
+      await reloadTenants(session.user.id)
     }
     load()
   }, [])
+
+  const reloadTenants = async (uid: string) => {
+    const { data } = await supabase.from('tenants')
+      .select('*, units(name, properties(name))')
+      .eq('owner_id', uid)
+      .order('full_name')
+    setTenants(data || [])
+  }
 
   const handleInvite = async () => {
     if (!selectedTenant || !inviteEmail) return
     setLoading(true); setError(''); setSuccess('')
 
-    const tenant = tenants.find(t => t.id === selectedTenant)
-    const registerLink = `https://mietnext.de/tenant-register?email=${encodeURIComponent(inviteEmail)}`
-
-
-
-    // E-Mail senden via Resend (jetzt mit Ownership-Check)
     const res = await fetch('/api/invite-tenant', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        tenantId: selectedTenant, // ✅ statt email speichern auf Server
+        tenantId: selectedTenant,
         email: inviteEmail,
       }),
     })
 
     if (!res.ok) {
-      setError('E-Mail konnte nicht gesendet werden.')
+      const errData = await res.json().catch(() => ({}))
+      setError(
+        errData.details 
+          ? `E-Mail konnte nicht gesendet werden: ${errData.details}`
+          : 'E-Mail konnte nicht gesendet werden.'
+      )
       setLoading(false)
       return
     }
 
-    setSuccess(`Link generiert: ${registerLink}`)
+    setSuccess(`Einladung gesendet an ${inviteEmail}`)
     setSelectedTenant(''); setInviteEmail('')
+    
+    // Tenants neu laden damit Status sich aktualisiert
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session) await reloadTenants(session.user.id)
+    
     setLoading(false)
+  }
+
+  // Status-Logik: 3 Stufen
+  const getTenantStatus = (t: any) => {
+    if (t.user_id) return { label: 'Aktiv', color: '#16a34a', bg: '#f0fdf4' }
+    if (t.invited_at) return { label: 'Eingeladen', color: '#d97706', bg: '#fef3c7' }
+    return { label: 'Nicht eingeladen', color: '#999', bg: '#f5f4f0' }
   }
 
   const card = { backgroundColor: '#fff', border: '1px solid #e8e6e0', borderRadius: '12px', padding: '28px' }
@@ -74,15 +89,7 @@ export default function InviteTenant() {
 
         {success && (
           <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '16px', marginBottom: '24px', fontSize: '14px', color: '#16a34a' }}>
-            <p style={{ margin: '0 0 8px', fontWeight: '500' }}>✅ Einladung gesendet!</p>
-            <p style={{ margin: '0 0 8px', color: '#166534' }}>Der Mieter hat eine E-Mail erhalten mit dem Zugangslink.</p>
-            <code style={{ backgroundColor: '#dcfce7', padding: '8px 12px', borderRadius: '6px', fontSize: '12px', display: 'block', wordBreak: 'break-all', color: '#166534' }}>
-              {success.split(': ')[1]}
-            </code>
-            <button onClick={() => navigator.clipboard.writeText(success.split(': ')[1])}
-              style={{ marginTop: '8px', backgroundColor: '#16a34a', color: '#fff', padding: '8px 16px', borderRadius: '6px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>
-              Link kopieren
-            </button>
+            <p style={{ margin: 0, fontWeight: '500' }}>✅ {success}</p>
           </div>
         )}
 
@@ -100,13 +107,18 @@ export default function InviteTenant() {
                 setSelectedTenant(e.target.value)
                 const t = tenants.find(t => t.id === e.target.value)
                 if (t?.email) setInviteEmail(t.email)
+                else setInviteEmail('')
               }} style={input}>
                 <option value="">Mieter auswählen...</option>
-                {tenants.map(t => (
-                  <option key={t.id} value={t.id}>
-                    {t.full_name} – {t.units?.properties?.name} {t.units?.name}
-                  </option>
-                ))}
+                {tenants.map(t => {
+                  const status = getTenantStatus(t)
+                  return (
+                    <option key={t.id} value={t.id}>
+                      {t.full_name} – {t.units?.properties?.name} {t.units?.name}
+                      {status.label !== 'Nicht eingeladen' ? ` (${status.label})` : ''}
+                    </option>
+                  )
+                })}
               </select>
             </div>
             <div>
@@ -131,20 +143,23 @@ export default function InviteTenant() {
               Deine Mieter
             </h2>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              {tenants.map(t => (
-                <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #f0ede6' }}>
-                  <div>
-                    <p style={{ fontSize: '14px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 2px' }}>{t.full_name}</p>
-                    <p style={{ fontSize: '12px', color: '#bbb', margin: 0 }}>
-                      {t.units?.properties?.name} – {t.units?.name}
-                      {t.email && ` · ${t.email}`}
-                    </p>
+              {tenants.map(t => {
+                const status = getTenantStatus(t)
+                return (
+                  <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #f0ede6' }}>
+                    <div>
+                      <p style={{ fontSize: '14px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 2px' }}>{t.full_name}</p>
+                      <p style={{ fontSize: '12px', color: '#bbb', margin: 0 }}>
+                        {t.units?.properties?.name} – {t.units?.name}
+                        {t.email && ` · ${t.email}`}
+                      </p>
+                    </div>
+                    <span style={{ fontSize: '11px', color: status.color, backgroundColor: status.bg, padding: '4px 10px', borderRadius: '20px', fontWeight: '500' }}>
+                      {status.label}
+                    </span>
                   </div>
-                  <span style={{ fontSize: '11px', color: t.email ? '#16a34a' : '#999', backgroundColor: t.email ? '#f0fdf4' : '#f5f4f0', padding: '4px 10px', borderRadius: '20px' }}>
-                    {t.email ? 'Eingeladen' : 'Nicht eingeladen'}
-                  </span>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         )}

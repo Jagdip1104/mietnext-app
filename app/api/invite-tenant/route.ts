@@ -3,7 +3,6 @@ import { createClient } from '@supabase/supabase-js'
 import { getAuthedUser } from '@/lib/supabase-server'
 
 export async function POST(req: NextRequest) {
-  // ✅ Auth-Check
   const user = await getAuthedUser()
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -15,7 +14,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
   }
 
-  // E-Mail-Format validieren
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return NextResponse.json({ error: 'Invalid email' }, { status: 400 })
   }
@@ -25,27 +23,28 @@ export async function POST(req: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  // ✅ Ownership-Check: User muss Vermieter dieses Mieters sein
-  const { data: tenant } = await supabaseAdmin
+  // Ownership-Check
+  const { data: tenant, error: tenantErr } = await supabaseAdmin
     .from('tenants')
     .select('id, full_name, owner_id')
     .eq('id', tenantId)
     .single()
 
-  if (!tenant || tenant.owner_id !== user.id) {
+  if (tenantErr || !tenant || tenant.owner_id !== user.id) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
   const normalizedEmail = email.toLowerCase().trim()
 
-  // E-Mail im Mieter speichern
-  await supabaseAdmin
-    .from('tenants')
-    .update({ email: normalizedEmail })
-    .eq('id', tenantId)
+  // Resend Key check
+  if (!process.env.RESEND_API_KEY) {
+    console.error('RESEND_API_KEY is missing!')
+    return NextResponse.json({ error: 'Mail service not configured' }, { status: 500 })
+  }
 
   const registerLink = `https://mietnext.de/tenant-register?email=${encodeURIComponent(normalizedEmail)}`
 
+  // E-Mail senden
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
@@ -80,8 +79,23 @@ export async function POST(req: NextRequest) {
   })
 
   if (!res.ok) {
-    return NextResponse.json({ error: 'Mail-Versand fehlgeschlagen' }, { status: 500 })
+    const errBody = await res.text()
+    console.error('Resend Error:', res.status, errBody)
+    return NextResponse.json({ 
+      error: 'Mail-Versand fehlgeschlagen', 
+      details: errBody,
+      status: res.status 
+    }, { status: 500 })
   }
+
+  // ✅ ERST nach erfolgreichem Versand: email + invited_at speichern
+  await supabaseAdmin
+    .from('tenants')
+    .update({ 
+      email: normalizedEmail,
+      invited_at: new Date().toISOString()
+    })
+    .eq('id', tenantId)
 
   return NextResponse.json({ success: true })
 }

@@ -114,6 +114,7 @@ export default function TenantPortal() {
     const { error } = await supabase.from('tickets').insert({
       title, description, priority,
       unit_id: tenant.unit_id,
+      tenant_id: tenant.id,
       status: 'open',
     })
     if (error) {

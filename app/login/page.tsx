@@ -49,6 +49,20 @@ export default function LoginPage() {
     router.push('/role-select')
   }
 
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.toLowerCase().trim(),
+      password,
+    })
+    if (error) {
+      setError('E-Mail oder Passwort falsch')
+      setLoading(false)
+    }
+  }
+
   return (
     <main style={{ minHeight: '100vh', backgroundColor: '#fafaf8', display: 'flex' }}>
       <div style={{ flex: 1, backgroundColor: '#1a1a1a', flexDirection: 'column', justifyContent: 'space-between', padding: '48px', display: 'flex' }}>

@@ -1,4 +1,3 @@
-cat > 'app/role-select/page.tsx' << 'ROLE_SELECT_EOF'
 'use client'
 
 import { useEffect, useState } from 'react'
@@ -148,4 +147,3 @@ export default function RoleSelect() {
     </main>
   )
 }
-ROLE_SELECT_EOF

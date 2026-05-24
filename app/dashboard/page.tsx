@@ -17,15 +17,41 @@ export default function Dashboard() {
   const [recentPayments, setRecentPayments] = useState<any[]>([])
   const router = useRouter()
 
-  useEffect(() => {
-    const load = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { router.push('/login'); return }
-      setUser(session.user)
-      loadData(session.user.id)
-    }
-    load()
-  }, [])
+    useEffect(() => {
+        const load = async () => {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) { router.push('/login'); return }
+
+        // 🛡️ Guard: nur Vermieter dürfen aufs Dashboard
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('id', session.user.id)
+            .maybeSingle()
+
+        if (!profile) {
+            // Kein Vermieter-Profil → checken ob Mieter
+            const userEmail = (session.user.email ?? '').toLowerCase().trim()
+            const { data: tenantRows } = await supabase
+            .from('tenants')
+            .select('id')
+            .or(`user_id.eq.${session.user.id},email.eq.${userEmail}`)
+            .limit(1)
+
+            if (tenantRows && tenantRows.length > 0) {
+            router.push('/tenant-portal')
+            return
+            }
+            // Weder noch → zurück zur Rollen-Auswahl
+            router.push('/role-select')
+            return
+        }
+
+        setUser(session.user)
+        loadData(session.user.id)
+        }
+        load()
+    }, [])
 
   const loadData = async (uid: string) => {
     const { data: ownProperties } = await supabase

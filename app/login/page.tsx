@@ -31,15 +31,12 @@ export default function LoginPage() {
   const redirectUser = async (uid: string, userEmail: string) => {
     const emailLower = userEmail.toLowerCase().trim()
 
-    // 1. Hat User bereits einen tenant_users Eintrag?
+    // Auto-Linking: tenants per E-Mail mit user_id verknüpfen
     const { data: existingTU } = await supabase
       .from('tenant_users').select('id').eq('user_id', uid).limit(1)
-
-    // 2. Wenn nicht → Auto-Linking per E-Mail
     if (!existingTU || existingTU.length === 0) {
       const { data: tenants } = await supabase
         .from('tenants').select('id').ilike('email', emailLower).limit(1)
-
       if (tenants && tenants.length > 0) {
         await supabase.from('tenant_users').insert({
           user_id: uid,
@@ -48,33 +45,8 @@ export default function LoginPage() {
       }
     }
 
-    // 3. Final check für Mieter
-    const { data: finalTU } = await supabase
-      .from('tenant_users').select('id').eq('user_id', uid).limit(1)
-    const isTenant = (finalTU?.length || 0) > 0
-
-    // 4. Vermieter-Check über profiles (Source of Truth, NICHT Properties-Count)
-    const { data: profile } = await supabase
-      .from('profiles').select('id').eq('id', uid).maybeSingle()
-    const isLandlord = !!profile
-
-
-    // 5. Routing-Logik: immer zur Rollen-Auswahl
-        router.push('/role-select')
-    }
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-    const { error } = await supabase.auth.signInWithPassword({
-      email: email.toLowerCase().trim(),
-      password,
-    })
-    if (error) {
-      setError('E-Mail oder Passwort falsch')
-      setLoading(false)
-    }
+    // Immer zur Rollen-Auswahl - dort entscheidet der User
+    router.push('/role-select')
   }
 
   return (

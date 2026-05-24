@@ -1,4 +1,3 @@
-cat > 'app/properties/[id]/page.tsx' << 'PAGE_TSX_EOF'
 'use client'
 
 import { useEffect, useState } from 'react'
@@ -246,4 +245,3 @@ export default function PropertyDetailPage() {
     </div>
   )
 }
-PAGE_TSX_EOF

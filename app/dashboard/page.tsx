@@ -152,11 +152,11 @@ export default function Dashboard() {
   return (
     <main style={{ backgroundColor: '#fafaf8', minHeight: '100vh' }}>
       <Nav />
-      <div style={{ maxWidth: '1040px', margin: '0 auto', padding: '48px 48px' }}>
+      <div className="max-w-[1040px] mx-auto px-5 py-8 md:px-12 md:py-12">
 
         <PlanUsageBanner />
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '40px' }}>
+        <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-6 mb-10">
           <div>
             <h1 style={{ fontSize: '28px', fontWeight: '400', color: '#1a1a1a', margin: '0 0 4px', fontFamily: 'Georgia, serif' }}>
               Dashboard
@@ -165,7 +165,7 @@ export default function Dashboard() {
               Willkommen zurück, {user?.email}
             </p>
           </div>
-          <div style={{ textAlign: 'right' }}>
+          <div className="text-left md:text-right">
             <p style={{ fontSize: '12px', color: '#999', margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '1px' }}>Auslastung</p>
             <p style={{ fontSize: '32px', fontWeight: '300', color: '#1a1a1a', margin: '0 0 2px', fontFamily: 'Georgia, serif' }}>
               {occupancyRate}%
@@ -176,7 +176,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '16px' }}>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           {[
             { label: 'Einnahmen diesen Monat', value: stats.monthlyIncome, color: '#16a34a' },
             { label: 'Ausstehende Zahlungen', value: stats.pendingPayments, color: '#d97706' },
@@ -193,7 +193,7 @@ export default function Dashboard() {
           ))}
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' }}>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {[
             { label: 'Objekte', value: stats.properties, href: '/properties' },
             { label: 'Einheiten', value: stats.units, href: '/units' },
@@ -212,7 +212,7 @@ export default function Dashboard() {
           ))}
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div style={card}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <p style={{ fontSize: '13px', fontWeight: '500', color: '#1a1a1a', margin: 0 }}>Offene Tickets</p>
@@ -258,7 +258,7 @@ export default function Dashboard() {
                       <p style={{ fontSize: '13px', color: '#1a1a1a', margin: '0 0 2px' }}>{p.contracts?.tenants?.full_name || 'Unbekannt'}</p>
                       <p style={{ fontSize: '12px', color: '#bbb', margin: 0 }}>{new Date(p.due_date).toLocaleDateString('de-DE')}</p>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
+                    <div className="text-left md:text-right">
                       <p style={{ fontSize: '13px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 2px' }}>{Number(p.amount).toLocaleString('de-DE')} €</p>
                       <p style={{ fontSize: '11px', color: statusColor[p.status], margin: 0, fontWeight: '500' }}>{statusLabel[p.status]}</p>
                     </div>
@@ -271,7 +271,7 @@ export default function Dashboard() {
 
         <div style={card}>
           <p style={{ fontSize: '13px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 16px' }}>Schnellzugriff</p>
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div className="grid grid-cols-2 md:flex md:flex-wrap gap-2">
             {[
               { label: '+ Objekt anlegen', href: '/properties', primary: true },
               { label: '+ Einheit anlegen', href: '/units', primary: false },

@@ -368,7 +368,7 @@ export default function NebenkostenabrechnungDetail() {
   if (!statement) return (
     <main style={{ backgroundColor: '#fafaf8', minHeight: '100vh' }}>
       <Nav />
-      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '48px' }}>
+      <div className="max-w-[900px] mx-auto px-5 py-8 md:px-12 md:py-12">
         <p style={{ color: '#999', fontSize: '14px' }}>Lade Abrechnung...</p>
       </div>
     </main>
@@ -377,7 +377,7 @@ export default function NebenkostenabrechnungDetail() {
   return (
     <main style={{ backgroundColor: '#fafaf8', minHeight: '100vh' }}>
       <Nav />
-      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '48px' }}>
+      <div className="max-w-[900px] mx-auto px-5 py-8 md:px-12 md:py-12">
 
         <button onClick={() => router.push('/nebenkostenabrechnung')}
           style={{ background: 'none', border: 'none', color: '#888', fontSize: '13px', cursor: 'pointer', marginBottom: '24px', padding: 0 }}>
@@ -404,7 +404,7 @@ export default function NebenkostenabrechnungDetail() {
         </div>
 
         {/* ── Summary Cards ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '32px' }}>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-[32px]">
           {([
             { label: 'Gesamtkosten',    value: totalCosts,       color: '#1a1a1a', sub: `${costItems.length} Positionen`          },
             { label: 'Vorauszahlungen', value: totalPrepayments, color: '#1a1a1a', sub: 'geleistete Vorauszahlungen'              },
@@ -435,7 +435,7 @@ export default function NebenkostenabrechnungDetail() {
 
           {showAddForm && (
             <div style={{ ...card, marginBottom: '12px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-[16px]">
                 <div style={{ gridColumn: 'span 2' }}>
                   <label style={lbl}>Kostenkategorie *</label>
                   <select value={newItem.category} onChange={e => handleCategoryChange(e.target.value)} style={inp}>
@@ -477,7 +477,7 @@ export default function NebenkostenabrechnungDetail() {
                   <p style={{ fontSize: '12px', color: '#999', margin: '0 0 12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     Betrag je Einheit (aus Ista/Techem-Abrechnung)
                   </p>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {units.map((unit: any) => (
                       <div key={unit.id}>
                         <label style={{ fontSize: '13px', color: '#666', marginBottom: '4px', display: 'block' }}>{unit.name}</label>

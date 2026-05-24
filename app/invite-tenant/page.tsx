@@ -79,7 +79,7 @@ export default function InviteTenant() {
   return (
     <main style={{ backgroundColor: '#fafaf8', minHeight: '100vh' }}>
       <Nav />
-      <div style={{ maxWidth: '640px', margin: '0 auto', padding: '48px' }}>
+      <div className="max-w-[640px] mx-auto px-5 py-8 md:px-12 md:py-12">
         <h1 style={{ fontSize: '28px', fontWeight: '400', color: '#1a1a1a', margin: '0 0 4px', fontFamily: 'Georgia, serif' }}>
           Mieter einladen
         </h1>

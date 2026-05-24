@@ -275,7 +275,7 @@ export default function GuvPage() {
   return (
     <main style={{ backgroundColor: '#fafaf8', minHeight: '100vh' }}>
       <Nav />
-      <div style={{ maxWidth: '960px', margin: '0 auto', padding: '48px' }}>
+      <div className="max-w-[960px] mx-auto px-5 py-8 md:px-12 md:py-12">
 
         {/* ── Header ── */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px' }}>
@@ -329,7 +329,7 @@ export default function GuvPage() {
         {loaded && (
           <>
             {/* ── Summary Cards ── */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' }}>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-[32px]">
               {([
                 { label: 'Einnahmen',          value: totalEinnahmen, color: '#16a34a' },
                 { label: 'Ausgaben gesamt',    value: totalAusgaben,  color: '#dc2626' },

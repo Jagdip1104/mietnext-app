@@ -167,7 +167,7 @@ export default function KostenPage() {
   return (
     <main style={{ backgroundColor: '#fafaf8', minHeight: '100vh' }}>
       <Nav />
-      <div style={{ maxWidth: '960px', margin: '0 auto', padding: '48px' }}>
+      <div className="max-w-[960px] mx-auto px-5 py-8 md:px-12 md:py-12">
 
         {/* ── Header ── */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px' }}>
@@ -182,7 +182,7 @@ export default function KostenPage() {
         </div>
 
         {/* ── Summary Cards ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-[24px]">
           {([
             { label: 'Gesamtkosten',          value: totalAll,   color: '#1a1a1a' },
             { label: 'Davon umlagefähig',      value: totalUml,   color: '#16a34a' },
@@ -218,7 +218,7 @@ export default function KostenPage() {
             <h2 style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 20px', fontFamily: 'Georgia, serif' }}>
               Kosten erfassen
             </h2>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-[16px]">
 
               <div>
                 <label style={lbl}>Objekt *</label>

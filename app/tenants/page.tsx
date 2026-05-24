@@ -78,8 +78,8 @@ export default function Tenants() {
   return (
     <main style={{ backgroundColor: '#fafaf8', minHeight: '100vh' }}>
       <Nav />
-      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '48px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '40px' }}>
+      <div className="max-w-[900px] mx-auto px-5 py-8 md:px-12 md:py-12">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-6 mb-10">
           <div>
             <h1 style={{ fontSize: '28px', fontWeight: '400', color: '#1a1a1a', margin: '0 0 4px', fontFamily: 'Georgia, serif' }}>Mieter</h1>
             <p style={{ fontSize: '14px', color: '#999', margin: 0 }}>{tenants.length} Mieter gesamt</p>
@@ -95,7 +95,7 @@ export default function Tenants() {
             <h2 style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 20px', fontFamily: 'Georgia, serif' }}>
               {editingId ? 'Mieter bearbeiten' : 'Neuer Mieter'}
             </h2>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-[20px]">
               <div style={{ gridColumn: 'span 2' }}>
                 <label style={label}>Name *</label>
                 <input value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Vor- und Nachname" style={input} />

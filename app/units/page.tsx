@@ -233,11 +233,11 @@ export default function Units() {
   return (
     <main style={{ backgroundColor: '#fafaf8', minHeight: '100vh' }}>
       <Nav />
-      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '48px' }}>
+      <div className="max-w-[900px] mx-auto px-5 py-8 md:px-12 md:py-12">
 
         <PlanUsageBanner />
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
+        <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-6">
           <div>
             <h1 style={{ fontSize: '28px', fontWeight: '400', color: '#1a1a1a', margin: '0 0 4px', fontFamily: 'Georgia, serif' }}>Einheiten</h1>
             <p style={{ fontSize: '14px', color: '#999', margin: 0 }}>
@@ -275,7 +275,7 @@ export default function Units() {
             <h2 style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 20px', fontFamily: 'Georgia, serif' }}>
               {editingId ? 'Einheit bearbeiten' : 'Neue Einheit'}
             </h2>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-[20px]">
               <div style={{ gridColumn: 'span 2' }}>
                 <label style={label}>Typ *</label>
                 <select value={type} onChange={e => setType(e.target.value)} style={input}>

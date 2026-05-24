@@ -1,8 +1,9 @@
+cat > 'app/properties/[id]/page.tsx' << 'PAGE_TSX_EOF'
 'use client'
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import {
   ChevronDown, ChevronRight, ArrowLeft, Building2,
@@ -15,7 +16,8 @@ type Property = { id: string; name: string; address: string; city: string; zip: 
 type Tenant = { id: string; name: string; email: string | null; phone: string | null; user_id: string | null; invited_at: string | null; unit_id: string }
 type Contract = { id: string; unit_id: string; start_date: string; end_date: string | null; rent_amount: number; status: string }
 type Payment = { id: string; contract_id: string; amount: number; due_date: string; paid_date: string | null; status: string }
-type UnitRow = { id: string; name: string; unit_code: string | null; floor: string | null; area_sqm: number | null; tenant: Tenant | null; contract: Contract | null; lastPayment: Payment | null }
+type RawUnit = { id: string; name: string; unit_code: string | null; floor: string | null; area_sqm: number | null }
+type UnitRow = RawUnit & { tenant: Tenant | null; contract: Contract | null; lastPayment: Payment | null }
 
 function inviteStatus(tenant: Tenant | null) {
   if (!tenant) return null
@@ -142,27 +144,30 @@ export default function PropertyDetailPage() {
 
   async function loadData() {
     setLoading(true); setError(null)
-    const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.push('/login'); return }
     const { data: prop, error: propErr } = await supabase.from('properties').select('id, name, address, city, zip, type').eq('id', propertyId).eq('owner_id', user.id).single()
     if (propErr || !prop) { setError('Objekt nicht gefunden oder kein Zugriff.'); setLoading(false); return }
-    setProperty(prop)
-    const { data: rawUnits } = await supabase.from('units').select('id, name, unit_code, floor, area_sqm').eq('property_id', propertyId).order('name')
-    if (!rawUnits?.length) { setUnits([]); setLoading(false); return }
+    setProperty(prop as Property)
+    const { data: rawUnitsData } = await supabase.from('units').select('id, name, unit_code, floor, area_sqm').eq('property_id', propertyId).order('name')
+    const rawUnits = (rawUnitsData ?? []) as RawUnit[]
+    if (!rawUnits.length) { setUnits([]); setLoading(false); return }
     const unitIds = rawUnits.map(u => u.id)
-    const { data: tenants } = await supabase.from('tenants').select('id, name, email, phone, user_id, invited_at, unit_id').in('unit_id', unitIds)
-    const { data: contracts } = await supabase.from('contracts').select('id, unit_id, start_date, end_date, rent_amount, status').in('unit_id', unitIds).eq('status', 'active').order('start_date', { ascending: false })
-    const contractIds = (contracts ?? []).map(c => c.id)
-    const { data: payments } = contractIds.length
+    const { data: tenantsData } = await supabase.from('tenants').select('id, name, email, phone, user_id, invited_at, unit_id').in('unit_id', unitIds)
+    const tenants = (tenantsData ?? []) as Tenant[]
+    const { data: contractsData } = await supabase.from('contracts').select('id, unit_id, start_date, end_date, rent_amount, status').in('unit_id', unitIds).eq('status', 'active').order('start_date', { ascending: false })
+    const contracts = (contractsData ?? []) as Contract[]
+    const contractIds = contracts.map(c => c.id)
+    const { data: paymentsData } = contractIds.length
       ? await supabase.from('payments').select('id, contract_id, amount, due_date, paid_date, status').in('contract_id', contractIds).order('due_date', { ascending: false })
-      : { data: [] as Payment[] }
+      : { data: [] }
+    const payments = (paymentsData ?? []) as Payment[]
     const tenantByUnit = new Map<string, Tenant>()
-    for (const t of tenants ?? []) tenantByUnit.set(t.unit_id, t)
+    for (const t of tenants) tenantByUnit.set(t.unit_id, t)
     const contractByUnit = new Map<string, Contract>()
-    for (const c of contracts ?? []) { if (!contractByUnit.has(c.unit_id)) contractByUnit.set(c.unit_id, c) }
+    for (const c of contracts) { if (!contractByUnit.has(c.unit_id)) contractByUnit.set(c.unit_id, c) }
     const lastPaymentByContract = new Map<string, Payment>()
-    for (const p of payments ?? []) { if (!lastPaymentByContract.has(p.contract_id)) lastPaymentByContract.set(p.contract_id, p) }
+    for (const p of payments) { if (!lastPaymentByContract.has(p.contract_id)) lastPaymentByContract.set(p.contract_id, p) }
     const assembled: UnitRow[] = rawUnits.map(u => {
       const tenant = tenantByUnit.get(u.id) ?? null
       const contract = contractByUnit.get(u.id) ?? null
@@ -241,3 +246,4 @@ export default function PropertyDetailPage() {
     </div>
   )
 }
+PAGE_TSX_EOF

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import Nav from '@/components/Nav'
 import { getUserPlanInfo } from '@/lib/plans'
 import { generateUnitCode, isValidUnitCode, makeUniqueCode } from '@/lib/unit-code'
@@ -628,7 +629,9 @@ export default function Properties() {
               <div key={p.id} style={card}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <p style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 4px' }}>{p.name}</p>
+                  <Link href={`/properties/${p.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                      <p style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 4px', cursor: 'pointer' }}>{p.name} →</p>
+                    </Link>
                     <p style={{ fontSize: '13px', color: '#bbb', margin: 0 }}>
                       {[p.address, p.zip, p.city].filter(Boolean).join(', ')}
                     </p>

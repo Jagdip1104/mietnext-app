@@ -15,7 +15,7 @@ type Property = { id: string; name: string; address: string; city: string; zip: 
 type Tenant = { id: string; name: string; email: string | null; phone: string | null; user_id: string | null; invited_at: string | null; unit_id: string }
 type Contract = { id: string; unit_id: string; start_date: string; end_date: string | null; rent_amount: number; status: string }
 type Payment = { id: string; contract_id: string; amount: number; due_date: string; paid_date: string | null; status: string }
-type RawUnit = { id: string; name: string; unit_code: string | null; floor: string | null; area_sqm: number | null }
+type RawUnit = { id: string; name: string; unit_code: string | null; floor: string | null; size_sqm: number | null }
 type UnitRow = RawUnit & { tenant: Tenant | null; contract: Contract | null; lastPayment: Payment | null }
 
 function inviteStatus(tenant: Tenant | null) {
@@ -63,7 +63,7 @@ function ExpandableUnit({ unit, forceOpen }: { unit: UnitRow; forceOpen: boolean
           <span className="font-medium text-gray-900 text-sm">{unit.name}</span>
           {unit.unit_code && <span className="text-xs font-mono text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">{unit.unit_code}</span>}
           {unit.floor != null && <span className="text-xs text-gray-400 flex items-center gap-0.5"><Layers className="h-3 w-3" />{unit.floor}. OG</span>}
-          {unit.area_sqm && <span className="text-xs text-gray-400">{unit.area_sqm} m²</span>}
+          {unit.size_sqm && <span className="text-xs text-gray-400">{unit.size_sqm} m²</span>}
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {isVacant ? (
@@ -148,7 +148,7 @@ export default function PropertyDetailPage() {
     const { data: prop, error: propErr } = await supabase.from('properties').select('id, name, address, city, zip').eq('id', propertyId).eq('owner_id', user.id).single()
     if (propErr || !prop) { setError('Objekt nicht gefunden oder kein Zugriff.'); setLoading(false); return }
     setProperty(prop as Property)
-    const { data: rawUnitsData } = await supabase.from('units').select('id, name, unit_code, floor, area_sqm').eq('property_id', propertyId).order('name')
+    const { data: rawUnitsData } = await supabase.from('units').select('id, name, unit_code, floor, size_sqm').eq('property_id', propertyId).order('name')
     const rawUnits = (rawUnitsData ?? []) as RawUnit[]
     if (!rawUnits.length) { setUnits([]); setLoading(false); return }
     const unitIds = rawUnits.map(u => u.id)

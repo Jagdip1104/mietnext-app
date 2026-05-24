@@ -111,11 +111,17 @@ export default function TenantPortal() {
   const handleTicket = async () => {
     if (!title || !tenant) return
     setLoading(true)
-    await supabase.from('tickets').insert({
+    const { error } = await supabase.from('tickets').insert({
       title, description, priority,
       unit_id: tenant.unit_id,
       status: 'open',
     })
+    if (error) {
+      alert('Fehler beim Ticket-Versand: ' + error.message)
+      console.error('Ticket insert error:', error)
+      setLoading(false)
+      return
+    }
     setTitle(''); setDescription(''); setPriority('medium')
     setShowForm(false); setLoading(false)
     loadContractAndTickets(tenant.id, tenant.unit_id)

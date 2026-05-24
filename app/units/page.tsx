@@ -446,7 +446,7 @@ export default function Units() {
                         </p>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                    <div className="flex flex-wrap items-center gap-2">
                       <span style={{ fontSize: '11px', color: typeColor[u.type] || '#6b7280', backgroundColor: typeBg[u.type] || '#f5f4f0', padding: '4px 10px', borderRadius: '20px', fontWeight: '500' }}>
                         {typeLabel[u.type] || 'Sonstige'}
                       </span>

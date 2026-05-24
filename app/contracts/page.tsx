@@ -289,10 +289,10 @@ export default function Contracts() {
                         💶 {paymentCounts[c.id] || 0} Zahlungen · {paidCounts[c.id] || 0} bezahlt
                       </p>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                      <div style={{ textAlign: 'right' }}>
+                    <div className="flex flex-wrap items-center gap-2 justify-start md:justify-end">
+                      <div className="text-left md:text-right">
                         <p style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 2px' }}>{formatEur(c.rent_amount)}/Mo.</p>
-                        {c.deposit && <p style={{ fontSize: '12px', color: '#bbb', margin: 0 }}>Kaution: {formatEur(c.deposit)}</p>}
+                        {c.deposit ? <p style={{ fontSize: '12px', color: '#bbb', margin: 0 }}>Kaution: {formatEur(c.deposit)}</p> : null}
                       </div>
                       <span style={{ fontSize: '12px', color: c.is_active ? '#16a34a' : '#999', backgroundColor: c.is_active ? '#f0fdf4' : '#f5f4f0', padding: '4px 12px', borderRadius: '20px' }}>
                         {c.is_active ? 'Aktiv' : 'Beendet'}

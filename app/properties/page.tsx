@@ -627,8 +627,8 @@ export default function Properties() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {properties.map((p: any) => (
               <div key={p.id} style={card}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
+                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+                  <div className="min-w-0">
                   <Link href={`/properties/${p.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                       <p style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 4px', cursor: 'pointer' }}>{p.name} →</p>
                     </Link>
@@ -636,7 +636,7 @@ export default function Properties() {
                       {[p.address, p.zip, p.city].filter(Boolean).join(', ')}
                     </p>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div className="flex flex-wrap items-center gap-2">
                     <span style={{ fontSize: '12px', color: '#999', backgroundColor: '#f5f4f0', padding: '4px 12px', borderRadius: '20px' }}>
                       {p.units?.[0]?.count || 0} Einheiten
                     </span>

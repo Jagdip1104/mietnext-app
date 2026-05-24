@@ -37,32 +37,32 @@ export default function Home() {
 
   return (
     <main style={{ fontFamily: "'Georgia', serif", backgroundColor: '#fafaf8', minHeight: '100vh' }}>
-      <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 48px', borderBottom: '1px solid #e8e6e0', backgroundColor: '#fafaf8', position: 'sticky', top: 0, zIndex: 100 }}>
+      <nav className="flex justify-between items-center gap-3 px-5 py-4 md:px-12 md:py-5 border-b border-[#e8e6e0] bg-[#fafaf8] sticky top-0 z-[100]">
         <div style={{ fontSize: '18px', fontWeight: '600', letterSpacing: '-0.5px', color: '#1a1a1a' }}>MietNext</div>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           <a href="/login" style={{ fontSize: '14px', color: '#666', textDecoration: 'none', padding: '8px 16px', borderRadius: '8px' }}>Einloggen</a>
-          <a href="/register" style={{ fontSize: '14px', backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 20px', borderRadius: '8px', textDecoration: 'none', fontFamily: 'system-ui, sans-serif' }}>Kostenlos starten →</a>
+          <a href="/register" className="shrink-0 whitespace-nowrap" style={{ fontSize: '14px', backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 16px', borderRadius: '8px', textDecoration: 'none', fontFamily: 'system-ui, sans-serif' }}><span className="hidden sm:inline">Kostenlos </span>Starten →</a>
         </div>
       </nav>
 
-      <section style={{ maxWidth: '960px', margin: '0 auto', padding: '80px 48px 60px' }}>
+      <section className="max-w-[960px] mx-auto px-5 pt-12 pb-10 md:px-12 md:pt-20 md:pb-15">
         <div style={{ display: 'inline-block', fontSize: '12px', fontFamily: 'system-ui, sans-serif', color: '#666', border: '1px solid #ddd', borderRadius: '20px', padding: '4px 14px', marginBottom: '32px', letterSpacing: '0.5px' }}>
           Jetzt in Deutschland verfügbar
         </div>
-        <h1 style={{ fontSize: '56px', fontWeight: '400', lineHeight: '1.1', color: '#1a1a1a', marginBottom: '24px', letterSpacing: '-1.5px', maxWidth: '720px' }}>
+        <h1 style={{ fontWeight: '400', lineHeight: '1.1', color: '#1a1a1a', marginBottom: '20px', letterSpacing: '-1px', maxWidth: '720px', fontSize: 'clamp(32px, 9vw, 56px)' }}>
           Immobilienverwaltung,<br />
           <em style={{ fontStyle: 'italic', color: '#888' }}>die endlich einfach ist</em>
         </h1>
-        <p style={{ fontSize: '18px', color: '#666', lineHeight: '1.7', maxWidth: '520px', marginBottom: '40px', fontFamily: 'system-ui, sans-serif' }}>
+        <p style={{ color: '#666', lineHeight: '1.6', maxWidth: '520px', marginBottom: '28px', fontFamily: 'system-ui, sans-serif', fontSize: 'clamp(15px, 4vw, 18px)' }}>
           Verwalte all deine Objekte, Mieter und Finanzen an einem Ort. Jeder Mieter bekommt sein eigenes Portal.
         </p>
-        <div style={{ display: 'flex', gap: '12px' }}>
+        <div className="flex flex-wrap gap-3">
           <a href="/register" style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '14px 28px', borderRadius: '10px', textDecoration: 'none', fontSize: '15px', fontFamily: 'system-ui, sans-serif' }}>Kostenlos starten – 0 €</a>
           <a href="/login" style={{ backgroundColor: '#fff', color: '#444', padding: '14px 28px', borderRadius: '10px', textDecoration: 'none', fontSize: '15px', border: '1px solid #ddd', fontFamily: 'system-ui, sans-serif' }}>Einloggen</a>
         </div>
       </section>
 
-      <section style={{ maxWidth: '960px', margin: '0 auto', padding: '40px 48px 80px' }}>
+      <section className="max-w-[960px] mx-auto px-5 pt-10 pb-16 md:px-12 md:pb-20">
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2px', backgroundColor: '#e8e6e0', borderRadius: '16px', overflow: 'hidden' }}>
           {[
             { icon: '🏢', title: 'Objekte & Einheiten', desc: 'Verwalte Wohnungen, Gewerbeeinheiten und Stellplätze an einem Ort.' },

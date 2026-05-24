@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Nav from '@/components/Nav'
+import { Badge } from '@/components/ui'
 
 export default function Tickets() {
   const [units, setUnits] = useState<any[]>([])
@@ -171,12 +172,12 @@ export default function Tickets() {
                         <p style={{ fontSize: '13px', color: '#bbb', margin: 0 }}>{t.units?.properties?.name} – {t.units?.name}</p>
                       </div>
                       <div style={{ display: 'flex', gap: '6px' }}>
-                        <span style={{ fontSize: '11px', color: priorityColor[t.priority], backgroundColor: priorityBg[t.priority], padding: '4px 10px', borderRadius: '20px', fontWeight: '500' }}>
+                        <Badge variant={t.priority === 'high' ? 'danger' : t.priority === 'medium' ? 'warning' : 'default'}>
                           {priorityLabel[t.priority]}
-                        </span>
-                        <span style={{ fontSize: '11px', color: statusColor[t.status], backgroundColor: statusBg[t.status], padding: '4px 10px', borderRadius: '20px', fontWeight: '500' }}>
+                        </Badge>
+                        <Badge variant={t.status === 'open' ? 'danger' : t.status === 'in_progress' ? 'warning' : 'success'}>
                           {statusLabel[t.status]}
-                        </span>
+                        </Badge>
                       </div>
                     </div>
                     {t.description && <p style={{ fontSize: '13px', color: '#888', margin: '0 0 16px', lineHeight: '1.5' }}>{t.description}</p>}

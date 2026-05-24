@@ -258,7 +258,7 @@ export default function Contracts() {
             {contracts.map(c => (
               <div key={c.id} style={card}>
                 {deleteConfirm === c.id ? (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3">
                     <p style={{ fontSize: '14px', color: '#dc2626', margin: 0 }}>
                       Vertrag inkl. {paymentCounts[c.id] || 0} Zahlungen wirklich löschen?
                     </p>
@@ -268,7 +268,7 @@ export default function Contracts() {
                     </div>
                   </div>
                 ) : endConfirm === c.id ? (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3">
                     <p style={{ fontSize: '14px', color: '#d97706', margin: 0 }}>
                       Vertrag heute beenden? Zukünftige unbezahlte Zahlungen werden entfernt.
                     </p>

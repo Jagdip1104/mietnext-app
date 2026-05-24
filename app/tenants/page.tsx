@@ -143,7 +143,7 @@ export default function Tenants() {
             {tenants.map(t => (
               <div key={t.id} style={card}>
                 {deleteConfirm === t.id ? (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3">
                     <p style={{ fontSize: '14px', color: '#dc2626', margin: 0 }}>Mieter wirklich löschen?</p>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <button onClick={() => handleDelete(t.id)} style={{ backgroundColor: '#dc2626', color: '#fff', padding: '8px 16px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>Ja, löschen</button>
@@ -151,7 +151,7 @@ export default function Tenants() {
                     </div>
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3">
                     <div>
                       <p style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 4px' }}>{t.full_name}</p>
                       <p style={{ fontSize: '13px', color: '#bbb', margin: 0 }}>{t.email}{t.phone && ` · ${t.phone}`}</p>

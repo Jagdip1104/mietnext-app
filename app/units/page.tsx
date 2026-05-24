@@ -363,7 +363,7 @@ export default function Units() {
 
               {(rentAmount || utilitiesAmount) && (
                 <div style={{ gridColumn: 'span 2', backgroundColor: '#f5f4f0', borderRadius: '8px', padding: '14px 18px', marginTop: '4px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3">
                     <span style={{ fontSize: '13px', color: '#666' }}>
                       Kaltmiete {formatEur(rentAmount)} + Nebenkosten {formatEur(utilitiesAmount)}
                       {type === 'gewerbe' && vatApplicable && ` + ${vatRate}% MwSt.`}
@@ -409,7 +409,7 @@ export default function Units() {
             {filteredUnits.map(u => (
               <div key={u.id} style={card}>
                 {deleteConfirm === u.id ? (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3">
                     <p style={{ fontSize: '14px', color: '#dc2626', margin: 0 }}>
                       Einheit {u.unit_code ? `(${u.unit_code})` : ''} wirklich löschen?
                     </p>
@@ -419,7 +419,7 @@ export default function Units() {
                     </div>
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
                       {u.unit_code && (
                         <span style={{

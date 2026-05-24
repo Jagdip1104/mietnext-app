@@ -58,18 +58,10 @@ export default function LoginPage() {
       .from('profiles').select('id').eq('id', uid).maybeSingle()
     const isLandlord = !!profile
 
-    // 5. Routing-Logik
-    if (isTenant && isLandlord) {
-      router.push('/role-select')
-    } else if (isTenant) {
-      router.push('/tenant-portal')
-    } else if (isLandlord) {
-      router.push('/dashboard')
-    } else {
-      // Edge case: weder noch (sollte nicht passieren)
-      router.push('/dashboard')
+
+    // 5. Routing-Logik: immer zur Rollen-Auswahl
+        router.push('/role-select')
     }
-  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()

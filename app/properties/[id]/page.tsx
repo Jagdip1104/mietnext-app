@@ -4,7 +4,12 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
-
+import {
+  ChevronDown, ChevronRight, ArrowLeft, Building2,
+  User, UserX, FileText, CreditCard, Mail, Phone,
+  Plus, Loader2, CheckCircle2, Clock, AlertCircle,
+  Circle, Layers,
+} from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -24,6 +29,7 @@ type Tenant = {
   phone: string | null
   user_id: string | null
   invited_at: string | null
+  unit_id: string
 }
 
 type Contract = {
@@ -137,9 +143,9 @@ function ExpandableUnit({ unit, forceOpen }: { unit: UnitRow; forceOpen: boolean
           ) : (
             <>
               <span className="text-sm text-gray-700 hidden sm:block">{unit.tenant!.name}</span>
-              {status === 'active'       && <Circle className="h-2.5 w-2.5 fill-emerald-500 text-emerald-500" title="Portal aktiv" />}
-              {status === 'invited'      && <Circle className="h-2.5 w-2.5 fill-amber-400 text-amber-400"   title="Eingeladen" />}
-              {status === 'not_invited'  && <Circle className="h-2.5 w-2.5 fill-red-400 text-red-400"       title="Nicht eingeladen" />}
+              {status === 'active'       && <Circle className="h-2.5 w-2.5 fill-emerald-500 text-emerald-500" />}
+              {status === 'invited'      && <Circle className="h-2.5 w-2.5 fill-amber-400 text-amber-400" />}
+              {status === 'not_invited'  && <Circle className="h-2.5 w-2.5 fill-red-400 text-red-400" />}
               <PaymentBadge payment={unit.lastPayment} />
             </>
           )}
@@ -261,8 +267,8 @@ export default function PropertyDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [expandAll, setExpandAll] = useState(false)
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    useEffect(() => { if (propertyId) loadData() }, [propertyId])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (propertyId) loadData() }, [propertyId])
 
   async function loadData() {
     setLoading(true)
@@ -320,7 +326,7 @@ export default function PropertyDetailPage() {
           .select('id, contract_id, amount, due_date, paid_date, status')
           .in('contract_id', contractIds)
           .order('due_date', { ascending: false })
-      : { data: [] }
+      : { data: [] as Payment[] }
 
     // Build lookup maps
     const tenantByUnit = new Map<string, Tenant>()

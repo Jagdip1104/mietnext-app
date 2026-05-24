@@ -11,7 +11,7 @@ import {
   Circle, Layers,
 } from 'lucide-react'
 
-type Property = { id: string; name: string; address: string; city: string; zip: string | null; type: string | null }
+type Property = { id: string; name: string; address: string; city: string; zip: string | null }
 type Tenant = { id: string; name: string; email: string | null; phone: string | null; user_id: string | null; invited_at: string | null; unit_id: string }
 type Contract = { id: string; unit_id: string; start_date: string; end_date: string | null; rent_amount: number; status: string }
 type Payment = { id: string; contract_id: string; amount: number; due_date: string; paid_date: string | null; status: string }
@@ -145,7 +145,7 @@ export default function PropertyDetailPage() {
     setLoading(true); setError(null)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.push('/login'); return }
-    const { data: prop, error: propErr } = await supabase.from('properties').select('id, name, address, city, zip, type').eq('id', propertyId).eq('owner_id', user.id).single()
+    const { data: prop, error: propErr } = await supabase.from('properties').select('id, name, address, city, zip').eq('id', propertyId).eq('owner_id', user.id).single()
     if (propErr || !prop) { setError('Objekt nicht gefunden oder kein Zugriff.'); setLoading(false); return }
     setProperty(prop as Property)
     const { data: rawUnitsData } = await supabase.from('units').select('id, name, unit_code, floor, area_sqm').eq('property_id', propertyId).order('name')
@@ -200,7 +200,6 @@ export default function PropertyDetailPage() {
             <p className="text-gray-500 mt-0.5 text-sm">
               {property!.address}
               {(property!.zip || property!.city) && `, ${[property!.zip, property!.city].filter(Boolean).join(' ')}`}
-              {property!.type && ` · ${property!.type}`}
             </p>
           </div>
           <Link href={`/units?property=${propertyId}`} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors flex-shrink-0"><Plus className="h-4 w-4" />Einheit hinzufügen</Link>

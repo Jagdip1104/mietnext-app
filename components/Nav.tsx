@@ -1,145 +1,245 @@
 'use client'
-
-import { useRouter, usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { Home, Building2, Wallet, Bell, MoreHorizontal, X } from 'lucide-react'
 
-const PLAN_COLORS: Record<string, { bg: string; text: string; label: string }> = {
-  free:       { bg: '#f0ede6', text: '#666',    label: 'Free'       },
-  starter:    { bg: '#dbeafe', text: '#1e40af', label: 'Starter'    },
-  business:   { bg: '#dcfce7', text: '#166534', label: 'Business'   },
-  enterprise: { bg: '#ede9fe', text: '#5b21b6', label: 'Enterprise' },
+interface NavChild {
+  label: string
+  href: string
+}
+
+interface NavItem {
+  label: string
+  href?: string
+  Icon: any
+  children?: NavChild[]
+}
+
+const navStructure: NavItem[] = [
+  { label: 'Dashboard', href: '/dashboard', Icon: Home },
+  {
+    label: 'Objekte',
+    Icon: Building2,
+    children: [
+      { label: 'Objekte', href: '/properties' },
+      { label: 'Einheiten', href: '/units' },
+      { label: 'Mieter', href: '/tenants' },
+      { label: 'Verträge', href: '/contracts' },
+    ],
+  },
+  {
+    label: 'Finanzen',
+    Icon: Wallet,
+    children: [
+      { label: 'Zahlungen', href: '/payments' },
+      { label: 'Kosten', href: '/kosten' },
+      { label: 'GuV', href: '/guv' },
+      { label: 'Nebenkosten', href: '/nebenkostenabrechnung' },
+    ],
+  },
+  { label: 'Tickets', href: '/tickets', Icon: Bell },
+  {
+    label: 'Mehr',
+    Icon: MoreHorizontal,
+    children: [
+      { label: 'Einladen', href: '/invite-tenant' },
+      { label: 'Import', href: '/import' },
+      { label: 'Profil', href: '/profile' },
+    ],
+  },
+]
+
+const planLabels: Record<string, string> = {
+  free: 'Free',
+  starter: 'Starter',
+  business: 'Business',
+  enterprise: 'Enterprise',
 }
 
 export default function Nav() {
-  const router = useRouter()
-  const pathname = usePathname()
-  const [plan, setPlan] = useState<string>('free')
   const [email, setEmail] = useState<string>('')
+  const [plan, setPlan] = useState<string>('free')
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null)
+  const [mobileOpen, setMobileOpen] = useState<string | null>(null)
+  const pathname = usePathname()
+  const router = useRouter()
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const load = async () => {
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
-      setEmail(session.user.email || '')
-      const { data: profile } = await supabase
-        .from('profiles').select('plan').eq('id', session.user.id).single()
-      setPlan(profile?.plan || 'free')
+      if (session) {
+        setEmail(session.user.email || '')
+        const { data: profile } = await supabase
+          .from('profiles').select('plan').eq('id', session.user.id).maybeSingle()
+        if (profile?.plan) setPlan(profile.plan)
+      }
     }
     load()
   }, [])
 
-  const handleLogout = async () => {
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setOpenDropdown(null)
+      }
+    }
+    if (openDropdown) {
+      document.addEventListener('mousedown', handleClick)
+      return () => document.removeEventListener('mousedown', handleClick)
+    }
+  }, [openDropdown])
+
+  const isActive = (href?: string) => {
+    if (!href) return false
+    if (href === '/dashboard') return pathname === '/dashboard'
+    return pathname?.startsWith(href) ?? false
+  }
+
+  const isParentActive = (item: NavItem) => {
+    if (item.href) return isActive(item.href)
+    return item.children?.some(c => isActive(c.href)) ?? false
+  }
+
+  const signOut = async () => {
     await supabase.auth.signOut()
     router.push('/login')
   }
 
-  const links = [
-    { href: '/dashboard',             label: 'Dashboard'   },
-    { href: '/properties',            label: 'Objekte'     },
-    { href: '/units',                 label: 'Einheiten'   },
-    { href: '/tenants',               label: 'Mieter'      },
-    { href: '/contracts',             label: 'Verträge'    },
-    { href: '/payments',              label: 'Zahlungen'   },
-    { href: '/kosten',                label: 'Kosten'      },
-    { href: '/guv',                   label: 'GuV'         },
-    { href: '/nebenkostenabrechnung', label: 'Nebenkosten' },
-    { href: '/tickets',               label: 'Tickets'     },
-    { href: '/invite-tenant',         label: 'Einladen'    },
-    { href: '/import',                label: 'Import'      },
-  ]
-
-  const planStyle = PLAN_COLORS[plan] || PLAN_COLORS.free
-
   return (
-    <nav style={{
-      backgroundColor: '#ffffff',
-      borderBottom: '1px solid #e8e6e0',
-      padding: '0 32px',
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      position: 'sticky',
-      top: 0,
-      zIndex: 100,
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
-        <div style={{
-          fontSize: '16px', fontWeight: '600',
-          color: '#1a1a1a', letterSpacing: '-0.5px',
-          fontFamily: 'Georgia, serif', padding: '16px 0',
-          cursor: 'pointer',
-        }} onClick={() => router.push('/dashboard')}>
-          MietNext
-        </div>
-        <div style={{ display: 'flex', gap: '2px', flexWrap: 'wrap' as const }}>
-          {links.map(link => (
-            <button key={link.href} onClick={() => router.push(link.href)}
-              style={{
-                padding: '6px 10px',
-                fontSize: '13px',
-                fontWeight: pathname === link.href ? '500' : '400',
-                color: pathname === link.href ? '#1a1a1a' : '#888',
-                backgroundColor: pathname === link.href ? '#f0ede6' : 'transparent',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                transition: 'all 0.15s',
-              }}>
-              {link.label}
+    <>
+      {/* === Desktop Nav === */}
+      <nav className="hidden md:block sticky top-0 z-40 bg-white border-b border-[#e8e6e0]">
+        <div className="max-w-[1200px] mx-auto px-8 h-16 flex items-center justify-between gap-6">
+          <Link href="/dashboard" className="text-lg font-semibold text-[#1a1a1a]" style={{ fontFamily: 'Georgia, serif' }}>
+            MietNext
+          </Link>
+
+          <div ref={dropdownRef} className="flex items-center gap-1">
+            {navStructure.map((item) => {
+              const active = isParentActive(item)
+              if (item.children) {
+                return (
+                  <div key={item.label} className="relative">
+                    <button
+                      onClick={() => setOpenDropdown(openDropdown === item.label ? null : item.label)}
+                      className={`flex items-center gap-1 px-3 py-2 rounded-md text-[13px] font-medium transition-colors ${active ? 'text-[#1a1a1a] bg-[#f5f4f0]' : 'text-[#666] hover:text-[#1a1a1a] hover:bg-[#fafaf8]'}`}
+                    >
+                      {item.label}<span className="text-[10px]">▾</span>
+                    </button>
+                    {openDropdown === item.label && (
+                      <div className="absolute top-full left-0 mt-1 min-w-[180px] bg-white border border-[#e8e6e0] rounded-lg shadow-lg py-1 z-50">
+                        {item.children.map(child => (
+                          <Link
+                            key={child.href} href={child.href}
+                            onClick={() => setOpenDropdown(null)}
+                            className={`block px-4 py-2 text-[13px] transition-colors ${isActive(child.href) ? 'text-[#1a1a1a] bg-[#f5f4f0] font-medium' : 'text-[#666] hover:bg-[#fafaf8]'}`}
+                          >
+                            {child.label}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              }
+              return (
+                <Link key={item.label} href={item.href!}
+                  className={`px-3 py-2 rounded-md text-[13px] font-medium transition-colors ${active ? 'text-[#1a1a1a] bg-[#f5f4f0]' : 'text-[#666] hover:text-[#1a1a1a] hover:bg-[#fafaf8]'}`}
+                >
+                  {item.label}
+                </Link>
+              )
+            })}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span className="text-[11px] font-medium bg-[#dcfce7] text-[#16a34a] px-2.5 py-1 rounded-full">
+              {planLabels[plan] || plan}
+            </span>
+            <span className="text-[12px] text-[#999] truncate max-w-[160px]">{email}</span>
+            <button onClick={signOut} className="text-[12px] text-[#666] hover:text-[#1a1a1a] border border-[#e8e6e0] rounded-md px-3 py-1.5 transition-colors hover:border-[#1a1a1a]">
+              Abmelden
             </button>
-          ))}
+          </div>
         </div>
-      </div>
+      </nav>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-
-        {/* Plan-Badge mit Upgrade-Hint */}
-        <button onClick={() => router.push('/pricing')}
-          style={{
-            padding: '5px 12px',
-            fontSize: '11px',
-            fontWeight: '500',
-            backgroundColor: planStyle.bg,
-            color: planStyle.text,
-            border: 'none',
-            borderRadius: '12px',
-            cursor: 'pointer',
-            letterSpacing: '0.3px',
-          }}>
-          {plan === 'free' ? '⬆ Upgrade' : planStyle.label}
-        </button>
-
-        {/* User Email */}
-        <span style={{
-          fontSize: '12px',
-          color: '#888',
-          maxWidth: '160px',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap' as const,
-        }}>
-          {email}
+      {/* === Mobile Top Bar === */}
+      <nav className="md:hidden sticky top-0 z-40 bg-white border-b border-[#e8e6e0] h-14 flex items-center justify-between px-4">
+        <Link href="/dashboard" className="text-lg font-semibold text-[#1a1a1a]" style={{ fontFamily: 'Georgia, serif' }}>
+          MietNext
+        </Link>
+        <span className="text-[11px] font-medium bg-[#dcfce7] text-[#16a34a] px-2.5 py-1 rounded-full">
+          {planLabels[plan] || plan}
         </span>
+      </nav>
 
-        <button onClick={() => router.push('/profile')}
-          style={{
-            padding: '6px 12px', fontSize: '13px',
-            color: pathname === '/profile' ? '#1a1a1a' : '#888',
-            backgroundColor: pathname === '/profile' ? '#f0ede6' : 'transparent',
-            border: 'none', borderRadius: '6px', cursor: 'pointer',
-          }}>
-          Profil
-        </button>
-        <button onClick={handleLogout}
-          style={{
-            padding: '6px 12px', fontSize: '13px',
-            color: '#888', backgroundColor: 'transparent',
-            border: '1px solid #e8e6e0', borderRadius: '6px', cursor: 'pointer',
-          }}>
-          Abmelden
-        </button>
-      </div>
-    </nav>
+      {/* === Mobile Bottom Nav === */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-[#e8e6e0] flex items-stretch h-16">
+        {navStructure.map(item => {
+          const active = isParentActive(item)
+          const Icon = item.Icon
+          if (item.children) {
+            return (
+              <button key={item.label} onClick={() => setMobileOpen(item.label)}
+                className={`flex-1 flex flex-col items-center justify-center gap-1 ${active ? 'text-[#1a1a1a]' : 'text-[#999]'}`}
+              >
+                <Icon size={18} />
+                <span className="text-[10px] font-medium">{item.label}</span>
+              </button>
+            )
+          }
+          return (
+            <Link key={item.label} href={item.href!}
+              className={`flex-1 flex flex-col items-center justify-center gap-1 ${active ? 'text-[#1a1a1a]' : 'text-[#999]'}`}
+            >
+              <Icon size={18} />
+              <span className="text-[10px] font-medium">{item.label}</span>
+            </Link>
+          )
+        })}
+      </nav>
+
+      {/* === Mobile Bottom Sheet === */}
+      {mobileOpen && (
+        <div className="md:hidden fixed inset-0 z-50 flex items-end" onClick={() => setMobileOpen(null)}>
+          <div className="absolute inset-0 bg-black/40" />
+          <div className="relative w-full bg-white rounded-t-2xl pb-10" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 pt-4 pb-2">
+              <p className="text-[15px] font-medium text-[#1a1a1a]" style={{ fontFamily: 'Georgia, serif' }}>
+                {mobileOpen}
+              </p>
+              <button onClick={() => setMobileOpen(null)} className="text-[#999]">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="flex flex-col py-2">
+              {navStructure.find(i => i.label === mobileOpen)?.children?.map(child => (
+                <Link key={child.href} href={child.href}
+                  onClick={() => setMobileOpen(null)}
+                  className={`px-5 py-3 text-[15px] transition-colors ${isActive(child.href) ? 'text-[#1a1a1a] bg-[#f5f4f0] font-medium' : 'text-[#666]'}`}
+                >
+                  {child.label}
+                </Link>
+              ))}
+              {mobileOpen === 'Mehr' && (
+                <>
+                  <div className="px-5 py-2 text-[11px] text-[#bbb] uppercase tracking-wider">{email}</div>
+                  <button onClick={signOut} className="px-5 py-3 text-[15px] text-[#dc2626] text-left">
+                    Abmelden
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Spacer für Mobile Bottom-Nav */}
+      <div className="md:hidden h-16" />
+    </>
   )
 }

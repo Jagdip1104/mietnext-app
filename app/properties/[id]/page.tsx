@@ -62,7 +62,7 @@ function ExpandableUnit({ unit, forceOpen }: { unit: UnitRow; forceOpen: boolean
         <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
           <span className="font-medium text-gray-900 text-sm">{unit.name}</span>
           {unit.unit_code && <span className="text-xs font-mono text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">{unit.unit_code}</span>}
-          {unit.floor != null && <span className="text-xs text-gray-400 flex items-center gap-0.5"><Layers className="h-3 w-3" />{unit.floor}. OG</span>}
+          {unit.floor != null && <span className="text-xs text-gray-400 flex items-center gap-0.5"><Layers className="h-3 w-3" />{unit.floor === '0' || unit.floor === 'EG' ? 'EG' : `${unit.floor}. OG`}</span>}
           {unit.size_sqm && <span className="text-xs text-gray-400">{unit.size_sqm} m²</span>}
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">

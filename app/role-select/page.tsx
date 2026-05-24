@@ -11,37 +11,50 @@ export default function RoleSelect() {
   const router = useRouter()
 
   useEffect(() => {
-    const check = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { router.push('/login'); return }
+      const check = async () => {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) { router.push('/login'); return }
 
-      // Check 1: Vermieter? (Profil-Eintrag existiert)
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', session.user.id)
-        .maybeSingle()
-      const landlord = !!profile
+        const userId = session.user.id
+        const userEmail = (session.user.email ?? '').toLowerCase().trim()
 
-      // Check 2: Mieter? (tenants-Eintrag mit user_id existiert)
-      const { data: tenant } = await supabase
-        .from('tenants')
-        .select('id')
-        .eq('user_id', session.user.id)
-        .maybeSingle()
-      const tenantUser = !!tenant
+        // Check 1: Mieter? (per user_id ODER email - fallback wenn noch nicht verknüpft)
+        let tenantUser = false
+        if (userEmail) {
+          const { data: tenantRows } = await supabase
+            .from('tenants')
+            .select('id, user_id')
+            .or(`user_id.eq.${userId},email.eq.${userEmail}`)
+          
+          if (tenantRows && tenantRows.length > 0) {
+            tenantUser = true
+            // Auto-Link: tenants.user_id setzen wenn noch null
+            const unlinked = tenantRows.find((t: any) => !t.user_id)
+            if (unlinked) {
+              await supabase.from('tenants').update({ user_id: userId }).eq('id', unlinked.id)
+            }
+          }
+        }
 
-      // Nur eine Rolle → direkt weiterleiten
-      if (landlord && !tenantUser) { router.push('/dashboard'); return }
-      if (!landlord && tenantUser) { router.push('/tenant-portal'); return }
+        // Check 2: Vermieter? (Profil-Eintrag existiert)
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', userId)
+          .maybeSingle()
+        const landlord = !!profile
 
-      // Beide oder keine → Auswahl zeigen
-      setIsLandlord(landlord)
-      setIsTenant(tenantUser)
-      setLoading(false)
-    }
-    check()
-  }, [])
+        // Nur eine Rolle → direkt weiterleiten
+        if (landlord && !tenantUser) { router.push('/dashboard'); return }
+        if (!landlord && tenantUser) { router.push('/tenant-portal'); return }
+
+        // Beide oder keine → Auswahl zeigen
+        setIsLandlord(landlord)
+        setIsTenant(tenantUser)
+        setLoading(false)
+      }
+      check()
+    }, [])
 
   const goToVermieter = () => router.push('/dashboard')
   const goToMieter = () => router.push('/tenant-portal')

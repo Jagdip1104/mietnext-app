@@ -77,8 +77,9 @@ export default function TenantPortal() {
       }
     }
 
-    setNotFound(true)
-  }
+    // Kein Mieter-Account → zurück zur Rollen-Auswahl
+        router.push('/role-select?error=no-tenant')
+    }
 
   const loadContractAndTickets = async (tenantId: string, unitId: string) => {
     // Aktiver Vertrag

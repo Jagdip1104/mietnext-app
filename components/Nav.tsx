@@ -156,9 +156,9 @@ export default function Nav() {
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-[11px] font-medium bg-[#dcfce7] text-[#16a34a] px-2.5 py-1 rounded-full">
+            <Link href="/pricing" className="text-[11px] font-medium bg-[#dcfce7] text-[#16a34a] px-2.5 py-1 rounded-full hover:bg-[#bbf7d0] transition-colors cursor-pointer">
               {planLabels[plan] || plan}
-            </span>
+            </Link>
             <span className="text-[12px] text-[#999] truncate max-w-[160px]">{email}</span>
             <button onClick={signOut} className="text-[12px] text-[#666] hover:text-[#1a1a1a] border border-[#e8e6e0] rounded-md px-3 py-1.5 transition-colors hover:border-[#1a1a1a]">
               Abmelden
@@ -172,9 +172,9 @@ export default function Nav() {
         <Link href="/dashboard" className="text-lg font-semibold text-[#1a1a1a]" style={{ fontFamily: 'Georgia, serif' }}>
           MietNext
         </Link>
-        <span className="text-[11px] font-medium bg-[#dcfce7] text-[#16a34a] px-2.5 py-1 rounded-full">
+        <Link href="/pricing" className="text-[11px] font-medium bg-[#dcfce7] text-[#16a34a] px-2.5 py-1 rounded-full hover:bg-[#bbf7d0] transition-colors cursor-pointer">
           {planLabels[plan] || plan}
-        </span>
+        </Link>
       </nav>
 
       {/* === Mobile Bottom Nav === */}

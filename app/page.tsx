@@ -108,18 +108,20 @@ export default function Home() {
       <section className="max-w-[960px] mx-auto px-5 py-16 md:px-12 md:py-20">
         <h2 style={{ fontWeight: '400', color: '#1a1a1a', marginBottom: '8px', letterSpacing: '-1px', fontSize: 'clamp(28px, 7vw, 36px)' }}>Einfache Preise</h2>
         <p style={{ fontSize: '16px', color: '#888', marginBottom: '48px', fontFamily: 'system-ui, sans-serif' }}>Starte kostenlos – upgrade wenn du bereit bist.</p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { name: 'Free', price: '0 €', features: ['Bis zu 3 Einheiten', '1 Vermieter-Account', 'Dashboard & Übersicht', 'Ticketsystem'], cta: 'Kostenlos starten', highlight: false },
-            { name: 'Pro', price: '19 €', features: ['Unbegrenzte Einheiten', 'Mieter-Portal', 'Zahlungsverfolgung', 'Prioritäts-Support'], cta: 'Pro starten', highlight: true },
-            { name: 'Business', price: '49 €', features: ['Alles aus Pro', 'Mehrere Verwalter', 'API-Zugang', 'Individuelle Berichte'], cta: 'Business starten', highlight: false },
+            { name: 'Free', price: '0 €', units: '3 Einheiten', features: ['Objekte, Mieter, Verträge', 'Zahlungsübersicht', 'Ticketsystem'], cta: 'Kostenlos starten', highlight: false },
+            { name: 'Starter', price: '19 €', units: '15 Einheiten', features: ['Alles aus Free', 'PDF Export', 'NK-Abrechnung', 'GuV + Kosten', 'Excel-Import'], cta: 'Starter wählen', highlight: true },
+            { name: 'Business', price: '49 €', units: '50 Einheiten', features: ['Alles aus Starter', 'KI-Ausweis-Scan', 'Prioritäts-Support', 'Früher Zugang'], cta: 'Business wählen', highlight: false },
+            { name: 'Enterprise', price: '199 €', units: 'Unbegrenzt', features: ['Alles aus Business', 'Bankkonto-Anbindung', 'Dedicated Support', 'Onboarding-Call', 'SLA Garantie'], cta: 'Enterprise wählen', highlight: false }
           ].map(plan => (
             <div key={plan.name} className="p-6 md:p-8" style={{ borderRadius: '16px', backgroundColor: plan.highlight ? '#1a1a1a' : '#fff', border: plan.highlight ? 'none' : '1px solid #e8e6e0' }}>
               <div style={{ fontSize: '12px', fontFamily: 'system-ui, sans-serif', color: plan.highlight ? '#aaa' : '#888', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '16px' }}>{plan.name}</div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '24px' }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '4px' }}>
                 <span style={{ fontSize: '36px', fontWeight: '400', color: plan.highlight ? '#fff' : '#1a1a1a' }}>{plan.price}</span>
                 <span style={{ fontSize: '14px', color: plan.highlight ? '#aaa' : '#888', fontFamily: 'system-ui, sans-serif' }}>/Monat</span>
               </div>
+              <p style={{ fontSize: '13px', color: plan.highlight ? '#aaa' : '#999', marginBottom: '24px', fontFamily: 'system-ui, sans-serif' }}>{plan.units}</p>
               <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 28px' }}>
                 {plan.features.map(f => (
                   <li key={f} style={{ fontSize: '14px', color: plan.highlight ? '#ccc' : '#666', padding: '6px 0', fontFamily: 'system-ui, sans-serif', display: 'flex', gap: '8px' }}>

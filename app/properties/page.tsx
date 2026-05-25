@@ -493,7 +493,7 @@ export default function Properties() {
 
                 <div style={{
                   display: 'grid',
-                  gridTemplateColumns: '100px 1fr 130px 50px 60px 50px 75px 75px 28px', minWidth: '720px', minWidth: '720px',
+                  gridTemplateColumns: '100px 1fr 130px 50px 60px 50px 75px 75px 28px', minWidth: '720px',
                   gap: '6px', padding: '0 4px 8px',
                   borderBottom: '1px solid #f0eee8', marginBottom: '8px'
                 }}>
@@ -514,7 +514,7 @@ export default function Properties() {
                   return (
                     <div key={idx} style={{
                       display: 'grid',
-                      gridTemplateColumns: '100px 1fr 130px 50px 60px 50px 75px 75px 28px', minWidth: '720px', minWidth: '720px',
+                      gridTemplateColumns: '100px 1fr 130px 50px 60px 50px 75px 75px 28px', minWidth: '720px',
                       gap: '6px', padding: '4px', marginBottom: '4px'
                     }}>
                       <select value={unit.type} onChange={e => updateUnit(idx, 'type', e.target.value)} style={inputSmall}>

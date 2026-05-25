@@ -36,7 +36,7 @@ export default function Home() {
   }, [])
 
   return (
-    <main style={{ fontFamily: "'Georgia', serif", backgroundColor: '#fafaf8', minHeight: '100vh' }}>
+    <main style={{ fontFamily: "'Georgia', serif", backgroundColor: '#fafaf8', minHeight: '100vh', overflowX: 'hidden' }}>
       <nav className="flex justify-between items-center gap-3 px-5 py-4 md:px-12 md:py-5 border-b border-[#e8e6e0] bg-[#fafaf8] sticky top-0 z-[100]">
         <div style={{ fontSize: '18px', fontWeight: '600', letterSpacing: '-0.5px', color: '#1a1a1a' }}>MietNext</div>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
@@ -63,7 +63,7 @@ export default function Home() {
       </section>
 
       <section className="max-w-[960px] mx-auto px-5 pt-10 pb-16 md:px-12 md:pb-20">
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2px', backgroundColor: '#e8e6e0', borderRadius: '16px', overflow: 'hidden' }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-px bg-[#e8e6e0] rounded-2xl overflow-hidden">
           {[
             { icon: '🏢', title: 'Objekte & Einheiten', desc: 'Verwalte Wohnungen, Gewerbeeinheiten und Stellplätze an einem Ort.' },
             { icon: '👥', title: 'Mieterverwaltung', desc: 'Alle Mieter mit Kontaktdaten, Verträgen und Kommunikationsverlauf.' },
@@ -81,15 +81,15 @@ export default function Home() {
         </div>
       </section>
 
-      <section style={{ backgroundColor: '#1a1a1a', padding: '80px 48px' }}>
+      <section className="bg-[#1a1a1a] px-5 py-16 md:px-12 md:py-20">
         <div style={{ maxWidth: '960px', margin: '0 auto' }}>
-          <h2 style={{ fontSize: '36px', fontWeight: '400', color: '#fff', marginBottom: '48px', letterSpacing: '-1px' }}>Zwei Portale, eine Plattform</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+          <h2 style={{ fontWeight: '400', color: '#fff', marginBottom: '36px', letterSpacing: '-1px', fontSize: 'clamp(28px, 7vw, 36px)' }}>Zwei Portale, eine Plattform</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             {[
               { tag: 'Vermieter-Portal', title: 'Alles unter Kontrolle', items: ['Alle Objekte & Einheiten', 'Mieter & Verträge', 'Zahlungen & Finanzen', 'Tickets & Wartung', 'Dashboard & Berichte'], color: '#4ade80' },
               { tag: 'Mieter-Portal', title: 'Eigener Zugang', items: ['Eigene Wohnungsinfos', 'Dokumente abrufen', 'Schäden melden', 'Ticket-Status verfolgen', 'Direkter Kontakt'], color: '#60a5fa' },
             ].map(p => (
-              <div key={p.tag} style={{ backgroundColor: '#242424', borderRadius: '16px', padding: '36px', border: '1px solid #333' }}>
+              <div key={p.tag} className="p-6 md:p-9" style={{ backgroundColor: '#242424', borderRadius: '16px', border: '1px solid #333' }}>
                 <div style={{ fontSize: '11px', letterSpacing: '2px', color: '#888', marginBottom: '16px', fontFamily: 'system-ui, sans-serif', textTransform: 'uppercase' }}>{p.tag}</div>
                 <h3 style={{ fontSize: '22px', color: '#fff', fontWeight: '400', marginBottom: '16px' }}>{p.title}</h3>
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
@@ -105,16 +105,16 @@ export default function Home() {
         </div>
       </section>
 
-      <section style={{ maxWidth: '960px', margin: '0 auto', padding: '80px 48px' }}>
-        <h2 style={{ fontSize: '36px', fontWeight: '400', color: '#1a1a1a', marginBottom: '8px', letterSpacing: '-1px' }}>Einfache Preise</h2>
+      <section className="max-w-[960px] mx-auto px-5 py-16 md:px-12 md:py-20">
+        <h2 style={{ fontWeight: '400', color: '#1a1a1a', marginBottom: '8px', letterSpacing: '-1px', fontSize: 'clamp(28px, 7vw, 36px)' }}>Einfache Preise</h2>
         <p style={{ fontSize: '16px', color: '#888', marginBottom: '48px', fontFamily: 'system-ui, sans-serif' }}>Starte kostenlos – upgrade wenn du bereit bist.</p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[
             { name: 'Free', price: '0 €', features: ['Bis zu 3 Einheiten', '1 Vermieter-Account', 'Dashboard & Übersicht', 'Ticketsystem'], cta: 'Kostenlos starten', highlight: false },
             { name: 'Pro', price: '19 €', features: ['Unbegrenzte Einheiten', 'Mieter-Portal', 'Zahlungsverfolgung', 'Prioritäts-Support'], cta: 'Pro starten', highlight: true },
             { name: 'Business', price: '49 €', features: ['Alles aus Pro', 'Mehrere Verwalter', 'API-Zugang', 'Individuelle Berichte'], cta: 'Business starten', highlight: false },
           ].map(plan => (
-            <div key={plan.name} style={{ borderRadius: '16px', padding: '32px', backgroundColor: plan.highlight ? '#1a1a1a' : '#fff', border: plan.highlight ? 'none' : '1px solid #e8e6e0' }}>
+            <div key={plan.name} className="p-6 md:p-8" style={{ borderRadius: '16px', backgroundColor: plan.highlight ? '#1a1a1a' : '#fff', border: plan.highlight ? 'none' : '1px solid #e8e6e0' }}>
               <div style={{ fontSize: '12px', fontFamily: 'system-ui, sans-serif', color: plan.highlight ? '#aaa' : '#888', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '16px' }}>{plan.name}</div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '24px' }}>
                 <span style={{ fontSize: '36px', fontWeight: '400', color: plan.highlight ? '#fff' : '#1a1a1a' }}>{plan.price}</span>
@@ -135,15 +135,15 @@ export default function Home() {
         </div>
       </section>
 
-      <section style={{ backgroundColor: '#f0ede6', padding: '80px 48px', textAlign: 'center' }}>
-        <h2 style={{ fontSize: '40px', fontWeight: '400', color: '#1a1a1a', marginBottom: '16px', letterSpacing: '-1px' }}>Bereit loszulegen?</h2>
+      <section className="bg-[#f0ede6] px-5 py-16 md:px-12 md:py-20 text-center">
+        <h2 style={{ fontWeight: '400', color: '#1a1a1a', marginBottom: '16px', letterSpacing: '-1px', fontSize: 'clamp(30px, 8vw, 40px)' }}>Bereit loszulegen?</h2>
         <p style={{ fontSize: '16px', color: '#888', marginBottom: '32px', fontFamily: 'system-ui, sans-serif' }}>Kostenlos registrieren – keine Kreditkarte erforderlich.</p>
         <a href="/register" style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '16px 36px', borderRadius: '10px', textDecoration: 'none', fontSize: '16px', fontFamily: 'system-ui, sans-serif' }}>
           Jetzt kostenlos starten →
         </a>
       </section>
 
-      <footer style={{ borderTop: '1px solid #e8e6e0', padding: '32px 48px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fafaf8' }}>
+      <footer className="border-t border-[#e8e6e0] px-5 py-6 md:px-12 md:py-8 flex flex-col gap-3 text-center md:flex-row md:gap-4 md:justify-between md:items-center md:text-left bg-[#fafaf8]">
         <div style={{ fontSize: '14px', color: '#1a1a1a', fontWeight: '600' }}>MietNext</div>
         <div style={{ fontSize: '13px', color: '#aaa', fontFamily: 'system-ui, sans-serif' }}>© 2026 MietNext · DSGVO-konform · Hosted in Frankfurt 🇩🇪</div>
         <div style={{ display: 'flex', gap: '20px' }}>

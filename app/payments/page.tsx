@@ -138,7 +138,7 @@ export default function Payments() {
         </div>
 
         {showForm && (
-          <div id="formcard" style={{ ...card, marginBottom: '24px' }}>
+          <div id="formcard" className="scroll-mt-24" style={{ ...card, marginBottom: '24px' }}>
             <h2 style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 20px', fontFamily: 'Georgia, serif' }}>
               Zahlung erfassen
             </h2>

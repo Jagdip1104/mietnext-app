@@ -19,6 +19,9 @@ export default function Payments() {
   const [dueDate, setDueDate] = useState('')
   const [paidDate, setPaidDate] = useState('')
   const [status, setStatus] = useState('pending')
+  const [filterProperty, setFilterProperty] = useState<string>('all')
+  const [filterStatus, setFilterStatus] = useState<string>('all')
+  const [filterYear, setFilterYear] = useState<string>('all')
   const [loading, setLoading] = useState(false)
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
@@ -95,9 +98,20 @@ export default function Payments() {
     loadData(userId!)
   }
 
-  const totalPaid = payments.filter((p: any) => p.status === 'paid').reduce((s: number, p: any) => s + Number(p.amount || 0), 0)
-  const totalPending = payments.filter((p: any) => p.status === 'pending').reduce((s: number, p: any) => s + Number(p.amount || 0), 0)
-  const totalLate = payments.filter((p: any) => p.status === 'late').reduce((s: number, p: any) => s + Number(p.amount || 0), 0)
+  // Filter logic
+  const filteredPayments = payments.filter((p: any) => {
+    if (filterProperty !== 'all' && p.contracts?.units?.properties?.name !== filterProperty) return false
+    if (filterStatus !== 'all' && p.status !== filterStatus) return false
+    if (filterYear !== 'all' && new Date(p.due_date).getFullYear().toString() !== filterYear) return false
+    return true
+  })
+
+  const propertyOptions: string[] = Array.from(new Set(payments.map((p: any) => p.contracts?.units?.properties?.name).filter(Boolean) as string[])).sort()
+  const yearOptions: string[] = Array.from(new Set(payments.map((p: any) => new Date(p.due_date).getFullYear().toString()))).sort().reverse()
+
+  const totalPaid = filteredPayments.filter((p: any) => p.status === 'paid').reduce((s: number, p: any) => s + Number(p.amount || 0), 0)
+  const totalPending = filteredPayments.filter((p: any) => p.status === 'pending').reduce((s: number, p: any) => s + Number(p.amount || 0), 0)
+  const totalLate = filteredPayments.filter((p: any) => p.status === 'late').reduce((s: number, p: any) => s + Number(p.amount || 0), 0)
 
   const statusColor: any = { paid: '#16a34a', pending: '#d97706', late: '#dc2626' }
   const statusBg: any = { paid: '#f0fdf4', pending: '#fffbeb', late: '#fef2f2' }
@@ -189,6 +203,26 @@ export default function Payments() {
           </div>
         )}
 
+        {/* Filter (nur wenn Zahlungen vorhanden) */}
+        {payments.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+            <select value={filterProperty} onChange={e => setFilterProperty(e.target.value)} style={input}>
+              <option value="all">Alle Objekte</option>
+              {propertyOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+            </select>
+            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={input}>
+              <option value="all">Alle Status</option>
+              <option value="paid">Bezahlt</option>
+              <option value="pending">Ausstehend</option>
+              <option value="late">Überfällig</option>
+            </select>
+            <select value={filterYear} onChange={e => setFilterYear(e.target.value)} style={input}>
+              <option value="all">Alle Jahre</option>
+              {yearOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+            </select>
+          </div>
+        )}
+
         {payments.length === 0 ? (
           <div style={{ ...card, textAlign: 'center', padding: '64px' }}>
             <p style={{ fontSize: '14px', color: '#bbb', margin: '0 0 12px' }}>Noch keine Zahlungen erfasst.</p>
@@ -198,7 +232,11 @@ export default function Payments() {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {payments.map((p: any) => {
+            {filteredPayments.length === 0 ? (
+              <div style={{ ...card, textAlign: 'center', padding: '48px' }}>
+                <p style={{ fontSize: '14px', color: '#bbb', margin: 0 }}>Keine Zahlungen für diese Filter gefunden.</p>
+              </div>
+            ) : filteredPayments.map((p: any) => {
               const isConfirmingReset = confirmAction?.paymentId === p.id && confirmAction?.action === 'reset'
               const isConfirmingDelete = confirmAction?.paymentId === p.id && confirmAction?.action === 'delete'
 

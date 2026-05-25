@@ -84,14 +84,14 @@ export default function Tenants() {
             <h1 style={{ fontSize: '28px', fontWeight: '400', color: '#1a1a1a', margin: '0 0 4px', fontFamily: 'Georgia, serif' }}>Mieter</h1>
             <p style={{ fontSize: '14px', color: '#999', margin: 0 }}>{tenants.length} Mieter gesamt</p>
           </div>
-          <button onClick={() => setShowForm(true)} style={{
+          <button onClick={() => { setShowForm(true); setTimeout(() => document.getElementById('formcard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50) }} style={{
             backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 20px',
             borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer',
           }}>+ Mieter anlegen</button>
         </div>
 
         {showForm && (
-          <div style={{ ...card, marginBottom: '24px' }}>
+          <div id="formcard" style={{ ...card, marginBottom: '24px' }}>
             <h2 style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 20px', fontFamily: 'Georgia, serif' }}>
               {editingId ? 'Mieter bearbeiten' : 'Neuer Mieter'}
             </h2>
@@ -134,7 +134,7 @@ export default function Tenants() {
         {tenants.length === 0 ? (
           <div style={{ ...card, textAlign: 'center', padding: '64px' }}>
             <p style={{ fontSize: '14px', color: '#bbb', margin: '0 0 12px' }}>Noch keine Mieter angelegt.</p>
-            <button onClick={() => setShowForm(true)} style={{ background: 'none', border: 'none', color: '#1a1a1a', fontSize: '14px', cursor: 'pointer', textDecoration: 'underline' }}>
+            <button onClick={() => { setShowForm(true); setTimeout(() => document.getElementById('formcard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50) }} style={{ background: 'none', border: 'none', color: '#1a1a1a', fontSize: '14px', cursor: 'pointer', textDecoration: 'underline' }}>
               Ersten Mieter anlegen →
             </button>
           </div>

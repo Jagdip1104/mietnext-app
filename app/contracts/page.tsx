@@ -187,13 +187,13 @@ export default function Contracts() {
               {contracts.filter(c => c.is_active).length} aktiv · {contracts.length} gesamt
             </p>
           </div>
-          <button onClick={() => setShowForm(true)} style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>
+          <button onClick={() => { setShowForm(true); setTimeout(() => document.getElementById('formcard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50) }} style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>
             + Vertrag anlegen
           </button>
         </div>
 
         {showForm && (
-          <div style={{ ...card, marginBottom: '24px' }}>
+          <div id="formcard" style={{ ...card, marginBottom: '24px' }}>
             <h2 style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 20px', fontFamily: 'Georgia, serif' }}>
               {editingId ? 'Vertrag bearbeiten' : 'Neuer Mietvertrag'}
             </h2>
@@ -249,7 +249,7 @@ export default function Contracts() {
         {contracts.length === 0 ? (
           <div style={{ ...card, textAlign: 'center', padding: '64px' }}>
             <p style={{ fontSize: '14px', color: '#bbb', margin: '0 0 12px' }}>Noch keine Mietverträge angelegt.</p>
-            <button onClick={() => setShowForm(true)} style={{ background: 'none', border: 'none', color: '#1a1a1a', fontSize: '14px', cursor: 'pointer', textDecoration: 'underline' }}>
+            <button onClick={() => { setShowForm(true); setTimeout(() => document.getElementById('formcard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50) }} style={{ background: 'none', border: 'none', color: '#1a1a1a', fontSize: '14px', cursor: 'pointer', textDecoration: 'underline' }}>
               Ersten Vertrag anlegen →
             </button>
           </div>

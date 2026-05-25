@@ -175,7 +175,7 @@ export default function KostenPage() {
             <h1 style={{ fontSize: '28px', fontWeight: '400', color: '#1a1a1a', margin: '0 0 4px', fontFamily: 'Georgia, serif' }}>Kostenerfassung</h1>
             <p style={{ fontSize: '14px', color: '#999', margin: 0 }}>Umlagefähige und nicht umlagefähige Kosten pro Objekt</p>
           </div>
-          <button onClick={() => setShowForm(true)}
+          <button onClick={() => { setShowForm(true); setTimeout(() => document.getElementById('formcard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50) }}
             style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>
             + Kosten erfassen
           </button>
@@ -214,7 +214,7 @@ export default function KostenPage() {
 
         {/* ── Formular ── */}
         {showForm && (
-          <div style={{ ...card, marginBottom: '24px' }}>
+          <div id="formcard" style={{ ...card, marginBottom: '24px' }}>
             <h2 style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 20px', fontFamily: 'Georgia, serif' }}>
               Kosten erfassen
             </h2>
@@ -319,7 +319,7 @@ export default function KostenPage() {
             <p style={{ fontSize: '32px', margin: '0 0 12px' }}>🧾</p>
             <p style={{ fontSize: '15px', color: '#999', margin: '0 0 4px' }}>Keine Kosten gefunden.</p>
             <p style={{ fontSize: '13px', color: '#bbb', margin: '0 0 20px' }}>Erfasse deine erste Ausgabe für ein Objekt.</p>
-            <button onClick={() => setShowForm(true)}
+            <button onClick={() => { setShowForm(true); setTimeout(() => document.getElementById('formcard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50) }}
               style={{ background: 'none', border: 'none', color: '#1a1a1a', fontSize: '14px', cursor: 'pointer', textDecoration: 'underline' }}>
               Erste Kosten erfassen →
             </button>

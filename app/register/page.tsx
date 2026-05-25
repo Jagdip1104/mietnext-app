@@ -56,15 +56,17 @@ export default function RegisterPage() {
 
   if (success) {
     return (
-      <main style={{ minHeight: '100vh', backgroundColor: '#fafaf8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ textAlign: 'center', maxWidth: '400px', padding: '32px' }}>
-          <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', fontSize: '20px' }}>✓</div>
-          <h2 style={{ fontSize: '22px', fontWeight: '400', color: '#1a1a1a', margin: '0 0 8px', fontFamily: 'Georgia, serif' }}>Account erstellt!</h2>
-          <p style={{ fontSize: '14px', color: '#999', margin: '0 0 32px', lineHeight: '1.6' }}>
-            Wir haben dir eine Bestätigungs-E-Mail an <strong style={{ color: '#1a1a1a' }}>{email}</strong> geschickt.
+      <main className="min-h-screen bg-[#fafaf8] flex items-center justify-center px-5">
+        <div className="text-center max-w-[400px] w-full">
+          <div className="w-12 h-12 rounded-full bg-[#f0fdf4] border border-[#bbf7d0] flex items-center justify-center mx-auto mb-6 text-xl">✓</div>
+          <h2 className="text-[22px] font-normal text-[#1a1a1a] mb-2" style={{ fontFamily: 'Georgia, serif' }}>Account erstellt!</h2>
+          <p className="text-sm text-[#999] mb-8 leading-relaxed">
+            Wir haben dir eine Bestätigungs-E-Mail an <strong className="text-[#1a1a1a]">{email}</strong> geschickt.
           </p>
-          <button onClick={() => router.push('/login')}
-            style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '12px 24px', borderRadius: '8px', border: 'none', fontSize: '14px', cursor: 'pointer' }}>
+          <button
+            onClick={() => router.push('/login')}
+            className="bg-[#1a1a1a] text-white px-6 py-3 rounded-lg text-sm hover:bg-black transition-colors"
+          >
             Zum Login →
           </button>
         </div>
@@ -73,116 +75,116 @@ export default function RegisterPage() {
   }
 
   return (
-    <main style={{ minHeight: '100vh', backgroundColor: '#fafaf8', display: 'flex' }}>
-      {/* Linke Seite – Branding */}
-      <div style={{ flex: 1, backgroundColor: '#1a1a1a', flexDirection: 'column', justifyContent: 'space-between', padding: '48px', display: 'flex' }}>
-        <div style={{ fontSize: '18px', fontWeight: '600', color: '#fff', fontFamily: 'Georgia, serif' }}>MietNext</div>
+    <main className="min-h-screen bg-[#fafaf8] flex flex-col md:flex-row">
+      {/* Linke Seite – Branding (nur Desktop) */}
+      <div className="hidden md:flex md:flex-1 bg-[#1a1a1a] flex-col justify-between p-12">
+        <div className="text-lg font-semibold text-white" style={{ fontFamily: 'Georgia, serif' }}>MietNext</div>
         <div>
-          <p style={{ fontSize: '20px', fontWeight: '400', color: '#fff', fontFamily: 'Georgia, serif', lineHeight: '1.5', marginBottom: '32px' }}>
-            Verwalte deine Immobilien professionell – von überall, jederzeit.
+          <p className="text-2xl text-white leading-relaxed mb-6" style={{ fontFamily: 'Georgia, serif' }}>
+            "Endlich eine Lösung, die einfach funktioniert. Verwalte 12 Wohnungen ohne Excel-Chaos."
           </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {[
-              { icon: '🏢', text: 'Objekte & Einheiten verwalten' },
-              { icon: '👥', text: 'Mieter einladen & verwalten' },
-              { icon: '💶', text: 'Zahlungen & Finanzen tracken' },
-              { icon: '🔧', text: 'Tickets & Wartung organisieren' },
-            ].map(f => (
-              <div key={f.text} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <span style={{ fontSize: '16px' }}>{f.icon}</span>
-                <span style={{ fontSize: '14px', color: '#aaa' }}>{f.text}</span>
-              </div>
-            ))}
-          </div>
+          <p className="text-sm text-white/60">— Vermieter aus Osnabrück</p>
+        </div>
+        <div className="text-xs text-white/40">
+          © {new Date().getFullYear()} MietNext · Hosted in Frankfurt 🇩🇪
         </div>
       </div>
 
-      {/* Rechte Seite – Register Form */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 32px' }}>
-        <div style={{ width: '100%', maxWidth: '380px' }}>
-          <div style={{ marginBottom: '40px' }}>
-            <h1 style={{ fontSize: '24px', fontWeight: '400', color: '#1a1a1a', margin: '0 0 4px', fontFamily: 'Georgia, serif' }}>
-              Konto erstellen
-            </h1>
-            <p style={{ fontSize: '14px', color: '#999', margin: 0 }}>
-              Kostenlos starten – keine Kreditkarte nötig
-            </p>
-          </div>
+      {/* Mobile Logo Header */}
+      <div className="md:hidden bg-[#1a1a1a] px-5 py-6 text-center">
+        <Link href="/" className="text-xl font-semibold text-white no-underline" style={{ fontFamily: 'Georgia, serif' }}>
+          MietNext
+        </Link>
+      </div>
+
+      {/* Rechte Seite – Form */}
+      <div className="flex-1 flex items-center justify-center p-5 md:p-12">
+        <div className="w-full max-w-[400px]">
+          <h1 className="text-[28px] md:text-[32px] font-normal text-[#1a1a1a] mb-2" style={{ fontFamily: 'Georgia, serif' }}>
+            Konto erstellen
+          </h1>
+          <p className="text-sm text-[#999] mb-8">Starte kostenlos mit 3 Einheiten</p>
 
           {error && (
-            <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '12px 16px', marginBottom: '20px', fontSize: '14px', color: '#dc2626' }}>
+            <div className="bg-[#fef2f2] border border-[#fecaca] text-[#991b1b] text-sm px-4 py-3 rounded-lg mb-4">
               {error}
             </div>
           )}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '20px' }}>
+          <div className="space-y-4">
             <div>
-              <label style={{ fontSize: '13px', color: '#666', marginBottom: '6px', display: 'block' }}>Vollständiger Name *</label>
-              <input value={fullName} onChange={e => setFullName(e.target.value)}
-                placeholder="Vor- und Nachname"
-                style={{ width: '100%', border: '1px solid #e8e6e0', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', outline: 'none', color: '#1a1a1a', backgroundColor: '#fff', boxSizing: 'border-box' as const }} />
+              <label className="block text-xs text-[#666] mb-1.5">Vollständiger Name</label>
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="Max Mustermann"
+                className="w-full bg-white border border-[#e8e6e0] px-4 py-3 rounded-lg text-sm text-[#1a1a1a] outline-none focus:border-[#1a1a1a] transition-colors"
+              />
             </div>
             <div>
-              <label style={{ fontSize: '13px', color: '#666', marginBottom: '6px', display: 'block' }}>E-Mail-Adresse *</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-                placeholder="name@email.de"
-                style={{ width: '100%', border: '1px solid #e8e6e0', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', outline: 'none', color: '#1a1a1a', backgroundColor: '#fff', boxSizing: 'border-box' as const }} />
+              <label className="block text-xs text-[#666] mb-1.5">E-Mail</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="max@beispiel.de"
+                autoComplete="email"
+                className="w-full bg-white border border-[#e8e6e0] px-4 py-3 rounded-lg text-sm text-[#1a1a1a] outline-none focus:border-[#1a1a1a] transition-colors"
+              />
             </div>
             <div>
-              <label style={{ fontSize: '13px', color: '#666', marginBottom: '6px', display: 'block' }}>Passwort * (min. 8 Zeichen)</label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)}
-                placeholder="••••••••"
-                style={{ width: '100%', border: '1px solid #e8e6e0', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', outline: 'none', color: '#1a1a1a', backgroundColor: '#fff', boxSizing: 'border-box' as const }} />
+              <label className="block text-xs text-[#666] mb-1.5">Passwort</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Mindestens 8 Zeichen"
+                autoComplete="new-password"
+                className="w-full bg-white border border-[#e8e6e0] px-4 py-3 rounded-lg text-sm text-[#1a1a1a] outline-none focus:border-[#1a1a1a] transition-colors"
+              />
             </div>
             <div>
-              <label style={{ fontSize: '13px', color: '#666', marginBottom: '6px', display: 'block' }}>Passwort bestätigen *</label>
-              <input type="password" value={passwordConfirm} onChange={e => setPasswordConfirm(e.target.value)}
-                placeholder="••••••••"
-                style={{ width: '100%', border: '1px solid #e8e6e0', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', outline: 'none', color: '#1a1a1a', backgroundColor: '#fff', boxSizing: 'border-box' as const }} />
+              <label className="block text-xs text-[#666] mb-1.5">Passwort bestätigen</label>
+              <input
+                type="password"
+                value={passwordConfirm}
+                onChange={(e) => setPasswordConfirm(e.target.value)}
+                placeholder="Passwort wiederholen"
+                autoComplete="new-password"
+                className="w-full bg-white border border-[#e8e6e0] px-4 py-3 rounded-lg text-sm text-[#1a1a1a] outline-none focus:border-[#1a1a1a] transition-colors"
+              />
             </div>
+
+            <label className="flex items-start gap-3 cursor-pointer pt-2">
+              <input
+                type="checkbox"
+                checked={acceptedTerms}
+                onChange={(e) => setAcceptedTerms(e.target.checked)}
+                className="mt-0.5 w-4 h-4 cursor-pointer accent-[#1a1a1a]"
+              />
+              <span className="text-xs text-[#666] leading-relaxed">
+                Ich akzeptiere die{' '}
+                <Link href="/agb" className="text-[#1a1a1a] underline">AGB</Link>
+                {' '}und die{' '}
+                <Link href="/datenschutz" className="text-[#1a1a1a] underline">Datenschutzerklärung</Link>.
+              </span>
+            </label>
+
+            <button
+              onClick={handleRegister}
+              disabled={loading}
+              className="w-full bg-[#1a1a1a] text-white py-3 rounded-lg text-sm font-medium hover:bg-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+            >
+              {loading ? 'Wird erstellt...' : 'Konto erstellen →'}
+            </button>
           </div>
 
-          {/* Datenschutz + AGB Checkbox */}
-          <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '20px', cursor: 'pointer' }}>
-            <input
-              type="checkbox"
-              checked={acceptedTerms}
-              onChange={e => setAcceptedTerms(e.target.checked)}
-              style={{
-                marginTop: '3px',
-                width: '16px', height: '16px',
-                cursor: 'pointer',
-                accentColor: '#1a1a1a',
-                flexShrink: 0,
-              }}
-            />
-            <span style={{ fontSize: '13px', color: '#666', lineHeight: '1.5' }}>
-              Ich akzeptiere die{' '}
-              <Link href="/agb" target="_blank" style={{ color: '#1a1a1a', textDecoration: 'underline' }}>AGB</Link>
-              {' '}und die{' '}
-              <Link href="/datenschutz" target="_blank" style={{ color: '#1a1a1a', textDecoration: 'underline' }}>Datenschutzerklärung</Link>.
-            </span>
-          </label>
-
-          <button onClick={handleRegister} disabled={loading || !fullName || !email || !password || !passwordConfirm || !acceptedTerms}
-            style={{
-              width: '100%',
-              backgroundColor: '#1a1a1a', color: '#fff',
-              padding: '12px', borderRadius: '8px', border: 'none',
-              fontSize: '14px',
-              cursor: loading || !acceptedTerms ? 'not-allowed' : 'pointer',
-              opacity: loading || !fullName || !email || !password || !passwordConfirm || !acceptedTerms ? 0.5 : 1,
-              marginBottom: '16px'
-            }}>
-            {loading ? 'Wird erstellt...' : 'Kostenlos registrieren →'}
-          </button>
-
-          <p style={{ textAlign: 'center', fontSize: '14px', color: '#999', margin: 0 }}>
-            Bereits ein Konto?{' '}
-            <button onClick={() => router.push('/login')}
-              style={{ background: 'none', border: 'none', color: '#1a1a1a', fontSize: '14px', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>
-              Einloggen
-            </button>
+          <p className="text-sm text-[#999] text-center mt-8">
+            Schon ein Konto?{' '}
+            <Link href="/login" className="text-[#1a1a1a] underline">
+              Anmelden
+            </Link>
           </p>
         </div>
       </div>

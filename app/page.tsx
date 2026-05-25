@@ -142,16 +142,6 @@ export default function Home() {
           Jetzt kostenlos starten →
         </a>
       </section>
-
-      <footer className="border-t border-[#e8e6e0] px-5 py-6 md:px-12 md:py-8 flex flex-col gap-3 text-center md:flex-row md:gap-4 md:justify-between md:items-center md:text-left bg-[#fafaf8]">
-        <div style={{ fontSize: '14px', color: '#1a1a1a', fontWeight: '600' }}>MietNext</div>
-        <div style={{ fontSize: '13px', color: '#aaa', fontFamily: 'system-ui, sans-serif' }}>© 2026 MietNext · DSGVO-konform · Hosted in Frankfurt 🇩🇪</div>
-        <div style={{ display: 'flex', gap: '20px' }}>
-          {['Impressum', 'Datenschutz', 'Kontakt'].map(link => (
-            <a key={link} href="#" style={{ fontSize: '13px', color: '#aaa', textDecoration: 'none', fontFamily: 'system-ui, sans-serif' }}>{link}</a>
-          ))}
-        </div>
-      </footer>
     </main>
   )
 }

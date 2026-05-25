@@ -78,7 +78,7 @@ export default function Tenants() {
   return (
     <main style={{ backgroundColor: '#fafaf8', minHeight: '100vh' }}>
       <Nav />
-      <div className="max-w-[900px] mx-auto px-5 py-8 md:px-12 md:py-12">
+      <div className="max-w-[900px] mx-auto px-5 py-8 md:px-12 md:py-12 pb-24 md:pb-12">
         <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-6 mb-10">
           <div>
             <h1 style={{ fontSize: '28px', fontWeight: '400', color: '#1a1a1a', margin: '0 0 4px', fontFamily: 'Georgia, serif' }}>Mieter</h1>

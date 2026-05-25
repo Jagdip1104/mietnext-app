@@ -167,7 +167,7 @@ export default function KostenPage() {
   return (
     <main style={{ backgroundColor: '#fafaf8', minHeight: '100vh' }}>
       <Nav />
-      <div className="max-w-[960px] mx-auto px-5 py-8 md:px-12 md:py-12">
+      <div className="max-w-[960px] mx-auto px-5 py-8 md:px-12 md:py-12 pb-24 md:pb-12">
 
         {/* ── Header ── */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px' }}>
@@ -196,7 +196,7 @@ export default function KostenPage() {
         </div>
 
         {/* ── Filter ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '24px' }}>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
           <select value={filterProperty} onChange={e => setFilterProperty(e.target.value)} style={inp}>
             <option value="">Alle Objekte</option>
             {properties.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}

@@ -364,7 +364,7 @@ export default function Properties() {
   return (
     <main style={{ backgroundColor: '#fafaf8', minHeight: '100vh' }}>
       <Nav />
-      <div className="max-w-[1200px] mx-auto px-5 py-8 md:px-12 md:py-12">
+      <div className="max-w-[1200px] mx-auto px-5 py-8 md:px-12 md:py-12 pb-24 md:pb-12">
         <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-6 mb-10">
           <div>
             <h1 style={{ fontSize: '28px', fontWeight: '400', color: '#1a1a1a', margin: '0 0 4px', fontFamily: 'Georgia, serif' }}>
@@ -438,7 +438,7 @@ export default function Properties() {
               {editingId ? 'Objekt bearbeiten' : 'Neues Objekt anlegen'}
             </h2>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: editingId ? '20px' : '32px' }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4" style={{ marginBottom: editingId ? '20px' : '32px' }}>
               <div style={{ gridColumn: 'span 2' }}>
                 <label style={label}>Name *</label>
                 <input value={name} onChange={e => setName(e.target.value)}
@@ -493,7 +493,7 @@ export default function Properties() {
 
                 <div style={{
                   display: 'grid',
-                  gridTemplateColumns: '100px 1fr 130px 50px 60px 50px 75px 75px 28px',
+                  gridTemplateColumns: '100px 1fr 130px 50px 60px 50px 75px 75px 28px', minWidth: '720px', minWidth: '720px',
                   gap: '6px', padding: '0 4px 8px',
                   borderBottom: '1px solid #f0eee8', marginBottom: '8px'
                 }}>
@@ -514,7 +514,7 @@ export default function Properties() {
                   return (
                     <div key={idx} style={{
                       display: 'grid',
-                      gridTemplateColumns: '100px 1fr 130px 50px 60px 50px 75px 75px 28px',
+                      gridTemplateColumns: '100px 1fr 130px 50px 60px 50px 75px 75px 28px', minWidth: '720px', minWidth: '720px',
                       gap: '6px', padding: '4px', marginBottom: '4px'
                     }}>
                       <select value={unit.type} onChange={e => updateUnit(idx, 'type', e.target.value)} style={inputSmall}>

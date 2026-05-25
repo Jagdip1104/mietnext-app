@@ -368,7 +368,7 @@ export default function NebenkostenabrechnungDetail() {
   if (!statement) return (
     <main style={{ backgroundColor: '#fafaf8', minHeight: '100vh' }}>
       <Nav />
-      <div className="max-w-[900px] mx-auto px-5 py-8 md:px-12 md:py-12">
+      <div className="max-w-[900px] mx-auto px-5 py-8 md:px-12 md:py-12 pb-24 md:pb-12">
         <p style={{ color: '#999', fontSize: '14px' }}>Lade Abrechnung...</p>
       </div>
     </main>
@@ -377,7 +377,7 @@ export default function NebenkostenabrechnungDetail() {
   return (
     <main style={{ backgroundColor: '#fafaf8', minHeight: '100vh' }}>
       <Nav />
-      <div className="max-w-[900px] mx-auto px-5 py-8 md:px-12 md:py-12">
+      <div className="max-w-[900px] mx-auto px-5 py-8 md:px-12 md:py-12 pb-24 md:pb-12">
 
         <button onClick={() => router.push('/nebenkostenabrechnung')}
           style={{ background: 'none', border: 'none', color: '#888', fontSize: '13px', cursor: 'pointer', marginBottom: '24px', padding: 0 }}>

@@ -201,7 +201,7 @@ export default function TenantPortal() {
         </div>
       </nav>
 
-      <div className="max-w-[760px] mx-auto px-5 py-8 md:px-12 md:py-12">
+      <div className="max-w-[760px] mx-auto px-5 py-8 md:px-12 md:py-12 pb-24 md:pb-12">
         <h1 style={{ fontSize: '28px', fontWeight: '400', color: '#1a1a1a', margin: '0 0 4px', fontFamily: 'Georgia, serif' }}>
           Mein Portal
         </h1>

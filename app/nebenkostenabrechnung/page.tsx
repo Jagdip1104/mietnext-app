@@ -70,7 +70,7 @@ export default function NebenkostenabrechnungPage() {
   return (
     <main style={{ backgroundColor: '#fafaf8', minHeight: '100vh' }}>
       <Nav />
-      <div className="max-w-[900px] mx-auto px-5 py-8 md:px-12 md:py-12">
+      <div className="max-w-[900px] mx-auto px-5 py-8 md:px-12 md:py-12 pb-24 md:pb-12">
 
         <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-6 mb-10">
           <div>

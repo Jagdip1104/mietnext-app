@@ -4,22 +4,14 @@ import Link from 'next/link'
 
 export default function Footer() {
   return (
-    <footer style={{
-      borderTop: '1px solid #e8e6e0',
-      padding: '20px 32px',
-      backgroundColor: '#fafaf8',
-      display: 'flex',
-      justifyContent: 'center',
-      gap: '24px',
-      flexWrap: 'wrap' as const,
-    }}>
-      <span style={{ fontSize: '12px', color: '#999' }}>
+    <footer className="border-t border-[#e8e6e0] bg-[#fafaf8] flex justify-center gap-6 flex-wrap px-8 pt-5 pb-20 md:pb-5">
+      <span className="text-[12px] text-[#999]">
         © {new Date().getFullYear()} MietNext
       </span>
-      <Link href="/impressum" style={{ fontSize: '12px', color: '#888', textDecoration: 'none' }}>
+      <Link href="/impressum" className="text-[12px] text-[#888] hover:text-[#1a1a1a] transition-colors no-underline">
         Impressum
       </Link>
-      <Link href="/datenschutz" style={{ fontSize: '12px', color: '#888', textDecoration: 'none' }}>
+      <Link href="/datenschutz" className="text-[12px] text-[#888] hover:text-[#1a1a1a] transition-colors no-underline">
         Datenschutz
       </Link>
     </footer>

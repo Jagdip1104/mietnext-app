@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Nav from '@/components/Nav'
@@ -56,6 +56,49 @@ export default function KostenPage() {
   const [showForm, setShowForm]       = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
+  
+  // Beleg-Upload States
+  const [receiptFile, setReceiptFile] = useState<File | null>(null)
+  const [existingReceipt, setExistingReceipt] = useState<{path: string, filename: string, mime: string} | null>(null)
+  const [removeReceipt, setRemoveReceipt] = useState(false)
+  const [receiptUploading, setReceiptUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  
+  const handleFileSelect = (file: File | null) => {
+    if (!file) { setReceiptFile(null); return }
+    if (file.size > 10 * 1024 * 1024) { alert('Datei zu groß (max. 10 MB)'); return }
+    const allowedMimes = ['application/pdf', 'image/jpeg', 'image/png', 'image/heic', 'image/heif', 'image/webp']
+    if (!allowedMimes.includes(file.type)) { alert('Nur PDF, JPG, PNG, HEIC oder WebP erlaubt'); return }
+    setReceiptFile(file)
+    setRemoveReceipt(false)
+  }
+  
+  const uploadReceipt = async (file: File): Promise<{path: string, filename: string, mime: string} | null> => {
+    setReceiptUploading(true)
+    const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_').slice(0, 100)
+    const path = `${userId}/${Date.now()}-${safeName}`
+    const { error } = await supabase.storage.from('receipts').upload(path, file, {
+      contentType: file.type, upsert: false,
+    })
+    setReceiptUploading(false)
+    if (error) { alert('Beleg-Upload fehlgeschlagen: ' + error.message); return null }
+    return { path, filename: file.name, mime: file.type }
+  }
+  
+  const deleteReceiptFromStorage = async (path: string) => {
+    await supabase.storage.from('receipts').remove([path])
+  }
+  
+  const getReceiptSignedUrl = async (path: string): Promise<string | null> => {
+    const { data, error } = await supabase.storage.from('receipts').createSignedUrl(path, 3600)
+    if (error) { alert('Beleg kann nicht geöffnet werden: ' + error.message); return null }
+    return data?.signedUrl || null
+  }
+  
+  const handleViewReceipt = async (path: string) => {
+    const url = await getReceiptSignedUrl(path)
+    if (url) window.open(url, '_blank')
+  }
   const [loading, setLoading]         = useState(false)
   const [userId, setUserId]           = useState<string | null>(null)
 
@@ -113,6 +156,22 @@ export default function KostenPage() {
     if (!form.property_id || !form.category || !form.amount || !form.expense_date) return
     setLoading(true)
     const cat = EXPENSE_CATEGORIES.find((c: any) => c.value === form.category)
+    
+    // Beleg-Logik
+    let receiptData: any = {}
+    if (receiptFile) {
+      const uploaded = await uploadReceipt(receiptFile)
+      if (!uploaded) { setLoading(false); return }
+      if (existingReceipt?.path) await deleteReceiptFromStorage(existingReceipt.path)
+      receiptData = {
+        receipt_path: uploaded.path, receipt_filename: uploaded.filename,
+        receipt_mime: uploaded.mime, receipt_uploaded_at: new Date().toISOString(),
+      }
+    } else if (removeReceipt && existingReceipt?.path) {
+      await deleteReceiptFromStorage(existingReceipt.path)
+      receiptData = { receipt_path: null, receipt_filename: null, receipt_mime: null, receipt_uploaded_at: null }
+    }
+    
     const expenseData = {
       property_id:     form.property_id,
       category:        form.category,
@@ -122,12 +181,14 @@ export default function KostenPage() {
       description:     form.description || null,
       invoice_number:  form.invoice_number || null,
       umlagefaehig:    cat?.umlagefaehig ?? false,
+      ...receiptData,
     }
     const { error } = editingId
       ? await supabase.from('expenses').update(expenseData).eq('id', editingId)
       : await supabase.from('expenses').insert({ ...expenseData, owner_id: userId })
     if (error) { alert('Fehler: ' + error.message); setLoading(false); return }
     setForm({ property_id: '', category: '', custom_category: '', amount: '', expense_date: new Date().toISOString().split('T')[0], description: '', invoice_number: '' })
+    setReceiptFile(null); setExistingReceipt(null); setRemoveReceipt(false)
     setEditingId(null)
     setShowForm(false)
     setLoading(false)
@@ -144,12 +205,18 @@ export default function KostenPage() {
       description:    e.description || '',
       invoice_number: e.invoice_number || '',
     })
+    setExistingReceipt(e.receipt_path ? {
+      path: e.receipt_path, filename: e.receipt_filename || 'Beleg', mime: e.receipt_mime || '',
+    } : null)
+    setReceiptFile(null); setRemoveReceipt(false)
     setEditingId(e.id)
     setShowForm(true)
     setTimeout(() => document.getElementById('formcard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
   }
 
   const handleDelete = async (id: string) => {
+    const exp = expenses.find((e: any) => e.id === id)
+    if (exp?.receipt_path) await deleteReceiptFromStorage(exp.receipt_path)
     await supabase.from('expenses').delete().eq('id', id)
     setDeleteConfirm(null)
     loadData(userId!)
@@ -318,6 +385,89 @@ export default function KostenPage() {
             </div>
 
             <div style={{ display: 'flex', gap: '8px' }}>
+              {/* Beleg-Upload */}
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ fontSize: '12px', color: '#999', display: 'block', marginBottom: '6px' }}>
+                  Beleg (PDF, JPG, PNG · max. 10 MB)
+                </label>
+                
+                {/* Bestehender Beleg */}
+                {existingReceipt && !receiptFile && !removeReceipt && (
+                  <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '10px 14px', backgroundColor: '#f5f3ed',
+                    border: '1px solid #e8e6e0', borderRadius: '8px', gap: '8px',
+                  }}>
+                    <button type="button" onClick={() => handleViewReceipt(existingReceipt.path)}
+                      style={{ background: 'none', border: 'none', color: '#1a1a1a',
+                        fontSize: '13px', cursor: 'pointer', textAlign: 'left',
+                        flex: 1, padding: 0, textDecoration: 'underline' }}>
+                      📎 {existingReceipt.filename}
+                    </button>
+                    <button type="button" onClick={() => setRemoveReceipt(true)}
+                      style={{ background: '#fff', color: '#dc2626', padding: '4px 10px',
+                        borderRadius: '6px', border: '1px solid #fecaca', fontSize: '12px',
+                        cursor: 'pointer' }}>
+                      Entfernen
+                    </button>
+                  </div>
+                )}
+                
+                {/* Neuer Beleg ausgewählt */}
+                {receiptFile && (
+                  <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '10px 14px', backgroundColor: '#f0fdf4',
+                    border: '1px solid #bbf7d0', borderRadius: '8px', gap: '8px',
+                  }}>
+                    <span style={{ fontSize: '13px', color: '#1a1a1a', flex: 1, wordBreak: 'break-all' }}>
+                      📎 {receiptFile.name} ({(receiptFile.size / 1024).toFixed(0)} KB)
+                    </span>
+                    <button type="button" onClick={() => { setReceiptFile(null); if (fileInputRef.current) fileInputRef.current.value = '' }}
+                      style={{ background: '#fff', color: '#666', padding: '4px 10px',
+                        borderRadius: '6px', border: '1px solid #e8e6e0', fontSize: '12px',
+                        cursor: 'pointer' }}>
+                      Verwerfen
+                    </button>
+                  </div>
+                )}
+                
+                {/* Lösch-Bestätigung */}
+                {removeReceipt && existingReceipt && !receiptFile && (
+                  <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '10px 14px', backgroundColor: '#fef2f2',
+                    border: '1px solid #fecaca', borderRadius: '8px', gap: '8px',
+                  }}>
+                    <span style={{ fontSize: '13px', color: '#991b1b', flex: 1 }}>
+                      📎 {existingReceipt.filename} wird beim Speichern entfernt
+                    </span>
+                    <button type="button" onClick={() => setRemoveReceipt(false)}
+                      style={{ background: '#fff', color: '#1a1a1a', padding: '4px 10px',
+                        borderRadius: '6px', border: '1px solid #e8e6e0', fontSize: '12px',
+                        cursor: 'pointer' }}>
+                      Behalten
+                    </button>
+                  </div>
+                )}
+                
+                {/* Datei-Picker (wenn kein Beleg oder bestehender entfernt wird) */}
+                {!receiptFile && (!existingReceipt || removeReceipt) && (
+                  <>
+                    <input ref={fileInputRef} type="file"
+                      accept="application/pdf,image/jpeg,image/png,image/heic,image/heif,image/webp"
+                      onChange={e => handleFileSelect(e.target.files?.[0] || null)}
+                      style={{ display: 'none' }} />
+                    <button type="button" onClick={() => fileInputRef.current?.click()}
+                      style={{ backgroundColor: '#fff', color: '#1a1a1a', padding: '10px 16px',
+                        borderRadius: '8px', border: '1.5px dashed #1a1a1a', fontSize: '13px',
+                        cursor: 'pointer', width: '100%', textAlign: 'center', fontWeight: '500' }}>
+                      📎 Beleg hochladen
+                    </button>
+                  </>
+                )}
+              </div>
+
               <button onClick={handleSave}
                 disabled={loading || !form.property_id || !form.category || !form.amount || !form.expense_date || (SONSTIGE.has(form.category) && !form.custom_category)}
                 style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer',
@@ -389,6 +539,15 @@ export default function KostenPage() {
                       <p style={{ fontSize: '18px', fontWeight: '500', color: '#1a1a1a', margin: 0, fontFamily: 'Georgia, serif' }}>
                         {formatEur(Number(e.amount))}
                       </p>
+                      {e.receipt_path && (
+                        <button onClick={() => handleViewReceipt(e.receipt_path)}
+                          title={e.receipt_filename || 'Beleg ansehen'}
+                          style={{ backgroundColor: '#fff', color: '#1a1a1a', padding: '6px 12px',
+                            borderRadius: '6px', border: '1px solid #e8e6e0', fontSize: '12px',
+                            cursor: 'pointer', marginRight: '6px' }}>
+                          📎 Beleg
+                        </button>
+                      )}
                       <button onClick={() => handleEditExpense(e)}
                         style={{ backgroundColor: '#fff', color: '#1a1a1a', padding: '6px 12px',
                           borderRadius: '6px', border: '1px solid #e8e6e0', fontSize: '12px',

@@ -372,12 +372,19 @@ export default function Properties() {
             </h1>
             <p style={{ fontSize: '14px', color: '#999', margin: 0 }}>{properties.length} Objekte gesamt</p>
           </div>
-          <button onClick={handleNewProperty} style={{
-            backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 20px',
-            borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer',
-          }}>
-            + Objekt anlegen
-          </button>
+          <div className="flex flex-col md:flex-row gap-2 md:gap-3">
+            <a href="/import" style={{
+              backgroundColor: '#fff', color: '#1a1a1a', padding: '10px 20px',
+              borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px',
+              textDecoration: 'none', display: 'inline-block',
+            }}>📥 Excel-Import</a>
+            <button onClick={handleNewProperty} style={{
+              backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 20px',
+              borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer',
+            }}>
+              + Objekt anlegen
+            </button>
+          </div>
         </div>
 
         {deleteInfo && (

@@ -244,18 +244,25 @@ export default function Units() {
               {searchLower ? `${filteredUnits.length} von ${units.length}` : `${units.length}`} Einheiten gesamt
             </p>
           </div>
-          <button onClick={handleNewUnit}
-            style={{
-              backgroundColor: atLimit ? '#fff' : '#1a1a1a',
-              color: atLimit ? '#dc2626' : '#fff',
-              padding: '10px 20px',
-              borderRadius: '8px',
-              border: atLimit ? '1px solid #fecaca' : 'none',
-              fontSize: '13px',
-              cursor: 'pointer'
-            }}>
-            {atLimit ? '⬆ Upgrade für mehr Einheiten' : '+ Einheit anlegen'}
-          </button>
+          <div className="flex flex-col md:flex-row gap-2 md:gap-3">
+            <a href="/import" style={{
+              backgroundColor: '#fff', color: '#1a1a1a', padding: '10px 20px',
+              borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px',
+              textDecoration: 'none', display: 'inline-block',
+            }}>📥 Excel-Import</a>
+            <button onClick={handleNewUnit}
+              style={{
+                backgroundColor: atLimit ? '#fff' : '#1a1a1a',
+                color: atLimit ? '#dc2626' : '#fff',
+                padding: '10px 20px',
+                borderRadius: '8px',
+                border: atLimit ? '1px solid #fecaca' : 'none',
+                fontSize: '13px',
+                cursor: 'pointer'
+              }}>
+              {atLimit ? '⬆ Upgrade für mehr Einheiten' : '+ Einheit anlegen'}
+            </button>
+          </div>
         </div>
 
         {/* === Such-Feld === */}

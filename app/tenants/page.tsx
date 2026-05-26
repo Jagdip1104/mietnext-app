@@ -84,10 +84,17 @@ export default function Tenants() {
             <h1 style={{ fontSize: '28px', fontWeight: '400', color: '#1a1a1a', margin: '0 0 4px', fontFamily: 'Georgia, serif' }}>Mieter</h1>
             <p style={{ fontSize: '14px', color: '#999', margin: 0 }}>{tenants.length} Mieter gesamt</p>
           </div>
-          <button onClick={() => { setShowForm(true); setTimeout(() => document.getElementById('formcard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50) }} style={{
-            backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 20px',
-            borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer',
-          }}>+ Mieter anlegen</button>
+          <div className="flex flex-col md:flex-row gap-2 md:gap-3">
+            <a href="/import" style={{
+              backgroundColor: '#fff', color: '#1a1a1a', padding: '10px 20px',
+              borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px',
+              textDecoration: 'none', display: 'inline-block',
+            }}>📥 Excel-Import</a>
+            <button onClick={() => { setShowForm(true); setTimeout(() => document.getElementById('formcard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50) }} style={{
+              backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 20px',
+              borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer',
+            }}>+ Mieter anlegen</button>
+          </div>
         </div>
 
         {showForm && (

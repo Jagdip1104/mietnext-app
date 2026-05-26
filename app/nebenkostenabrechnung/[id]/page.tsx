@@ -31,6 +31,27 @@ const DISTRIBUTION_KEYS = [
   { value: 'per_unit', label: 'Einzelbeträge je Einheit (z.B. Ista/Techem)' },
 ]
 
+// Mapping: Expenses-Kategorien → BetrKV-Kategorien (für Import aus /kosten)
+const EXPENSE_TO_BETRKV: Record<string, string> = {
+  grundsteuer: 'grundsteuer',
+  wasser: 'wasser', abwasser: 'entwasserung',
+  heizung: 'heizung', warmwasser: 'warmwasser',
+  heizung_warmwasser: 'heizung_warmwasser',
+  aufzug: 'aufzug',
+  strassenreinigung: 'strassenreinigung', muell: 'strassenreinigung',
+  gebaeudereinigung: 'gebaeudereinigung', ungeziefer: 'gebaeudereinigung',
+  gartenpflege: 'gartenpflege',
+  allgemeinstrom: 'allgemeinstrom',
+  schornstein: 'schornstein',
+  versicherung_uml: 'versicherung',
+  hauswart_uml: 'hauswart',
+  antenne: 'antenne',
+  waeschepflege: 'waeschepflege',
+  rauchmelder: 'sonstige', co2_umlage: 'sonstige',
+  dachrinne: 'sonstige', pool_sauna: 'sonstige',
+  sonstige_uml: 'sonstige',
+}
+
 export default function NebenkostenabrechnungDetail() {
   const router = useRouter()
   const params = useParams()
@@ -51,6 +72,12 @@ export default function NebenkostenabrechnungDetail() {
     category: '', description: '', total_amount: '',
     distribution_key: 'sqm', unit_amounts: {} as Record<string, string>,
   })
+
+  // Import-aus-Kosten States
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [availableExpenses, setAvailableExpenses] = useState<any[]>([])
+  const [selectedExpenseIds, setSelectedExpenseIds] = useState<Set<string>>(new Set())
+  const [importing, setImporting] = useState(false)
 
   useEffect(() => { if (id) loadData() }, [id])
 
@@ -80,7 +107,7 @@ export default function NebenkostenabrechnungDetail() {
     }
 
     const { data: itemsData } = await supabase
-      .from('utility_cost_items').select('*')
+      .from('utility_cost_items').select('*, expenses(amount, expense_date, invoice_number)')
       .eq('statement_id', id).order('created_at')
     setCostItems(itemsData || [])
   }
@@ -118,6 +145,82 @@ export default function NebenkostenabrechnungDetail() {
   const handleDeleteItem = async (itemId: string) => {
     await supabase.from('utility_cost_items').delete().eq('id', itemId)
     setDeleteConfirm(null)
+    loadData()
+  }
+
+  // 📥 Modal öffnen + Expenses laden
+  const openImportModal = async () => {
+    if (!statement?.property_id || !statement?.year) return
+    const importedIds = new Set(
+      costItems.filter((i: any) => i.linked_expense_id).map((i: any) => i.linked_expense_id)
+    )
+    const { data } = await supabase.from('expenses')
+      .select('*')
+      .eq('property_id', statement.property_id)
+      .eq('umlagefaehig', true)
+      .gte('expense_date', `${statement.year}-01-01`)
+      .lte('expense_date', `${statement.year}-12-31`)
+      .order('expense_date', { ascending: false })
+    const filtered = (data || []).filter((e: any) => !importedIds.has(e.id))
+    setAvailableExpenses(filtered)
+    setSelectedExpenseIds(new Set(filtered.map((e: any) => e.id)))
+    setShowImportModal(true)
+  }
+
+  const toggleExpenseSelection = (expenseId: string) => {
+    setSelectedExpenseIds(prev => {
+      const next = new Set(prev)
+      if (next.has(expenseId)) next.delete(expenseId)
+      else next.add(expenseId)
+      return next
+    })
+  }
+
+  const handleBulkImport = async () => {
+    if (selectedExpenseIds.size === 0) return
+    setImporting(true)
+    const now = new Date().toISOString()
+    const toImport = availableExpenses
+      .filter((e: any) => selectedExpenseIds.has(e.id))
+      .map((e: any) => {
+        const betrkvCat = EXPENSE_TO_BETRKV[e.category] || 'sonstige'
+        const distKey = BETRKV_CATEGORIES.find((c: any) => c.value === betrkvCat)?.defaultKey || 'sqm'
+        return {
+          statement_id: id,
+          category: betrkvCat,
+          description: [e.description, e.invoice_number && `Beleg-Nr: ${e.invoice_number}`].filter(Boolean).join(' · ') || null,
+          total_amount: Number(e.amount),
+          distribution_key: distKey,
+          linked_expense_id: e.id,
+          snapshot_amount: Number(e.amount),
+          linked_at: now,
+        }
+      })
+    const { error } = await supabase.from('utility_cost_items').insert(toImport)
+    if (error) {
+      alert('Import fehlgeschlagen: ' + error.message)
+    } else {
+      setShowImportModal(false)
+      setSelectedExpenseIds(new Set())
+      loadData()
+    }
+    setImporting(false)
+  }
+
+  // ⚠️ Items mit Änderung im Original (snapshot ≠ aktueller expense.amount)
+  const mismatchedItems = costItems.filter((i: any) =>
+    i.linked_expense_id && i.snapshot_amount !== null && i.expenses &&
+    Number(i.expenses.amount) !== Number(i.snapshot_amount)
+  )
+
+  const handleRefreshMismatches = async () => {
+    const now = new Date().toISOString()
+    for (const item of mismatchedItems) {
+      const newAmount = Number(item.expenses.amount)
+      await supabase.from('utility_cost_items')
+        .update({ total_amount: newAmount, snapshot_amount: newAmount, linked_at: now })
+        .eq('id', item.id)
+    }
     loadData()
   }
 
@@ -425,6 +528,39 @@ export default function NebenkostenabrechnungDetail() {
         <div style={{ marginBottom: '32px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h2 style={{ fontSize: '16px', fontWeight: '500', color: '#1a1a1a', margin: 0 }}>Kostenpositionen</h2>
+            {mismatchedItems.length > 0 && (
+              <div style={{
+                backgroundColor: '#fffbeb', border: '1px solid #fed7aa',
+                borderRadius: '8px', padding: '14px 18px', marginBottom: '16px',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                flexWrap: 'wrap', gap: '12px'
+              }}>
+                <div>
+                  <p style={{ fontSize: '13px', fontWeight: '500', color: '#92400e', margin: '0 0 2px' }}>
+                    ⚠️ {mismatchedItems.length} Position(en) wurden im Original geändert
+                  </p>
+                  <p style={{ fontSize: '12px', color: '#a16207', margin: 0 }}>
+                    Der Beleg in /kosten hat einen anderen Betrag als hier gespeichert.
+                  </p>
+                </div>
+                <button onClick={handleRefreshMismatches}
+                  style={{ backgroundColor: '#fff', color: '#92400e', padding: '8px 14px',
+                    borderRadius: '8px', border: '1px solid #fed7aa', fontSize: '13px',
+                    cursor: 'pointer', fontWeight: '500' }}>
+                  🔄 Aktualisieren
+                </button>
+              </div>
+            )}
+
+            {!showAddForm && (
+              <button onClick={openImportModal}
+                style={{ backgroundColor: '#fff', color: '#1a1a1a', padding: '10px 20px',
+                  borderRadius: '8px', border: '1.5px solid #1a1a1a', fontSize: '13px',
+                  fontWeight: '500', cursor: 'pointer', marginRight: '8px' }}>
+                📥 Aus Kosten importieren
+              </button>
+            )}
+
             {!showAddForm && (
               <button onClick={() => setShowAddForm(true)}
                 style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '8px 16px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>
@@ -710,6 +846,94 @@ export default function NebenkostenabrechnungDetail() {
           </div>
         )}
       </div>
+    {showImportModal && (
+      <div style={{
+        position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 100, padding: '20px'
+      }}>
+        <div style={{
+          backgroundColor: '#fff', borderRadius: '12px', maxWidth: '700px', width: '100%',
+          maxHeight: '85vh', display: 'flex', flexDirection: 'column'
+        }}>
+          <div style={{ padding: '20px 24px', borderBottom: '1px solid #e8e6e0' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 4px', fontFamily: 'Georgia, serif' }}>
+              Aus Kosten importieren
+            </h2>
+            <p style={{ fontSize: '13px', color: '#999', margin: 0 }}>
+              {availableExpenses.length === 0
+                ? 'Keine importierbaren Kosten für ' + statement?.year + ' gefunden.'
+                : `${availableExpenses.length} umlagefähige Kosten aus ${statement?.year} verfügbar`}
+            </p>
+          </div>
+          <div style={{ overflowY: 'auto', flex: 1, padding: '12px 24px' }}>
+            {availableExpenses.length === 0 ? (
+              <p style={{ fontSize: '14px', color: '#999', textAlign: 'center', padding: '40px 0' }}>
+                Keine importierbaren Kosten gefunden.
+              </p>
+            ) : availableExpenses.map((e: any) => (
+              <label key={e.id} style={{
+                display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '10px 0',
+                borderBottom: '1px solid #f5f4ef', cursor: 'pointer'
+              }}>
+                <input
+                  type="checkbox"
+                  checked={selectedExpenseIds.has(e.id)}
+                  onChange={() => toggleExpenseSelection(e.id)}
+                  className="mt-1 w-4 h-4 cursor-pointer accent-[#1a1a1a]"
+                />
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '12px' }}>
+                    <p style={{ fontSize: '14px', color: '#1a1a1a', margin: 0, fontWeight: '500' }}>
+                      {e.category}
+                    </p>
+                    <p style={{ fontSize: '14px', color: '#1a1a1a', margin: 0, fontWeight: '500', fontFamily: 'Georgia, serif', whiteSpace: 'nowrap' }}>
+                      {Number(e.amount).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                    </p>
+                  </div>
+                  <p style={{ fontSize: '12px', color: '#999', margin: '2px 0 0' }}>
+                    {new Date(e.expense_date).toLocaleDateString('de-DE')}
+                    {e.invoice_number && ` · Beleg ${e.invoice_number}`}
+                    {e.description && ` · ${e.description}`}
+                  </p>
+                  <p style={{ fontSize: '11px', color: '#bbb', margin: '2px 0 0' }}>
+                    → BetrKV: {EXPENSE_TO_BETRKV[e.category] || 'sonstige'}
+                  </p>
+                </div>
+              </label>
+            ))}
+          </div>
+          <div style={{
+            padding: '16px 24px', borderTop: '1px solid #e8e6e0',
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap'
+          }}>
+            <p style={{ fontSize: '13px', color: '#666', margin: 0 }}>
+              {selectedExpenseIds.size} ausgewählt · {' '}
+              <strong style={{ color: '#1a1a1a' }}>
+                {availableExpenses.filter((e: any) => selectedExpenseIds.has(e.id))
+                  .reduce((s: number, e: any) => s + Number(e.amount || 0), 0)
+                  .toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+              </strong>
+            </p>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={() => { setShowImportModal(false); setSelectedExpenseIds(new Set()) }}
+                style={{ backgroundColor: '#fff', color: '#666', padding: '10px 18px',
+                  borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer' }}>
+                Abbrechen
+              </button>
+              <button onClick={handleBulkImport}
+                disabled={importing || selectedExpenseIds.size === 0}
+                style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 18px',
+                  borderRadius: '8px', border: 'none', fontSize: '13px',
+                  cursor: importing || selectedExpenseIds.size === 0 ? 'not-allowed' : 'pointer',
+                  opacity: importing || selectedExpenseIds.size === 0 ? 0.5 : 1 }}>
+                {importing ? 'Importiere...' : `${selectedExpenseIds.size} importieren →`}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
     </main>
   )
 }

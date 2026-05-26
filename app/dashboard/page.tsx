@@ -93,17 +93,20 @@ export default function Dashboard() {
         .in('contract_id', contractIds)
         .gte('paid_date', firstDay).lte('paid_date', lastDay)
 
-      const { data: pendingPayments } = await supabase
-        .from('payments').select('amount').eq('status', 'pending')
+      // Computed Status: pending + due_date < today → late (auch wenn DB-Status noch 'pending' wegen fehlendem Cron)
+      const { data: openPayments } = await supabase
+        .from('payments').select('amount, status, due_date')
         .in('contract_id', contractIds)
+        .neq('status', 'paid')
 
-      const { data: latePayments } = await supabase
-        .from('payments').select('amount').eq('status', 'late')
-        .in('contract_id', contractIds)
-
+      const todayISO = new Date().toISOString().slice(0, 10)
       monthlyIncome = (paidThisMonth || []).reduce((s: number, p: any) => s + Number(p.amount || 0), 0)
-      pendingTotal = (pendingPayments || []).reduce((s: number, p: any) => s + Number(p.amount || 0), 0)
-      lateTotal = (latePayments || []).reduce((s: number, p: any) => s + Number(p.amount || 0), 0)
+      pendingTotal = (openPayments || [])
+        .filter((p: any) => p.status === 'pending' && p.due_date >= todayISO)
+        .reduce((s: number, p: any) => s + Number(p.amount || 0), 0)
+      lateTotal = (openPayments || [])
+        .filter((p: any) => p.status === 'late' || (p.status === 'pending' && p.due_date < todayISO))
+        .reduce((s: number, p: any) => s + Number(p.amount || 0), 0)
 
       const { data: payments } = await supabase
         .from('payments').select('*, contracts(tenants(full_name))')
@@ -146,6 +149,12 @@ export default function Dashboard() {
 
   const priorityColor: any = { low: '#888', medium: '#d97706', high: '#dc2626' }
   const priorityLabel: any = { low: 'Niedrig', medium: 'Mittel', high: 'Hoch' }
+  const todayISO = new Date().toISOString().slice(0, 10)
+  const effectiveStatus = (p: any) => {
+    if (p.status === 'paid') return 'paid'
+    if (p.status === 'late') return 'late'
+    return p.due_date < todayISO ? 'late' : 'pending'
+  }
   const statusColor: any = { paid: '#16a34a', pending: '#d97706', late: '#dc2626' }
   const statusLabel: any = { paid: 'Bezahlt', pending: 'Ausstehend', late: 'Überfällig' }
 
@@ -260,7 +269,7 @@ export default function Dashboard() {
                     </div>
                     <div className="text-left md:text-right">
                       <p style={{ fontSize: '13px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 2px' }}>{Number(p.amount).toLocaleString('de-DE')} €</p>
-                      <p style={{ fontSize: '11px', color: statusColor[p.status], margin: 0, fontWeight: '500' }}>{statusLabel[p.status]}</p>
+                      <p style={{ fontSize: '11px', color: statusColor[effectiveStatus(p)], margin: 0, fontWeight: '500' }}>{statusLabel[effectiveStatus(p)]}</p>
                     </div>
                   </div>
                 ))}

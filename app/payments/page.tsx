@@ -99,9 +99,15 @@ export default function Payments() {
   }
 
   // Filter logic
+  const todayISO = new Date().toISOString().slice(0, 10)
+  const effectiveStatus = (p: any) => {
+    if (p.status === 'paid') return 'paid'
+    if (p.status === 'late') return 'late'
+    return p.due_date < todayISO ? 'late' : 'pending'
+  }
   const filteredPayments = payments.filter((p: any) => {
     if (filterProperty !== 'all' && p.contracts?.units?.properties?.name !== filterProperty) return false
-    if (filterStatus !== 'all' && p.status !== filterStatus) return false
+    if (filterStatus !== 'all' && effectiveStatus(p) !== filterStatus) return false
     if (filterYear !== 'all' && new Date(p.due_date).getFullYear().toString() !== filterYear) return false
     return true
   })
@@ -109,9 +115,9 @@ export default function Payments() {
   const propertyOptions: string[] = Array.from(new Set(payments.map((p: any) => p.contracts?.units?.properties?.name).filter(Boolean) as string[])).sort()
   const yearOptions: string[] = Array.from(new Set(payments.map((p: any) => new Date(p.due_date).getFullYear().toString()))).sort().reverse()
 
-  const totalPaid = filteredPayments.filter((p: any) => p.status === 'paid').reduce((s: number, p: any) => s + Number(p.amount || 0), 0)
-  const totalPending = filteredPayments.filter((p: any) => p.status === 'pending').reduce((s: number, p: any) => s + Number(p.amount || 0), 0)
-  const totalLate = filteredPayments.filter((p: any) => p.status === 'late').reduce((s: number, p: any) => s + Number(p.amount || 0), 0)
+  const totalPaid = filteredPayments.filter((p: any) => effectiveStatus(p) === 'paid').reduce((s: number, p: any) => s + Number(p.amount || 0), 0)
+  const totalPending = filteredPayments.filter((p: any) => effectiveStatus(p) === 'pending').reduce((s: number, p: any) => s + Number(p.amount || 0), 0)
+  const totalLate = filteredPayments.filter((p: any) => effectiveStatus(p) === 'late').reduce((s: number, p: any) => s + Number(p.amount || 0), 0)
 
   const statusColor: any = { paid: '#16a34a', pending: '#d97706', late: '#dc2626' }
   const statusBg: any = { paid: '#f0fdf4', pending: '#fffbeb', late: '#fef2f2' }
@@ -285,8 +291,8 @@ export default function Payments() {
                         <p style={{ fontSize: '16px', fontWeight: '500', color: '#1a1a1a', margin: 0, fontFamily: 'Georgia, serif' }}>
                           {Number(p.amount).toLocaleString('de-DE')} €
                         </p>
-                        <span style={{ fontSize: '11px', color: statusColor[p.status], backgroundColor: statusBg[p.status], padding: '4px 12px', borderRadius: '20px', fontWeight: '500' }}>
-                          {statusLabel[p.status]}
+                        <span style={{ fontSize: '11px', color: statusColor[effectiveStatus(p)], backgroundColor: statusBg[effectiveStatus(p)], padding: '4px 12px', borderRadius: '20px', fontWeight: '500' }}>
+                          {statusLabel[effectiveStatus(p)]}
                         </span>
 
                         {/* Aktions-Buttons je nach Status */}

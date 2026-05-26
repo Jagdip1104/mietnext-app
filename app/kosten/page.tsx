@@ -55,6 +55,7 @@ export default function KostenPage() {
   const [properties, setProperties]   = useState<any[]>([])
   const [showForm, setShowForm]       = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [loading, setLoading]         = useState(false)
   const [userId, setUserId]           = useState<string | null>(null)
 
@@ -112,8 +113,7 @@ export default function KostenPage() {
     if (!form.property_id || !form.category || !form.amount || !form.expense_date) return
     setLoading(true)
     const cat = EXPENSE_CATEGORIES.find((c: any) => c.value === form.category)
-    const { error } = await supabase.from('expenses').insert({
-      owner_id:        userId,
+    const expenseData = {
       property_id:     form.property_id,
       category:        form.category,
       custom_category: SONSTIGE.has(form.category) ? form.custom_category || null : null,
@@ -122,12 +122,31 @@ export default function KostenPage() {
       description:     form.description || null,
       invoice_number:  form.invoice_number || null,
       umlagefaehig:    cat?.umlagefaehig ?? false,
-    })
+    }
+    const { error } = editingId
+      ? await supabase.from('expenses').update(expenseData).eq('id', editingId)
+      : await supabase.from('expenses').insert({ ...expenseData, owner_id: userId })
     if (error) { alert('Fehler: ' + error.message); setLoading(false); return }
     setForm({ property_id: '', category: '', custom_category: '', amount: '', expense_date: new Date().toISOString().split('T')[0], description: '', invoice_number: '' })
+    setEditingId(null)
     setShowForm(false)
     setLoading(false)
     loadData(userId!)
+  }
+
+  const handleEditExpense = (e: any) => {
+    setForm({
+      property_id:    e.property_id || '',
+      category:       e.category || '',
+      custom_category: e.custom_category || '',
+      amount:         String(e.amount || ''),
+      expense_date:   e.expense_date || new Date().toISOString().split('T')[0],
+      description:    e.description || '',
+      invoice_number: e.invoice_number || '',
+    })
+    setEditingId(e.id)
+    setShowForm(true)
+    setTimeout(() => document.getElementById('formcard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
   }
 
   const handleDelete = async (id: string) => {
@@ -370,6 +389,12 @@ export default function KostenPage() {
                       <p style={{ fontSize: '18px', fontWeight: '500', color: '#1a1a1a', margin: 0, fontFamily: 'Georgia, serif' }}>
                         {formatEur(Number(e.amount))}
                       </p>
+                      <button onClick={() => handleEditExpense(e)}
+                        style={{ backgroundColor: '#fff', color: '#1a1a1a', padding: '6px 12px',
+                          borderRadius: '6px', border: '1px solid #e8e6e0', fontSize: '12px',
+                          cursor: 'pointer', marginRight: '6px' }}>
+                        ✏️ Bearbeiten
+                      </button>
                       <button onClick={() => setDeleteConfirm(e.id)}
                         style={{ backgroundColor: '#fff', color: '#dc2626', padding: '6px 12px', borderRadius: '6px', border: '1px solid #fecaca', fontSize: '12px', cursor: 'pointer' }}>
                         Löschen

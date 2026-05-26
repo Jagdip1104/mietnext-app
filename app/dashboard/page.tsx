@@ -283,8 +283,9 @@ export default function Dashboard() {
                 style={{
                   padding: '10px 16px', fontSize: '13px', borderRadius: '8px', cursor: 'pointer',
                   backgroundColor: b.primary ? '#1a1a1a' : '#fff',
-                  color: b.primary ? '#fff' : '#666',
-                  border: b.primary ? 'none' : '1px solid #e8e6e0',
+                  color: b.primary ? '#fff' : (b.href === '/import' ? '#1a1a1a' : '#666'),
+                  border: b.primary ? 'none' : (b.href === '/import' ? '1.5px solid #1a1a1a' : '1px solid #e8e6e0'),
+                  fontWeight: b.href === '/import' ? '500' : '400',
                 }}>
                 {b.label}
               </button>

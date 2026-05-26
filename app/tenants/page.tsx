@@ -87,8 +87,8 @@ export default function Tenants() {
           <div className="flex flex-col md:flex-row gap-2 md:gap-3">
             <a href="/import" style={{
               backgroundColor: '#fff', color: '#1a1a1a', padding: '10px 20px',
-              borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px',
-              textDecoration: 'none', display: 'inline-block',
+              borderRadius: '8px', border: '1.5px solid #1a1a1a', fontSize: '13px',
+              fontWeight: '500', textDecoration: 'none', display: 'inline-block',
             }}>📥 Excel-Import</a>
             <button onClick={() => { setShowForm(true); setTimeout(() => document.getElementById('formcard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50) }} style={{
               backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 20px',

@@ -64,13 +64,86 @@ export default function KostenPage() {
   const [receiptUploading, setReceiptUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   
-  const handleFileSelect = (file: File | null) => {
-    if (!file) { setReceiptFile(null); return }
+  // KI-Scan States
+  const [scanning, setScanning] = useState(false)
+  const [scanResult, setScanResult] = useState<any>(null)
+  const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set())
+  
+  const handleFileSelect = async (file: File | null) => {
+    if (!file) { setReceiptFile(null); setScanResult(null); return }
     if (file.size > 10 * 1024 * 1024) { alert('Datei zu groß (max. 10 MB)'); return }
     const allowedMimes = ['application/pdf', 'image/jpeg', 'image/png', 'image/heic', 'image/heif', 'image/webp']
     if (!allowedMimes.includes(file.type)) { alert('Nur PDF, JPG, PNG, HEIC oder WebP erlaubt'); return }
     setReceiptFile(file)
     setRemoveReceipt(false)
+    
+    // KI-Scan im Hintergrund triggern
+    await runScan(file)
+  }
+  
+  const runScan = async (file: File) => {
+    setScanning(true)
+    setScanResult(null)
+    setAutoFilledFields(new Set())
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { setScanning(false); return }
+      
+      const formData = new FormData()
+      formData.append('file', file)
+      
+      const res = await fetch('/api/scan-receipt', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session.access_token}` },
+        body: formData,
+      })
+      
+      if (!res.ok) { setScanning(false); return }
+      const data = await res.json()
+      setScanResult(data)
+      autoFillFromScan(data)
+    } catch (e: any) {
+      console.error('Scan failed:', e)
+    } finally {
+      setScanning(false)
+    }
+  }
+  
+  const autoFillFromScan = (scan: any) => {
+    const filled = new Set<string>()
+    const newForm = { ...form }
+    
+    if (scan.property_match?.id && !newForm.property_id) {
+      newForm.property_id = scan.property_match.id
+      filled.add('property_id')
+    }
+    if (scan.betrag_brutto && !newForm.amount) {
+      newForm.amount = String(scan.betrag_brutto)
+      filled.add('amount')
+    }
+    if (scan.datum && newForm.expense_date === new Date().toISOString().split('T')[0]) {
+      newForm.expense_date = scan.datum
+      filled.add('expense_date')
+    }
+    if (scan.rechnungs_nr && !newForm.invoice_number) {
+      newForm.invoice_number = scan.rechnungs_nr
+      filled.add('invoice_number')
+    }
+    if (scan.lieferant && !newForm.description) {
+      newForm.description = scan.lieferant
+      filled.add('description')
+    }
+    if (scan.kategorie_vorschlag && !newForm.category) {
+      // Check ob Kategorie in EXPENSE_CATEGORIES existiert
+      const exists = EXPENSE_CATEGORIES.find((c: any) => c.value === scan.kategorie_vorschlag)
+      if (exists) {
+        newForm.category = scan.kategorie_vorschlag
+        filled.add('category')
+      }
+    }
+    
+    setForm(newForm)
+    setAutoFilledFields(filled)
   }
   
   const uploadReceipt = async (file: File): Promise<{path: string, filename: string, mime: string} | null> => {
@@ -189,6 +262,7 @@ export default function KostenPage() {
     if (error) { alert('Fehler: ' + error.message); setLoading(false); return }
     setForm({ property_id: '', category: '', custom_category: '', amount: '', expense_date: new Date().toISOString().split('T')[0], description: '', invoice_number: '' })
     setReceiptFile(null); setExistingReceipt(null); setRemoveReceipt(false)
+    setScanResult(null); setAutoFilledFields(new Set())
     setEditingId(null)
     setShowForm(false)
     setLoading(false)
@@ -385,6 +459,34 @@ export default function KostenPage() {
             </div>
 
             <div style={{ display: 'flex', gap: '8px' }}>
+              {/* KI-Scan Status-Banner */}
+              {(scanning || scanResult) && (
+                <div style={{
+                  padding: '12px 16px', marginBottom: '12px',
+                  backgroundColor: scanning ? '#eff6ff' : (scanResult?.confidence > 0.85 ? '#f0fdf4' : '#fffbeb'),
+                  border: '1px solid ' + (scanning ? '#bfdbfe' : (scanResult?.confidence > 0.85 ? '#bbf7d0' : '#fed7aa')),
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                }}>
+                  {scanning ? (
+                    <span style={{ color: '#1e40af' }}>🤖 Beleg wird analysiert... (1-3 Sekunden)</span>
+                  ) : scanResult?.error ? (
+                    <span style={{ color: '#991b1b' }}>⚠️ Scan fehlgeschlagen: {scanResult.error}</span>
+                  ) : (
+                    <div>
+                      <p style={{ margin: '0 0 4px', color: scanResult?.confidence > 0.85 ? '#166534' : '#92400e', fontWeight: '500' }}>
+                        ✨ Daten erkannt {scanResult?.is_mock && '(Demo-Modus — KI nicht aktiviert)'} — Bitte prüfen
+                      </p>
+                      <p style={{ margin: 0, color: '#666', fontSize: '12px' }}>
+                        Lieferant: <strong>{scanResult?.lieferant || '?'}</strong>
+                        {scanResult?.confidence && ` · Sicherheit: ${Math.round(scanResult.confidence * 100)}%`}
+                        {scanResult?.property_match && ` · Objekt: ${scanResult.property_match.name} (${Math.round(scanResult.property_match.address_confidence * 100)}% Match)`}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Beleg-Upload */}
               <div style={{ marginBottom: '16px' }}>
                 <label style={{ fontSize: '12px', color: '#999', display: 'block', marginBottom: '6px' }}>

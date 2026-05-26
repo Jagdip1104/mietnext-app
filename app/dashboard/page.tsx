@@ -274,6 +274,7 @@ export default function Dashboard() {
           <div className="grid grid-cols-2 md:flex md:flex-wrap gap-2">
             {[
               { label: '+ Objekt anlegen', href: '/properties', primary: true },
+              { label: '📥 Excel-Import', href: '/import', primary: false },
               { label: '+ Einheit anlegen', href: '/units', primary: false },
               { label: '+ Mieter anlegen', href: '/tenants', primary: false },
               { label: 'Zahlung erfassen', href: '/payments', primary: false },

@@ -177,7 +177,7 @@ export default function PropertyDetailPage() {
   }
 
   const totalUnits = units.length
-  const occupied = units.filter(u => u.is_occupied).length
+  const occupied = units.filter((u: any) => u.is_occupied).length
   const vacant = totalUnits - occupied
   const overdueCount = units.filter(u => u.lastPayment?.status === 'overdue').length
 

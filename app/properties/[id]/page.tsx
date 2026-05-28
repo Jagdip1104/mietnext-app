@@ -13,7 +13,7 @@ import {
 
 type Property = { id: string; name: string; address: string; city: string; zip: string | null }
 type Tenant = { id: string; name: string; email: string | null; phone: string | null; user_id: string | null; invited_at: string | null; unit_id: string }
-type Contract = { id: string; unit_id: string; start_date: string; end_date: string | null; rent_amount: number; status: string }
+type Contract = { id: string; unit_id: string; start_date: string; end_date: string | null; rent_amount: number; is_active: boolean }
 type Payment = { id: string; contract_id: string; amount: number; due_date: string; paid_date: string | null; status: string }
 type RawUnit = { id: string; name: string; unit_code: string | null; floor: string | null; size_sqm: number | null; is_occupied: boolean | null }
 type UnitRow = RawUnit & { tenant: Tenant | null; contract: Contract | null; lastPayment: Payment | null }
@@ -154,7 +154,7 @@ export default function PropertyDetailPage() {
     const unitIds = rawUnits.map(u => u.id)
     const { data: tenantsData } = await supabase.from('tenants').select('id, name, email, phone, user_id, invited_at, unit_id').in('unit_id', unitIds)
     const tenants = (tenantsData ?? []) as Tenant[]
-    const { data: contractsData } = await supabase.from('contracts').select('id, unit_id, start_date, end_date, rent_amount, status').in('unit_id', unitIds).eq('status', 'active').order('start_date', { ascending: false })
+    const { data: contractsData } = await supabase.from('contracts').select('id, unit_id, tenant_id, start_date, end_date, rent_amount, is_active').in('unit_id', unitIds).eq('is_active', true).order('start_date', { ascending: false })
     const contracts = (contractsData ?? []) as Contract[]
     const contractIds = contracts.map(c => c.id)
     const { data: paymentsData } = contractIds.length

@@ -378,7 +378,7 @@ export default function KostenPage() {
             <h2 style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 20px', fontFamily: 'Georgia, serif' }}>
               Kosten erfassen
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-[16px]">
+            <div className="flex flex-col md:grid md:grid-cols-2 md:gap-4 gap-4 mb-[16px]">
 
               <div>
                 <label style={lbl}>Objekt *</label>

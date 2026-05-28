@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 
 type Property = { id: string; name: string; address: string; city: string; zip: string | null }
-type Tenant = { id: string; name: string; email: string | null; phone: string | null; user_id: string | null; invited_at: string | null; unit_id: string }
+type Tenant = { id: string; full_name: string; email: string | null; phone: string | null; user_id: string | null; unit_id: string }
 type Contract = { id: string; unit_id: string; start_date: string; end_date: string | null; rent_amount: number; is_active: boolean }
 type Payment = { id: string; contract_id: string; amount: number; due_date: string; paid_date: string | null; status: string }
 type RawUnit = { id: string; name: string; unit_code: string | null; floor: string | null; size_sqm: number | null; is_occupied: boolean | null }
@@ -21,7 +21,6 @@ type UnitRow = RawUnit & { tenant: Tenant | null; contract: Contract | null; las
 function inviteStatus(tenant: Tenant | null) {
   if (!tenant) return null
   if (tenant.user_id) return 'active'
-  if (tenant.invited_at) return 'invited'
   return 'not_invited'
 }
 function formatDate(d: string | null) {
@@ -70,9 +69,8 @@ function ExpandableUnit({ unit, forceOpen }: { unit: UnitRow; forceOpen: boolean
             <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-500"><UserX className="h-3 w-3" />Leerstand</span>
           ) : (
             <>
-              <span className="text-sm text-gray-700 hidden sm:block">{unit.tenant!.name}</span>
+              <span className="text-sm text-gray-700 hidden sm:block">{unit.tenant!.full_name}</span>
               {status === 'active'      && <Circle className="h-2.5 w-2.5 fill-emerald-500 text-emerald-500" />}
-              {status === 'invited'     && <Circle className="h-2.5 w-2.5 fill-amber-400 text-amber-400" />}
               {status === 'not_invited' && <Circle className="h-2.5 w-2.5 fill-red-400 text-red-400" />}
               <PaymentBadge payment={unit.lastPayment} />
             </>
@@ -90,12 +88,12 @@ function ExpandableUnit({ unit, forceOpen }: { unit: UnitRow; forceOpen: boolean
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-1.5">
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-1"><User className="h-3.5 w-3.5" />Mieter</p>
-                <p className="text-sm font-medium text-gray-900">{unit.tenant!.name}</p>
+                <p className="text-sm font-medium text-gray-900">{unit.tenant!.full_name}</p>
                 {unit.tenant!.email && <a href={`mailto:${unit.tenant!.email}`} className="flex items-center gap-1.5 text-xs text-blue-600 hover:underline"><Mail className="h-3 w-3" />{unit.tenant!.email}</a>}
                 {unit.tenant!.phone && <a href={`tel:${unit.tenant!.phone}`} className="flex items-center gap-1.5 text-xs text-gray-600"><Phone className="h-3 w-3" />{unit.tenant!.phone}</a>}
                 <div>
                   {status === 'active' && <span className="inline-flex items-center gap-1 text-xs text-emerald-700"><CheckCircle2 className="h-3 w-3" />Portal-Zugang aktiv</span>}
-                  {status === 'invited' && <span className="inline-flex items-center gap-1 text-xs text-amber-700"><Clock className="h-3 w-3" />Eingeladen {formatDate(unit.tenant!.invited_at)}</span>}
+                  
                   {status === 'not_invited' && <Link href="/invite-tenant" className="inline-flex items-center gap-1 text-xs text-red-600 hover:underline"><AlertCircle className="h-3 w-3" />Nicht eingeladen →</Link>}
                 </div>
               </div>
@@ -105,7 +103,7 @@ function ExpandableUnit({ unit, forceOpen }: { unit: UnitRow; forceOpen: boolean
                   <>
                     <p className="text-sm font-semibold text-gray-900">{formatCurrency(unit.contract.rent_amount)}<span className="text-xs font-normal text-gray-500 ml-1">/ Monat</span></p>
                     <p className="text-xs text-gray-500">{formatDate(unit.contract.start_date)} – {unit.contract.end_date ? formatDate(unit.contract.end_date) : 'unbefristet'}</p>
-                    <span className={`inline-block text-xs rounded-full px-2 py-0.5 font-medium ${unit.contract.status === 'active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-gray-100 text-gray-600'}`}>{unit.contract.status === 'active' ? 'Aktiv' : unit.contract.status}</span>
+                    <span className={`inline-block text-xs rounded-full px-2 py-0.5 font-medium ${unit.contract.is_active ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-gray-100 text-gray-600'}`}>{unit.contract.is_active ? 'Aktiv' : 'Beendet'}</span>
                   </>
                 ) : <p className="text-xs text-gray-400">Kein Vertrag gefunden</p>}
               </div>
@@ -152,7 +150,7 @@ export default function PropertyDetailPage() {
     const rawUnits = (rawUnitsData ?? []) as RawUnit[]
     if (!rawUnits.length) { setUnits([]); setLoading(false); return }
     const unitIds = rawUnits.map(u => u.id)
-    const { data: tenantsData } = await supabase.from('tenants').select('id, name, email, phone, user_id, invited_at, unit_id').in('unit_id', unitIds)
+    const { data: tenantsData } = await supabase.from('tenants').select('id, full_name, email, phone, user_id, unit_id').in('unit_id', unitIds)
     const tenants = (tenantsData ?? []) as Tenant[]
     const { data: contractsData } = await supabase.from('contracts').select('id, unit_id, tenant_id, start_date, end_date, rent_amount, is_active').in('unit_id', unitIds).eq('is_active', true).order('start_date', { ascending: false })
     const contracts = (contractsData ?? []) as Contract[]

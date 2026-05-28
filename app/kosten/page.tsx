@@ -458,7 +458,7 @@ export default function KostenPage() {
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {/* KI-Scan Status-Banner */}
               {(scanning || scanResult) && (
                 <div style={{
@@ -522,7 +522,7 @@ export default function KostenPage() {
                     padding: '10px 14px', backgroundColor: '#f0fdf4',
                     border: '1px solid #bbf7d0', borderRadius: '8px', gap: '8px',
                   }}>
-                    <span style={{ fontSize: '13px', color: '#1a1a1a', flex: 1, wordBreak: 'break-all' }}>
+                    <span style={{ fontSize: '13px', color: '#1a1a1a', flex: 1, wordBreak: 'break-word', overflowWrap: 'anywhere', minWidth: 0 }}>
                       📎 {receiptFile.name} ({(receiptFile.size / 1024).toFixed(0)} KB)
                     </span>
                     <button type="button" onClick={() => { setReceiptFile(null); if (fileInputRef.current) fileInputRef.current.value = '' }}

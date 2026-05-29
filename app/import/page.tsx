@@ -29,6 +29,24 @@ interface ImportResult {
   errors: string[]
 }
 
+
+function normalizeUnitType(raw: string | null | undefined): string | null {
+  if (!raw) return null
+  const lower = String(raw).toLowerCase().trim()
+  if (/gewerbe|commercial|b[uü]ro|halle|laden|gesch[aä]ft|restaurant|restuarant/.test(lower)) return 'gewerbe'
+  if (/wohn|residential|apartment|einfam|haus/.test(lower)) return 'wohnung'
+  if (/stellplatz|parkplatz|garage|gerage|tiefgarage/.test(lower)) return 'stellplatz'
+  if (/lager|storage|keller/.test(lower)) return 'lager'
+  return lower
+}
+
+function normalizeUsageType(raw: string | null | undefined): string | null {
+  if (!raw) return null
+  let s = String(raw).trim()
+  if (s.toLowerCase() === 'restuarant') s = 'Restaurant'
+  return s
+}
+
 export default function Import() {
   const [userId, setUserId] = useState<string | null>(null)
   const [file, setFile] = useState<File | null>(null)
@@ -273,8 +291,10 @@ export default function Import() {
         property_id: propertyMap.get(row.property.toLowerCase()),
         name: row.unit, floor: row.floor || null,
         size_sqm: row.sizeSqm, rooms: row.rooms,
-        type: row.type || null, usage_type: row.usageType || null,
+        type: normalizeUnitType(row.type), usage_type: normalizeUsageType(row.usageType),
         parking_type: row.parkingType || null,
+        vat_applicable: normalizeUnitType(row.type) === 'gewerbe',
+        vat_rate: normalizeUnitType(row.type) === 'gewerbe' ? 19 : 0,
         rent_amount: row.rentAmount, utilities_amount: row.utilities,
         vat_applicable: row.vatApplicable, vat_rate: row.vatRate,
         notes: row.notes || null, is_occupied: !!row.tenantName

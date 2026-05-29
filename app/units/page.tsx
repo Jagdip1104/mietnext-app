@@ -219,9 +219,9 @@ export default function Units() {
       )
     : units
 
-  const typeColor: any = { wohnung: '#3b82f6', gewerbe: '#8b5cf6', stellplatz: '#6b7280', sonstige: '#6b7280' }
-  const typeBg: any = { wohnung: '#eff6ff', gewerbe: '#f5f3ff', stellplatz: '#f5f4f0', sonstige: '#f5f4f0' }
-  const typeLabel: any = { wohnung: 'Wohnung', gewerbe: 'Gewerbe', stellplatz: 'Stellplatz', sonstige: 'Sonstige' }
+  const typeColor: any = { wohnung: '#3b82f6', gewerbe: '#8b5cf6', stellplatz: '#6b7280', lager: '#a16207', sonstige: '#6b7280' }
+  const typeBg: any = { wohnung: '#eff6ff', gewerbe: '#f5f3ff', stellplatz: '#f5f4f0', lager: '#fef3c7', sonstige: '#f5f4f0' }
+  const typeLabel: any = { wohnung: 'Wohnung', gewerbe: 'Gewerbe', stellplatz: 'Stellplatz', lager: 'Lager', sonstige: 'Sonstige' }
 
   const card = { backgroundColor: '#fff', border: '1px solid #e8e6e0', borderRadius: '12px', padding: '24px' }
   const input = { width: '100%', border: '1px solid #e8e6e0', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', outline: 'none', color: '#1a1a1a', backgroundColor: '#fff' }

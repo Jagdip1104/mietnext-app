@@ -18,6 +18,16 @@ export default function Contracts() {
   const [selectedUnit, setSelectedUnit] = useState('')
   const [rentCold, setRentCold] = useState('')
   const [utilityAdvance, setUtilityAdvance] = useState('')
+  // Mieterhöhung Modal
+  const [increaseModalId, setIncreaseModalId] = useState<string | null>(null)
+  const [newRentCold, setNewRentCold] = useState('')
+  const [newUtilityAdvance, setNewUtilityAdvance] = useState('')
+  const [increaseReason, setIncreaseReason] = useState('vergleichsmiete')
+  const [effectiveDate, setEffectiveDate] = useState('')
+  const [increaseNotes, setIncreaseNotes] = useState('')
+  const [pendingPaymentsCount, setPendingPaymentsCount] = useState(0)
+  const [updatePaymentsToo, setUpdatePaymentsToo] = useState(true)
+  const [increaseLoading, setIncreaseLoading] = useState(false)
   const [deposit, setDeposit] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
@@ -169,6 +179,50 @@ export default function Contracts() {
     }
   }
 
+  const openIncreaseModal = async (contractId: string, rc: number, ua: number) => {
+    setIncreaseModalId(contractId)
+    setNewRentCold(rc.toString())
+    setNewUtilityAdvance(ua.toString())
+    setIncreaseReason('vergleichsmiete')
+    setEffectiveDate(new Date().toISOString().split('T')[0])
+    setIncreaseNotes('')
+    const today = new Date().toISOString().split('T')[0]
+    const { count } = await supabase
+      .from('payments').select('*', { count: 'exact', head: true })
+      .eq('contract_id', contractId)
+      .in('status', ['pending', 'late'])
+      .gte('due_date', today)
+    setPendingPaymentsCount(count || 0)
+    setUpdatePaymentsToo(true)
+  }
+
+  const handleSaveIncrease = async () => {
+    if (!increaseModalId || !newRentCold || !effectiveDate) return
+    const contract: any = contracts.find((c: any) => c.id === increaseModalId)
+    if (!contract) return
+    setIncreaseLoading(true)
+    const oldCold = parseFloat(contract.rent_cold || '0')
+    const oldUtil = parseFloat(contract.utility_advance || '0')
+    const newCold = parseFloat(newRentCold)
+    const newUtil = parseFloat(newUtilityAdvance || '0')
+    const { error: auditErr } = await supabase.from('rent_increases').insert({
+      contract_id: increaseModalId, effective_date: effectiveDate,
+      old_rent_cold: oldCold, new_rent_cold: newCold,
+      old_utility_advance: oldUtil, new_utility_advance: newUtil,
+      reason: increaseReason, notes: increaseNotes || null,
+    })
+    if (auditErr) { alert('Audit-Log fehlgeschlagen: ' + auditErr.message); setIncreaseLoading(false); return }
+    const { error: updErr } = await supabase.from('contracts')
+      .update({ rent_cold: newCold, utility_advance: newUtil }).eq('id', increaseModalId)
+    if (updErr) { alert('Vertrag-Update fehlgeschlagen: ' + updErr.message); setIncreaseLoading(false); return }
+    if (updatePaymentsToo && pendingPaymentsCount > 0) {
+      await supabase.from('payments').update({ amount: newCold + newUtil })
+        .eq('contract_id', increaseModalId).in('status', ['pending', 'late']).gte('due_date', effectiveDate)
+    }
+    setIncreaseModalId(null); setIncreaseLoading(false); loadData(userId!)
+    alert('Mieterhöhung gespeichert!')
+  }
+
   const formatEur = (val: number | string | null | undefined) => {
     if (val === null || val === undefined || val === '') return '0,00 €'
     const n = typeof val === 'string' ? parseFloat(val) : val
@@ -317,6 +371,9 @@ export default function Contracts() {
                       )}
                       <button onClick={() => handleEdit(c)} style={{ backgroundColor: '#fff', color: '#666', padding: '8px 14px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer' }}>Bearbeiten</button>
                       {c.is_active && (
+                        <button onClick={() => openIncreaseModal(c.id, parseFloat(c.rent_cold || '0'), parseFloat(c.utility_advance || '0'))} style={{ backgroundColor: '#fef3c7', color: '#92400e', padding: '8px 14px', borderRadius: '8px', border: '1px solid #fde68a', fontSize: '13px', cursor: 'pointer' }}>📈 Miete ändern</button>
+                      )}
+                      {c.is_active && (
                         <button onClick={() => setEndConfirm(c.id)} style={{ backgroundColor: '#fff', color: '#d97706', padding: '8px 14px', borderRadius: '8px', border: '1px solid #fed7aa', fontSize: '13px', cursor: 'pointer' }}>Beenden</button>
                       )}
                       <button onClick={() => setDeleteConfirm(c.id)} style={{ backgroundColor: '#fff', color: '#dc2626', padding: '8px 14px', borderRadius: '8px', border: '1px solid #fecaca', fontSize: '13px', cursor: 'pointer' }}>Löschen</button>
@@ -328,6 +385,114 @@ export default function Contracts() {
           </div>
         )}
       </div>
+
+      {/* Mieterhöhung Modal */}
+      {increaseModalId && (() => {
+        const contract: any = contracts.find((cc: any) => cc.id === increaseModalId)
+        if (!contract) return null
+        const oldCold = parseFloat(contract.rent_cold || '0')
+        const oldUtil = parseFloat(contract.utility_advance || '0')
+        const newCold = parseFloat(newRentCold || '0')
+        const newUtil = parseFloat(newUtilityAdvance || '0')
+        const oldTotal = oldCold + oldUtil
+        const newTotal = newCold + newUtil
+        const coldPct = oldCold > 0 ? ((newCold - oldCold) / oldCold) * 100 : 0
+        const isVergleichsmiete = increaseReason === 'vergleichsmiete'
+        const isOverKappung = isVergleichsmiete && coldPct > 20
+
+        return (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '20px' }}>
+            <div style={{ backgroundColor: '#fff', borderRadius: '12px', padding: '24px', maxWidth: '600px', width: '100%', maxHeight: '90vh', overflow: 'auto' }}>
+              <h2 style={{ fontSize: '18px', fontWeight: '500', margin: '0 0 4px', fontFamily: 'Georgia, serif' }}>Mieterhöhung</h2>
+              <p style={{ fontSize: '13px', color: '#666', margin: '0 0 20px' }}>
+                {contract.tenants?.full_name} – {contract.units?.properties?.name}, {contract.units?.name}
+              </p>
+
+              <div style={{ backgroundColor: '#f5f3ed', padding: '12px', borderRadius: '8px', marginBottom: '16px' }}>
+                <p style={{ fontSize: '12px', color: '#666', margin: '0 0 6px' }}>Aktuelle Miete:</p>
+                <p style={{ fontSize: '14px', margin: 0 }}>
+                  Kalt: <strong>{formatEur(oldCold)}</strong> &middot; NK: <strong>{formatEur(oldUtil)}</strong> &middot; Gesamt: <strong>{formatEur(oldTotal)}</strong>
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-4 mb-4">
+                <div>
+                  <label style={label}>Neue Kaltmiete (EUR) *</label>
+                  <input value={newRentCold} onChange={e => setNewRentCold(e.target.value)} type="number" step="0.01" style={input} />
+                  {newCold > 0 && oldCold > 0 && (
+                    <p style={{ fontSize: '11px', marginTop: '4px', marginBottom: 0, color: coldPct > 0 ? '#16a34a' : '#dc2626' }}>
+                      {coldPct >= 0 ? '+' : ''}{coldPct.toFixed(1)}% gegen&uuml;ber alt ({formatEur(oldCold)})
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label style={label}>Neue NK-Vorauszahlung (EUR)</label>
+                  <input value={newUtilityAdvance} onChange={e => setNewUtilityAdvance(e.target.value)} type="number" step="0.01" style={input} />
+                </div>
+
+                <div>
+                  <label style={label}>Grund der Erh&ouml;hung *</label>
+                  <select value={increaseReason} onChange={e => setIncreaseReason(e.target.value)} style={input}>
+                    <option value="vergleichsmiete">Vergleichsmietenerh&ouml;hung (&sect;558 BGB)</option>
+                    <option value="index">Indexmiete (&sect;557b BGB)</option>
+                    <option value="modernisierung">Modernisierung (&sect;559 BGB)</option>
+                    <option value="staffel">Staffelmiete (&sect;557a BGB)</option>
+                    <option value="nk_anpassung">NK-Anpassung (&sect;560 BGB)</option>
+                    <option value="other">Sonstiges</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={label}>Wirkungsdatum *</label>
+                  <input value={effectiveDate} onChange={e => setEffectiveDate(e.target.value)} type="date" style={input} />
+                </div>
+
+                <div>
+                  <label style={label}>Notizen (optional)</label>
+                  <input value={increaseNotes} onChange={e => setIncreaseNotes(e.target.value)} type="text" placeholder="z.B. Vergleichsmietenspiegel der Stadt" style={input} />
+                </div>
+              </div>
+
+              {isOverKappung && (
+                <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', padding: '12px', borderRadius: '8px', marginBottom: '16px' }}>
+                  <p style={{ fontSize: '13px', color: '#991b1b', margin: '0 0 4px', fontWeight: '500' }}>
+                    Warnung: Kappungsgrenze &sect;558 BGB &uuml;berschritten
+                  </p>
+                  <p style={{ fontSize: '12px', color: '#991b1b', margin: 0 }}>
+                    Bei Vergleichsmietenerh&ouml;hungen darf die Kaltmiete nicht um mehr als 20% in 3 Jahren steigen. Du gehst um {coldPct.toFixed(1)}% nach oben. Bitte juristisch pr&uuml;fen.
+                  </p>
+                </div>
+              )}
+
+              {pendingPaymentsCount > 0 && (
+                <div style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', padding: '12px', borderRadius: '8px', marginBottom: '16px' }}>
+                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', cursor: 'pointer' }}>
+                    <input type="checkbox" checked={updatePaymentsToo} onChange={e => setUpdatePaymentsToo(e.target.checked)} style={{ marginTop: '2px' }} />
+                    <div>
+                      <p style={{ fontSize: '13px', color: '#1e3a8a', margin: '0 0 4px', fontWeight: '500' }}>
+                        {pendingPaymentsCount} ausstehende Zahlung{pendingPaymentsCount !== 1 ? 'en' : ''} ab {new Date(effectiveDate).toLocaleDateString('de-DE')} mit aktualisieren
+                      </p>
+                      <p style={{ fontSize: '12px', color: '#1e3a8a', margin: 0 }}>
+                        Neuer Betrag: <strong>{formatEur(newTotal)}</strong> / Monat
+                      </p>
+                    </div>
+                  </label>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                <button onClick={() => setIncreaseModalId(null)} disabled={increaseLoading} style={{ backgroundColor: '#fff', color: '#666', padding: '10px 20px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '14px', cursor: 'pointer' }}>
+                  Abbrechen
+                </button>
+                <button onClick={handleSaveIncrease} disabled={increaseLoading || !newRentCold || !effectiveDate} style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', fontSize: '14px', cursor: 'pointer', opacity: increaseLoading || !newRentCold || !effectiveDate ? 0.5 : 1 }}>
+                  {increaseLoading ? 'Speichert...' : 'Mieterh&ouml;hung speichern'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </main>
   )
 }

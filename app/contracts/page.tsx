@@ -28,6 +28,7 @@ export default function Contracts() {
   const [pendingPaymentsCount, setPendingPaymentsCount] = useState(0)
   const [updatePaymentsToo, setUpdatePaymentsToo] = useState(true)
   const [increaseLoading, setIncreaseLoading] = useState(false)
+  const [rentIncreasesByContract, setRentIncreasesByContract] = useState<{[key: string]: any[]}>({})
   const [deposit, setDeposit] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
@@ -74,6 +75,20 @@ export default function Contracts() {
     }
     setPaymentCounts(counts)
     setPaidCounts(paidCountsTmp)
+    // Mieterhoehungen pro Vertrag laden
+    const contractIds = (contractsData || []).map((cc: any) => cc.id)
+    if (contractIds.length > 0) {
+      const { data: increases } = await supabase
+        .from('rent_increases').select('*')
+        .in('contract_id', contractIds)
+        .order('effective_date', { ascending: false })
+      const byContract: {[key: string]: any[]} = {}
+      ;(increases || []).forEach((inc: any) => {
+        if (!byContract[inc.contract_id]) byContract[inc.contract_id] = []
+        byContract[inc.contract_id].push(inc)
+      })
+      setRentIncreasesByContract(byContract)
+    }
   }
 
   const handleEdit = (c: any) => {
@@ -354,6 +369,11 @@ export default function Contracts() {
                       <p style={{ fontSize: '12px', color: '#16a34a', margin: 0 }}>
                         💶 {paymentCounts[c.id] || 0} Zahlungen · {paidCounts[c.id] || 0} bezahlt
                       </p>
+                      {(rentIncreasesByContract[c.id] || []).length > 0 && (
+                        <p style={{ fontSize: '11px', color: '#92400e', margin: '4px 0 0' }}>
+                          📈 {(rentIncreasesByContract[c.id] || []).length} Mieter&auml;nderung{(rentIncreasesByContract[c.id] || []).length !== 1 ? 'en' : ''}
+                        </p>
+                      )}
                     </div>
                     <div className="flex flex-wrap items-center gap-2 justify-start md:justify-end">
                       <div className="text-left md:text-right">
@@ -414,6 +434,29 @@ export default function Contracts() {
                   Kalt: <strong>{formatEur(oldCold)}</strong> &middot; NK: <strong>{formatEur(oldUtil)}</strong> &middot; Gesamt: <strong>{formatEur(oldTotal)}</strong>
                 </p>
               </div>
+
+              {(rentIncreasesByContract[increaseModalId] || []).length > 0 && (
+                <div style={{ backgroundColor: '#fafafa', border: '1px solid #e8e6e0', padding: '12px', borderRadius: '8px', marginBottom: '16px' }}>
+                  <p style={{ fontSize: '12px', color: '#666', margin: '0 0 8px', fontWeight: '500' }}>
+                    Bisherige &Auml;nderungen ({(rentIncreasesByContract[increaseModalId] || []).length})
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '120px', overflowY: 'auto' }}>
+                    {(rentIncreasesByContract[increaseModalId] || []).map((inc: any) => (
+                      <div key={inc.id} style={{ fontSize: '12px', color: '#444', display: 'flex', justifyContent: 'space-between', gap: '8px', borderBottom: '1px solid #f0ece4', paddingBottom: '6px' }}>
+                        <span>{new Date(inc.effective_date).toLocaleDateString('de-DE')}</span>
+                        <span>{formatEur(inc.old_rent_cold)} &rarr; <strong>{formatEur(inc.new_rent_cold)}</strong></span>
+                        <span style={{ color: '#888', fontSize: '11px' }}>{
+                          inc.reason === 'vergleichsmiete' ? '§558' :
+                          inc.reason === 'index' ? '§557b' :
+                          inc.reason === 'modernisierung' ? '§559' :
+                          inc.reason === 'staffel' ? '§557a' :
+                          inc.reason === 'nk_anpassung' ? '§560' : 'Sonst.'
+                        }</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="flex flex-col gap-4 mb-4">
                 <div>

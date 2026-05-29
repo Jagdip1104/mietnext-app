@@ -84,7 +84,7 @@ export default function Home() {
       <section className="bg-[#1a1a1a] px-5 py-16 md:px-12 md:py-20">
         <div style={{ maxWidth: '960px', margin: '0 auto' }}>
           <h2 style={{ fontWeight: '400', color: '#fff', marginBottom: '36px', letterSpacing: '-1px', fontSize: 'clamp(28px, 7vw, 36px)' }}>Zwei Portale, eine Plattform</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+          <div className="flex flex-col gap-4 md:grid md:grid-cols-2 md:gap-6">
             {[
               { tag: 'Vermieter-Portal', title: 'Alles unter Kontrolle', items: ['Alle Objekte & Einheiten', 'Mieter & Verträge', 'Zahlungen & Finanzen', 'Tickets & Wartung', 'Dashboard & Berichte'], color: '#4ade80' },
               { tag: 'Mieter-Portal', title: 'Eigener Zugang', items: ['Eigene Wohnungsinfos', 'Dokumente abrufen', 'Schäden melden', 'Ticket-Status verfolgen', 'Direkter Kontakt'], color: '#60a5fa' },

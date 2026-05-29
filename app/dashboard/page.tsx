@@ -221,7 +221,7 @@ export default function Dashboard() {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div className="flex flex-col gap-4 md:grid md:grid-cols-2 mb-4">
           <div style={card}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <p style={{ fontSize: '13px', fontWeight: '500', color: '#1a1a1a', margin: 0 }}>Offene Tickets</p>

@@ -210,7 +210,7 @@ export default function TenantPortal() {
         {/* Wohnung */}
         <div style={{ ...card, marginBottom: '16px' }}>
           <h2 style={{ fontSize: '13px', color: '#999', margin: '0 0 16px', textTransform: 'uppercase', letterSpacing: '1px' }}>Meine Wohnung</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="flex flex-col gap-4 md:grid md:grid-cols-2">
             <div>
               <p style={{ fontSize: '12px', color: '#bbb', margin: '0 0 4px' }}>Objekt</p>
               <p style={{ fontSize: '15px', color: '#1a1a1a', margin: 0, fontWeight: '500' }}>{unit?.properties?.name}</p>
@@ -238,7 +238,7 @@ export default function TenantPortal() {
         {contract ? (
           <div style={{ ...card, marginBottom: '16px' }}>
             <h2 style={{ fontSize: '13px', color: '#999', margin: '0 0 16px', textTransform: 'uppercase', letterSpacing: '1px' }}>Mein Mietvertrag</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-4 md:grid md:grid-cols-2">
               <div>
                 <p style={{ fontSize: '12px', color: '#bbb', margin: '0 0 4px' }}>Monatliche Miete</p>
                 <p style={{ fontSize: '22px', color: '#1a1a1a', margin: 0, fontWeight: '300', fontFamily: 'Georgia, serif' }}>{formatEur(contract.rent_amount)}</p>

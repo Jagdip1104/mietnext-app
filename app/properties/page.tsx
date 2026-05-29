@@ -445,7 +445,7 @@ export default function Properties() {
               {editingId ? 'Objekt bearbeiten' : 'Neues Objekt anlegen'}
             </h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4" style={{ marginBottom: editingId ? '20px' : '32px' }}>
+            <div className="flex flex-col gap-4 md:grid md:grid-cols-2" style={{ marginBottom: editingId ? '20px' : '32px' }}>
               <div style={{ gridColumn: 'span 2' }}>
                 <label style={label}>Name *</label>
                 <input value={name} onChange={e => setName(e.target.value)}

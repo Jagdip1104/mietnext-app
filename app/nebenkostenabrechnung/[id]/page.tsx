@@ -571,7 +571,7 @@ export default function NebenkostenabrechnungDetail() {
 
           {showAddForm && (
             <div style={{ ...card, marginBottom: '12px' }}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-[16px]">
+              <div className="flex flex-col gap-4 md:grid md:grid-cols-2 mb-[16px]">
                 <div style={{ gridColumn: 'span 2' }}>
                   <label style={lbl}>Kostenkategorie *</label>
                   <select value={newItem.category} onChange={e => handleCategoryChange(e.target.value)} style={inp}>
@@ -613,7 +613,7 @@ export default function NebenkostenabrechnungDetail() {
                   <p style={{ fontSize: '12px', color: '#999', margin: '0 0 12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     Betrag je Einheit (aus Ista/Techem-Abrechnung)
                   </p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-3 md:grid md:grid-cols-2">
                     {units.map((unit: any) => (
                       <div key={unit.id}>
                         <label style={{ fontSize: '13px', color: '#666', marginBottom: '4px', display: 'block' }}>{unit.name}</label>

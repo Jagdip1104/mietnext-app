@@ -282,7 +282,7 @@ export default function Units() {
             <h2 style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 20px', fontFamily: 'Georgia, serif' }}>
               {editingId ? 'Einheit bearbeiten' : 'Neue Einheit'}
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-[20px]">
+            <div className="flex flex-col gap-4 md:grid md:grid-cols-2 mb-[20px]">
               <div style={{ gridColumn: 'span 2' }}>
                 <label style={label}>Typ *</label>
                 <select value={type} onChange={e => setType(e.target.value)} style={input}>

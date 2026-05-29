@@ -371,7 +371,7 @@ export default function Contracts() {
                       </p>
                       {(rentIncreasesByContract[c.id] || []).length > 0 && (
                         <p style={{ fontSize: '11px', color: '#92400e', margin: '4px 0 0' }}>
-                          📈 {(rentIncreasesByContract[c.id] || []).length} Mieter&auml;nderung{(rentIncreasesByContract[c.id] || []).length !== 1 ? 'en' : ''}
+                          📈 {(rentIncreasesByContract[c.id] || []).length} Mieteränderung{(rentIncreasesByContract[c.id] || []).length !== 1 ? 'en' : ''}
                         </p>
                       )}
                     </div>
@@ -431,20 +431,20 @@ export default function Contracts() {
               <div style={{ backgroundColor: '#f5f3ed', padding: '12px', borderRadius: '8px', marginBottom: '16px' }}>
                 <p style={{ fontSize: '12px', color: '#666', margin: '0 0 6px' }}>Aktuelle Miete:</p>
                 <p style={{ fontSize: '14px', margin: 0 }}>
-                  Kalt: <strong>{formatEur(oldCold)}</strong> &middot; NK: <strong>{formatEur(oldUtil)}</strong> &middot; Gesamt: <strong>{formatEur(oldTotal)}</strong>
+                  Kalt: <strong>{formatEur(oldCold)}</strong> · NK: <strong>{formatEur(oldUtil)}</strong> · Gesamt: <strong>{formatEur(oldTotal)}</strong>
                 </p>
               </div>
 
               {(rentIncreasesByContract[increaseModalId] || []).length > 0 && (
                 <div style={{ backgroundColor: '#fafafa', border: '1px solid #e8e6e0', padding: '12px', borderRadius: '8px', marginBottom: '16px' }}>
                   <p style={{ fontSize: '12px', color: '#666', margin: '0 0 8px', fontWeight: '500' }}>
-                    Bisherige &Auml;nderungen ({(rentIncreasesByContract[increaseModalId] || []).length})
+                    Bisherige Änderungen ({(rentIncreasesByContract[increaseModalId] || []).length})
                   </p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '120px', overflowY: 'auto' }}>
                     {(rentIncreasesByContract[increaseModalId] || []).map((inc: any) => (
                       <div key={inc.id} style={{ fontSize: '12px', color: '#444', display: 'flex', justifyContent: 'space-between', gap: '8px', borderBottom: '1px solid #f0ece4', paddingBottom: '6px' }}>
                         <span>{new Date(inc.effective_date).toLocaleDateString('de-DE')}</span>
-                        <span>{formatEur(inc.old_rent_cold)} &rarr; <strong>{formatEur(inc.new_rent_cold)}</strong></span>
+                        <span>{formatEur(inc.old_rent_cold)} → <strong>{formatEur(inc.new_rent_cold)}</strong></span>
                         <span style={{ color: '#888', fontSize: '11px' }}>{
                           inc.reason === 'vergleichsmiete' ? '§558' :
                           inc.reason === 'index' ? '§557b' :
@@ -464,7 +464,7 @@ export default function Contracts() {
                   <input value={newRentCold} onChange={e => setNewRentCold(e.target.value)} type="number" step="0.01" style={input} />
                   {newCold > 0 && oldCold > 0 && (
                     <p style={{ fontSize: '11px', marginTop: '4px', marginBottom: 0, color: coldPct > 0 ? '#16a34a' : '#dc2626' }}>
-                      {coldPct >= 0 ? '+' : ''}{coldPct.toFixed(1)}% gegen&uuml;ber alt ({formatEur(oldCold)})
+                      {coldPct >= 0 ? '+' : ''}{coldPct.toFixed(1)}% gegenüber alt ({formatEur(oldCold)})
                     </p>
                   )}
                 </div>
@@ -475,13 +475,13 @@ export default function Contracts() {
                 </div>
 
                 <div>
-                  <label style={label}>Grund der Erh&ouml;hung *</label>
+                  <label style={label}>Grund der Erhöhung *</label>
                   <select value={increaseReason} onChange={e => setIncreaseReason(e.target.value)} style={input}>
-                    <option value="vergleichsmiete">Vergleichsmietenerh&ouml;hung (&sect;558 BGB)</option>
-                    <option value="index">Indexmiete (&sect;557b BGB)</option>
-                    <option value="modernisierung">Modernisierung (&sect;559 BGB)</option>
-                    <option value="staffel">Staffelmiete (&sect;557a BGB)</option>
-                    <option value="nk_anpassung">NK-Anpassung (&sect;560 BGB)</option>
+                    <option value="vergleichsmiete">Vergleichsmietenerhöhung (§558 BGB)</option>
+                    <option value="index">Indexmiete (§557b BGB)</option>
+                    <option value="modernisierung">Modernisierung (§559 BGB)</option>
+                    <option value="staffel">Staffelmiete (§557a BGB)</option>
+                    <option value="nk_anpassung">NK-Anpassung (§560 BGB)</option>
                     <option value="other">Sonstiges</option>
                   </select>
                 </div>
@@ -500,10 +500,10 @@ export default function Contracts() {
               {isOverKappung && (
                 <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', padding: '12px', borderRadius: '8px', marginBottom: '16px' }}>
                   <p style={{ fontSize: '13px', color: '#991b1b', margin: '0 0 4px', fontWeight: '500' }}>
-                    Warnung: Kappungsgrenze &sect;558 BGB &uuml;berschritten
+                    Warnung: Kappungsgrenze §558 BGB überschritten
                   </p>
                   <p style={{ fontSize: '12px', color: '#991b1b', margin: 0 }}>
-                    Bei Vergleichsmietenerh&ouml;hungen darf die Kaltmiete nicht um mehr als 20% in 3 Jahren steigen. Du gehst um {coldPct.toFixed(1)}% nach oben. Bitte juristisch pr&uuml;fen.
+                    Bei Vergleichsmietenerhöhungen darf die Kaltmiete nicht um mehr als 20% in 3 Jahren steigen. Du gehst um {coldPct.toFixed(1)}% nach oben. Bitte juristisch prüfen.
                   </p>
                 </div>
               )}
@@ -529,7 +529,7 @@ export default function Contracts() {
                   Abbrechen
                 </button>
                 <button onClick={handleSaveIncrease} disabled={increaseLoading || !newRentCold || !effectiveDate} style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', fontSize: '14px', cursor: 'pointer', opacity: increaseLoading || !newRentCold || !effectiveDate ? 0.5 : 1 }}>
-                  {increaseLoading ? 'Speichert...' : 'Mieterh&ouml;hung speichern'}
+                  {increaseLoading ? 'Speichert...' : 'Mieterhöhung speichern'}
                 </button>
               </div>
             </div>

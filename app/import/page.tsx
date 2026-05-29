@@ -293,10 +293,9 @@ export default function Import() {
         size_sqm: row.sizeSqm, rooms: row.rooms,
         type: normalizeUnitType(row.type), usage_type: normalizeUsageType(row.usageType),
         parking_type: row.parkingType || null,
-        vat_applicable: normalizeUnitType(row.type) === 'gewerbe',
-        vat_rate: normalizeUnitType(row.type) === 'gewerbe' ? 19 : 0,
         rent_amount: row.rentAmount, utilities_amount: row.utilities,
-        vat_applicable: row.vatApplicable, vat_rate: row.vatRate,
+        vat_applicable: row.vatApplicable ?? (normalizeUnitType(row.type) === 'gewerbe'),
+        vat_rate: row.vatRate ?? (normalizeUnitType(row.type) === 'gewerbe' ? 19 : 0),
         notes: row.notes || null, is_occupied: !!row.tenantName
       }))
 

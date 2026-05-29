@@ -16,7 +16,8 @@ export default function Contracts() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [selectedTenant, setSelectedTenant] = useState('')
   const [selectedUnit, setSelectedUnit] = useState('')
-  const [rentAmount, setRentAmount] = useState('')
+  const [rentCold, setRentCold] = useState('')
+  const [utilityAdvance, setUtilityAdvance] = useState('')
   const [deposit, setDeposit] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
@@ -67,31 +68,33 @@ export default function Contracts() {
 
   const handleEdit = (c: any) => {
     setEditingId(c.id); setSelectedTenant(c.tenant_id); setSelectedUnit(c.unit_id)
-    setRentAmount(c.rent_amount?.toString() || ''); setDeposit(c.deposit?.toString() || '')
+    setRentCold(c.rent_cold?.toString() || ''); setUtilityAdvance(c.utility_advance?.toString() || '0'); setDeposit(c.deposit?.toString() || '')
     setStartDate(c.start_date || ''); setEndDate(c.end_date || '')
     setShowForm(true)
   }
 
   const handleCancel = () => {
     setShowForm(false); setEditingId(null)
-    setSelectedTenant(''); setSelectedUnit(''); setRentAmount('')
+    setSelectedTenant(''); setSelectedUnit(''); setRentCold(''); setUtilityAdvance('')
     setDeposit(''); setStartDate(''); setEndDate('')
   }
 
   const handleUnitChange = (unitId: string) => {
     setSelectedUnit(unitId)
     const unit = units.find(u => u.id === unitId)
-    if (unit?.total_rent && !editingId) {
-      setRentAmount(parseFloat(unit.total_rent).toFixed(2))
+    if (unit && !editingId) {
+      if (unit.rent_amount) setRentCold(parseFloat(unit.rent_amount).toFixed(2))
+      if (unit.utilities_amount) setUtilityAdvance(parseFloat(unit.utilities_amount).toFixed(2))
     }
   }
 
   const handleSave = async () => {
-    if (!selectedTenant || !selectedUnit || !rentAmount || !startDate) return
+    if (!selectedTenant || !selectedUnit || !rentCold || !startDate) return
     setLoading(true)
     const data = {
       tenant_id: selectedTenant, unit_id: selectedUnit,
-      rent_amount: parseFloat(rentAmount),
+      rent_cold: parseFloat(rentCold),
+      utility_advance: parseFloat(utilityAdvance || '0'),
       deposit: deposit ? parseFloat(deposit) : null,
       start_date: startDate, end_date: endDate || null, is_active: true
     }
@@ -101,7 +104,7 @@ export default function Contracts() {
       const { data: newContract } = await supabase.from('contracts').insert(data).select().single()
       if (newContract) {
         const { error } = await generatePaymentsForContract(
-          newContract.id, startDate, parseFloat(rentAmount), 12, 0
+          newContract.id, startDate, parseFloat(rentCold) + parseFloat(utilityAdvance || '0'), 12, 0
         )
         if (error) {
           alert('Vertrag erstellt, aber Zahlungen konnten nicht generiert werden: ' + error.message)
@@ -213,8 +216,17 @@ export default function Contracts() {
                 </select>
               </div>
               <div>
-                <label style={label}>Monatliche Gesamtmiete (€) *</label>
-                <input value={rentAmount} onChange={e => setRentAmount(e.target.value)} placeholder="z.B. 950" type="number" step="0.01" style={input} />
+                <label style={label}>Kaltmiete (€) *</label>
+                <input value={rentCold} onChange={e => setRentCold(e.target.value)} placeholder="z.B. 800" type="number" step="0.01" style={input} />
+              </div>
+              <div>
+                <label style={label}>NK-Vorauszahlung (€)</label>
+                <input value={utilityAdvance} onChange={e => setUtilityAdvance(e.target.value)} placeholder="z.B. 150" type="number" step="0.01" style={input} />
+                {(rentCold || utilityAdvance) && (
+                  <p style={{ fontSize: '12px', color: '#16a34a', marginTop: '6px', marginBottom: 0 }}>
+                    Gesamt: {(parseFloat(rentCold || '0') + parseFloat(utilityAdvance || '0')).toFixed(2)} € / Monat
+                  </p>
+                )}
               </div>
               <div>
                 <label style={label}>Kaution (€)</label>
@@ -235,7 +247,7 @@ export default function Contracts() {
               </div>
             )}
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={handleSave} disabled={loading || !selectedTenant || !selectedUnit || !rentAmount || !startDate}
+              <button onClick={handleSave} disabled={loading || !selectedTenant || !selectedUnit || !rentCold || !startDate}
                 style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer', opacity: loading ? 0.4 : 1 }}>
                 {loading ? 'Speichern...' : editingId ? 'Änderungen speichern' : 'Speichern & Zahlungen erstellen'}
               </button>

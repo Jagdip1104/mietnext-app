@@ -65,6 +65,7 @@ export default function NebenkostenabrechnungDetail() {
   const [deleteConfirm, setDeleteConfirm]     = useState<string | null>(null)
   const [saving, setSaving]                   = useState(false)
   const [pdfLoading, setPdfLoading]           = useState(false)
+  const [profile, setProfile]                 = useState<any>(null)
   const [manualPrepayments, setManualPrepayments] = useState<Record<string, number | null>>({})
   const [editingPrepayment, setEditingPrepayment] = useState<string | null>(null)
   const [editPrepaymentValue, setEditPrepaymentValue] = useState('')
@@ -136,6 +137,11 @@ export default function NebenkostenabrechnungDetail() {
       .from('utility_cost_items').select('*, expenses(amount, expense_date, invoice_number)')
       .eq('statement_id', id).order('created_at')
     setCostItems(itemsData || [])
+
+    if (stmt.owner_id) {
+      const { data: prof } = await supabase.from('profiles').select('*').eq('id', stmt.owner_id).single()
+      setProfile(prof)
+    }
   }
 
   const handleCategoryChange = (category: string) => {
@@ -503,6 +509,11 @@ export default function NebenkostenabrechnungDetail() {
         doc.setTextColor(100, 100, 100)
         doc.text(`${prop?.address}, ${prop?.city}`, 20, 69)
         doc.text(`Einheit: ${unit.name}${unit.size_sqm ? ` · ${unit.size_sqm} m²` : ''}`, 115, 69)
+        if (profile?.landlord_name) {
+          doc.setFontSize(7.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(150, 150, 150)
+          const vad = [profile.landlord_name, profile.landlord_street, [profile.landlord_zip, profile.landlord_city].filter(Boolean).join(' ')].filter(Boolean).join(', ')
+          doc.text('Vermieter: ' + vad, 20, 74)
+        }
 
         let y = 83
         doc.setFillColor(245, 244, 241)
@@ -589,6 +600,59 @@ export default function NebenkostenabrechnungDetail() {
             : 'Der Guthabenbetrag wird mit der nächsten Mietzahlung verrechnet oder auf Wunsch überwiesen.',
           22, y
         )
+        if (isNach && profile?.landlord_iban) {
+          y += 4.5
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(120, 120, 120)
+          doc.text(`Bankverbindung: ${profile.landlord_iban}${profile.landlord_bic ? '  BIC ' + profile.landlord_bic : ''}${profile.landlord_bank ? '  ' + profile.landlord_bank : ''}`, 22, y)
+        }
+        y += 6
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(140, 140, 140)
+        doc.text('Hinweis: Einwendungen gegen diese Abrechnung sind innerhalb von 12 Monaten nach Zugang mitzuteilen (§ 556 Abs. 3 BGB).', 22, y)
+
+        // ── Tortendiagramm: Kostenverteilung dieser Einheit ──
+        const pieSegs = categoryGroups
+          .map((grp: any) => ({ category: grp.category, share: grp.items.reduce((s: number, it: any) => s + getUnitShare(it, unit), 0) }))
+          .filter((seg: any) => seg.share > 0)
+          .sort((a: any, b: any) => b.share - a.share)
+        if (pieSegs.length > 0 && allocated > 0 && y < 235) {
+          y += 10
+          const cx = 42, cy = y + 16, rad = 15
+          const PIE = [[37,99,235],[16,185,129],[245,158,11],[239,68,68],[139,92,246],[6,182,212],[236,72,153],[132,204,22],[249,115,22],[100,116,139]]
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(26, 26, 26)
+          doc.text('Ihre Kostenverteilung', 22, y + 2)
+          let a0 = -Math.PI / 2
+          pieSegs.forEach((seg: any, idx: number) => {
+            const frac = seg.share / allocated
+            const a1 = a0 + frac * Math.PI * 2
+            const col = PIE[idx % PIE.length]
+            doc.setFillColor(col[0], col[1], col[2])
+            const pts: number[][] = [[cx, cy]]
+            const steps = Math.max(2, Math.ceil(frac * 48))
+            for (let s = 0; s <= steps; s++) {
+              const t = a0 + (a1 - a0) * (s / steps)
+              pts.push([cx + rad * Math.cos(t), cy + rad * Math.sin(t)])
+            }
+            const deltas: number[][] = []
+            for (let i = 1; i < pts.length; i++) deltas.push([pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]])
+            doc.lines(deltas, pts[0][0], pts[0][1], [1, 1], 'F', true)
+            a0 = a1
+          })
+          let ly = cy - rad + 2
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5)
+          pieSegs.forEach((seg: any, idx: number) => {
+            const col = PIE[idx % PIE.length]
+            doc.setFillColor(col[0], col[1], col[2])
+            doc.rect(70, ly - 2.6, 3, 3, 'F')
+            doc.setTextColor(80, 80, 80)
+            const pct = Math.round(seg.share / allocated * 100)
+            let lab = getCatLabel(seg.category)
+            const dash = lab.indexOf('– ')
+            if (dash >= 0) lab = lab.slice(dash + 2)
+            if (lab.length > 30) lab = lab.slice(0, 27) + '…'
+            doc.text(`${lab}  ${pct}%  (${formatEur(seg.share)})`, 75, ly)
+            ly += 4.8
+          })
+        }
 
         doc.setDrawColor(220, 218, 214)
         doc.setLineWidth(0.3)

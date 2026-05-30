@@ -8,6 +8,14 @@ import Nav from '@/components/Nav'
 export default function Profile() {
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
+  const [llName, setLlName] = useState('')
+  const [llStreet, setLlStreet] = useState('')
+  const [llZip, setLlZip] = useState('')
+  const [llCity, setLlCity] = useState('')
+  const [llIban, setLlIban] = useState('')
+  const [llBic, setLlBic] = useState('')
+  const [llBank, setLlBank] = useState('')
+  const [loadingLl, setLoadingLl] = useState(false)
   const [email, setEmail] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
@@ -23,7 +31,12 @@ export default function Profile() {
       if (!session) { router.push('/login'); return }
       setEmail(session.user.email || '')
       const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single()
-      if (data) { setFullName(data.full_name || ''); setPhone(data.phone || '') }
+      if (data) {
+        setFullName(data.full_name || ''); setPhone(data.phone || '')
+        setLlName(data.landlord_name || ''); setLlStreet(data.landlord_street || '')
+        setLlZip(data.landlord_zip || ''); setLlCity(data.landlord_city || '')
+        setLlIban(data.landlord_iban || ''); setLlBic(data.landlord_bic || ''); setLlBank(data.landlord_bank || '')
+      }
     }
     load()
   }, [])
@@ -33,6 +46,22 @@ export default function Profile() {
     const { data: { session } } = await supabase.auth.getSession()
     await supabase.from('profiles').upsert({ id: session?.user.id, full_name: fullName, phone, email })
     setLoading(false); setSuccess('Profil erfolgreich gespeichert!')
+    setTimeout(() => setSuccess(''), 3000)
+  }
+
+  const handleSaveLandlord = async () => {
+    setLoadingLl(true); setSuccess(''); setError('')
+    const { data: { session } } = await supabase.auth.getSession()
+    const { error } = await supabase.from('profiles').upsert({
+      id: session?.user.id,
+      landlord_name: llName || null, landlord_street: llStreet || null,
+      landlord_zip: llZip || null, landlord_city: llCity || null,
+      landlord_iban: llIban ? llIban.replace(/\s+/g, '').toUpperCase() : null,
+      landlord_bic: llBic || null, landlord_bank: llBank || null,
+    })
+    setLoadingLl(false)
+    if (error) { setError(error.message); return }
+    setSuccess('Vermieter-Stammdaten gespeichert!')
     setTimeout(() => setSuccess(''), 3000)
   }
 
@@ -104,6 +133,57 @@ export default function Profile() {
             borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer', opacity: loading ? 0.4 : 1,
           }}>
             {loading ? 'Speichern...' : 'Änderungen speichern'}
+          </button>
+        </div>
+
+        {/* Vermieter-Stammdaten */}
+        <div style={{ ...card, marginBottom: '16px' }}>
+          <h2 style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 6px', fontFamily: 'Georgia, serif' }}>
+            Vermieter-Stammdaten für Abrechnungen
+          </h2>
+          <p style={{ fontSize: '13px', color: '#999', margin: '0 0 20px' }}>
+            Erscheinen auf Nebenkostenabrechnungen (Anschrift + Bankverbindung für Nachzahlungen).
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '20px' }}>
+            <div>
+              <label style={label}>Name / Firma (Vermieter)</label>
+              <input value={llName} onChange={e => setLlName(e.target.value)} placeholder="z.B. Jagdip Singh oder MietNext GmbH" style={input} />
+            </div>
+            <div>
+              <label style={label}>Straße & Hausnummer</label>
+              <input value={llStreet} onChange={e => setLlStreet(e.target.value)} placeholder="Musterstraße 12" style={input} />
+            </div>
+            <div className="flex flex-col md:grid md:grid-cols-[140px_1fr] md:gap-4 gap-4">
+              <div>
+                <label style={label}>PLZ</label>
+                <input value={llZip} onChange={e => setLlZip(e.target.value)} placeholder="49134" style={input} />
+              </div>
+              <div>
+                <label style={label}>Ort</label>
+                <input value={llCity} onChange={e => setLlCity(e.target.value)} placeholder="Wallenhorst" style={input} />
+              </div>
+            </div>
+            <div>
+              <label style={label}>IBAN</label>
+              <input value={llIban} onChange={e => setLlIban(e.target.value)} placeholder="DE00 0000 0000 0000 0000 00" style={input} />
+              <p style={{ fontSize: '12px', color: '#bbb', margin: '6px 0 0' }}>Für Nachzahlungen auf der Abrechnung. Wird nur dir angezeigt.</p>
+            </div>
+            <div className="flex flex-col md:grid md:grid-cols-2 md:gap-4 gap-4">
+              <div>
+                <label style={label}>BIC (optional)</label>
+                <input value={llBic} onChange={e => setLlBic(e.target.value)} placeholder="GENODEF1XXX" style={input} />
+              </div>
+              <div>
+                <label style={label}>Bank (optional)</label>
+                <input value={llBank} onChange={e => setLlBank(e.target.value)} placeholder="Volksbank ..." style={input} />
+              </div>
+            </div>
+          </div>
+          <button onClick={handleSaveLandlord} disabled={loadingLl} style={{
+            backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 20px',
+            borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer', opacity: loadingLl ? 0.4 : 1,
+          }}>
+            {loadingLl ? 'Speichern...' : 'Stammdaten speichern'}
           </button>
         </div>
 

@@ -68,9 +68,9 @@ textarea{resize:vertical;min-height:66px;line-height:1.5}
 @keyframes sp{to{transform:rotate(360deg)}}
 .lmsg{font-size:12px;color:var(--color-text-secondary);max-width:280px;line-height:1.5}
 #cv{background:var(--color-background-tertiary)}
-.cdoc{max-width:800px;margin:28px auto;padding:0 16px 64px}
-.ccard{background:var(--color-background-primary);border:.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden}
-.chdr{background:#1B4FD8;padding:28px 36px 24px;color:#fff;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+.cdoc{max-width:800px;margin:20px auto;padding:0 16px 32px}
+.ccard{background:var(--color-background-primary);border:.5px solid var(--color-border-tertiary);border-radius:12px}
+.chdr{background:#1B4FD8;padding:22px 36px 20px;color:#fff;print-color-adjust:exact;-webkit-print-color-adjust:exact;border-radius:12px 12px 0 0}
 .chdr-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px}
 .clname{font-size:16px;font-weight:600}
 .clsub{font-size:11px;opacity:.7;margin-top:1px}
@@ -111,9 +111,13 @@ textarea{resize:vertical;min-height:66px;line-height:1.5}
   body{background:#fff}
   .cdoc{margin:0;padding:0;max-width:100%}
   .ccard{border:none;border-radius:0}
-  .csec{page-break-inside:avoid}
+  .csec{page-break-inside:avoid;break-inside:avoid}
+  .cpg{page-break-inside:avoid;break-inside:avoid}
+  .csig{page-break-inside:avoid;break-inside:avoid}
+  .anl{page-break-inside:avoid;break-inside:avoid}
   .chdr,.cnum{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
+.csec,.cpg,.csig,.anl{page-break-inside:avoid;break-inside:avoid}
 </style>
 </head>
 <body>
@@ -549,14 +553,34 @@ function downloadPDF(){
   const btn=document.getElementById('pdfbtn');
   btn.textContent='⏳ PDF wird erstellt …';btn.disabled=true;
   const vn=(el.querySelector('.cftr div:nth-child(2)')?.textContent||'MietNext-Mietvertrag').trim();
+  
+  // Clone das Element für PDF-Rendering (verhindert Layout-Issues im iframe)
+  const clone=el.cloneNode(true);
+  clone.style.width='760px';
+  clone.style.maxWidth='760px';
+  clone.style.margin='0';
+  clone.style.padding='0';
+  
   html2pdf().set({
-    margin:[12,14,12,14],
+    margin:[10,10,10,10],
     filename:vn+'.pdf',
-    image:{type:'jpeg',quality:0.98},
-    html2canvas:{scale:2,useCORS:true,logging:false,backgroundColor:'#ffffff'},
-    jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}
-  }).from(el).save().then(()=>{
+    image:{type:'jpeg',quality:0.95},
+    html2canvas:{
+      scale:2,
+      useCORS:true,
+      logging:false,
+      backgroundColor:'#ffffff',
+      windowWidth:800,
+      letterRendering:true
+    },
+    jsPDF:{unit:'mm',format:'a4',orientation:'portrait',compress:true},
+    pagebreak:{mode:['css','legacy'],avoid:['.csec','.csig','.anl','.cpg']}
+  }).from(clone).save().then(()=>{
     btn.textContent='⬇ PDF herunterladen';btn.disabled=false;
+  }).catch(err=>{
+    console.error(err);
+    btn.textContent='⬇ PDF herunterladen';btn.disabled=false;
+    alert('PDF-Erstellung fehlgeschlagen: '+err.message);
   });
 }
 

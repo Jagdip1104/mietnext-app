@@ -68,6 +68,9 @@ export default function NebenkostenabrechnungDetail() {
   const [manualPrepayments, setManualPrepayments] = useState<Record<string, number | null>>({})
   const [editingPrepayment, setEditingPrepayment] = useState<string | null>(null)
   const [editPrepaymentValue, setEditPrepaymentValue] = useState('')
+  const [editingPeriod, setEditingPeriod]     = useState(false)
+  const [periodStartEdit, setPeriodStartEdit] = useState('')
+  const [periodEndEdit, setPeriodEndEdit]     = useState('')
   const [newItem, setNewItem] = useState({
     category: '', description: '', total_amount: '',
     distribution_key: 'sqm', unit_amounts: {} as Record<string, string>,
@@ -78,8 +81,23 @@ export default function NebenkostenabrechnungDetail() {
   const [availableExpenses, setAvailableExpenses] = useState<any[]>([])
   const [selectedExpenseIds, setSelectedExpenseIds] = useState<Set<string>>(new Set())
   const [importing, setImporting] = useState(false)
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
 
   useEffect(() => { if (id) loadData() }, [id])
+
+  // Abrechnungszeitraum (ISO) - period_start/end falls gesetzt, sonst Kalenderjahr
+  const periodStart = statement?.period_start || (statement ? `${statement.year}-01-01` : null)
+  const periodEnd   = statement?.period_end   || (statement ? `${statement.year}-12-31` : null)
+
+  const savePeriod = async () => {
+    if (!periodStartEdit || !periodEndEdit) return
+    if (periodStartEdit > periodEndEdit) { alert('Startdatum muss vor dem Enddatum liegen.'); return }
+    const { error } = await supabase.from('utility_statements')
+      .update({ period_start: periodStartEdit, period_end: periodEndEdit }).eq('id', id)
+    if (error) { alert('Fehler: ' + error.message); return }
+    setEditingPeriod(false)
+    loadData()
+  }
 
   const loadData = async () => {
     const { data: stmt } = await supabase
@@ -158,8 +176,8 @@ export default function NebenkostenabrechnungDetail() {
       .select('*')
       .eq('property_id', statement.property_id)
       .eq('umlagefaehig', true)
-      .gte('expense_date', `${statement.year}-01-01`)
-      .lte('expense_date', `${statement.year}-12-31`)
+      .gte('expense_date', periodStart)
+      .lte('expense_date', periodEnd)
       .order('expense_date', { ascending: false })
     const filtered = (data || []).filter((e: any) => !importedIds.has(e.id))
     setAvailableExpenses(filtered)
@@ -282,15 +300,15 @@ export default function NebenkostenabrechnungDetail() {
         ? Number(contract.utility_advance)
         : Number(unit.utilities_amount || 0)
     if (monthlyAdvance <= 0) return 0
-    const year      = statement.year
-    const yearStart = new Date(`${year}-01-01`)
-    const yearEnd   = new Date(`${year}-12-31`)
+    const yearStart = periodStart ? new Date(periodStart) : new Date(`${statement.year}-01-01`)
+    const yearEnd   = periodEnd   ? new Date(periodEnd)   : new Date(`${statement.year}-12-31`)
     const start     = new Date(contract.start_date)
     const end       = contract.end_date ? new Date(contract.end_date) : yearEnd
     const effStart  = start > yearStart ? start : yearStart
     const effEnd    = end   < yearEnd   ? end   : yearEnd
     if (effStart > effEnd) return 0
-    const months = Math.min(Math.round((effEnd.getTime() - effStart.getTime()) / (1000 * 60 * 60 * 24 * 30.44)) + 1, 12)
+    const periodMonths = Math.round((yearEnd.getTime() - yearStart.getTime()) / (1000 * 60 * 60 * 24 * 30.44)) + 1
+    const months = Math.min(Math.round((effEnd.getTime() - effStart.getTime()) / (1000 * 60 * 60 * 24 * 30.44)) + 1, periodMonths)
     return monthlyAdvance * months
   }
 
@@ -306,6 +324,20 @@ export default function NebenkostenabrechnungDetail() {
 
   const getTotalAllocated = (unit: any) =>
     costItems.reduce((s: number, item: any) => s + getUnitShare(item, unit), 0)
+
+  // Gruppiert Kostenpositionen nach BetrKV-Kategorie (Reihenfolge stabil, Summe je Kategorie)
+  const categoryGroups = (() => {
+    const map = new Map<string, any>()
+    for (const item of costItems) {
+      const key = item.category
+      if (!map.has(key)) map.set(key, { category: key, items: [], total_amount: 0, keys: new Set<string>() })
+      const g = map.get(key)
+      g.items.push(item)
+      g.total_amount += Number(item.total_amount)
+      g.keys.add(item.distribution_key)
+    }
+    return Array.from(map.values())
+  })()
 
   const totalCosts       = costItems.reduce((s: number, i: any) => s + Number(i.total_amount), 0)
   const totalPrepayments = units.reduce((s: number, u: any) => s + getPrepayments(u), 0)
@@ -358,7 +390,9 @@ export default function NebenkostenabrechnungDetail() {
         doc.setFontSize(10)
         doc.setFont('helvetica', 'normal')
         doc.setTextColor(120, 120, 120)
-        doc.text(`Abrechnungszeitraum: 01.01.${statement.year} – 31.12.${statement.year}`, 105, 43, { align: 'center' })
+        const pStart = periodStart ? new Date(periodStart).toLocaleDateString('de-DE') : `01.01.${statement.year}`
+        const pEnd   = periodEnd   ? new Date(periodEnd).toLocaleDateString('de-DE')   : `31.12.${statement.year}`
+        doc.text(`Abrechnungszeitraum: ${pStart} - ${pEnd}`, 105, 43, { align: 'center' })
         doc.setDrawColor(220, 218, 214)
         doc.setLineWidth(0.4)
         doc.line(20, 48, 190, 48)
@@ -390,18 +424,32 @@ export default function NebenkostenabrechnungDetail() {
         doc.text('Ihr Anteil', 190, y, { align: 'right' })
         y += 5
 
-        costItems.forEach((item: any) => {
-          const share = getUnitShare(item, unit)
+        categoryGroups.forEach((grp: any) => {
+          const grpShare = grp.items.reduce((s: number, it: any) => s + getUnitShare(it, unit), 0)
           doc.setFont('helvetica', 'normal')
           doc.setFontSize(9)
           doc.setTextColor(30, 30, 30)
-          const label = getCatLabel(item.category)
+          const label = getCatLabel(grp.category)
           doc.text(label.length > 55 ? label.slice(0, 52) + '…' : label, 22, y)
           doc.setTextColor(120, 120, 120)
-          doc.text(formatEur(Number(item.total_amount)), 130, y, { align: 'right' })
+          doc.text(formatEur(grp.total_amount), 130, y, { align: 'right' })
           doc.setTextColor(30, 30, 30)
-          doc.text(formatEur(share), 190, y, { align: 'right' })
+          doc.text(formatEur(grpShare), 190, y, { align: 'right' })
           y += 7
+          if (grp.items.length > 1) {
+            doc.setFontSize(7.5)
+            doc.setTextColor(150, 150, 150)
+            grp.items.forEach((it: any) => {
+              const dateStr = it.expenses?.expense_date ? new Date(it.expenses.expense_date).toLocaleDateString('de-DE') : ''
+              const sub = (it.description || dateStr || 'Einzelbetrag').toString()
+              doc.text(`- ${sub.length > 48 ? sub.slice(0, 45) + '…' : sub}`, 26, y)
+              doc.text(formatEur(Number(it.total_amount)), 130, y, { align: 'right' })
+              y += 4.5
+            })
+            doc.setFontSize(9)
+            doc.setTextColor(30, 30, 30)
+            y += 1
+          }
           doc.setDrawColor(240, 238, 234)
           doc.setLineWidth(0.2)
           doc.line(20, y - 3, 190, y - 3)
@@ -501,8 +549,30 @@ export default function NebenkostenabrechnungDetail() {
               {statement.properties?.name} · {statement.year}
             </h1>
             <p style={{ fontSize: '14px', color: '#999', margin: 0 }}>
-              {statement.properties?.address}, {statement.properties?.city} · 01.01.{statement.year} – 31.12.{statement.year}
+              {statement.properties?.address}, {statement.properties?.city}
             </p>
+            {editingPeriod ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px', flexWrap: 'wrap' }}>
+                <input type="date" value={periodStartEdit} onChange={e => setPeriodStartEdit(e.target.value)}
+                  style={{ border: '1px solid #e8e6e0', borderRadius: '6px', padding: '4px 8px', fontSize: '13px' }} />
+                <span style={{ color: '#999' }}>–</span>
+                <input type="date" value={periodEndEdit} onChange={e => setPeriodEndEdit(e.target.value)}
+                  style={{ border: '1px solid #e8e6e0', borderRadius: '6px', padding: '4px 8px', fontSize: '13px' }} />
+                <button onClick={savePeriod}
+                  style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '4px 10px', borderRadius: '6px', border: 'none', fontSize: '12px', cursor: 'pointer' }}>✓ Speichern</button>
+                <button onClick={() => setEditingPeriod(false)}
+                  style={{ backgroundColor: '#fff', color: '#666', padding: '4px 10px', borderRadius: '6px', border: '1px solid #e8e6e0', fontSize: '12px', cursor: 'pointer' }}>Abbrechen</button>
+              </div>
+            ) : (
+              <p style={{ fontSize: '13px', color: '#999', margin: '4px 0 0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                Abrechnungszeitraum: {periodStart ? new Date(periodStart).toLocaleDateString('de-DE') : ''} – {periodEnd ? new Date(periodEnd).toLocaleDateString('de-DE') : ''}
+                {statement.status === 'draft' && (
+                  <button onClick={() => { setEditingPeriod(true); setPeriodStartEdit(periodStart || ''); setPeriodEndEdit(periodEnd || '') }}
+                    title="Zeitraum aendern"
+                    style={{ background: 'none', border: 'none', color: '#bbb', fontSize: '13px', cursor: 'pointer', padding: 0 }}>✏️</button>
+                )}
+              </p>
+            )}
           </div>
           <span style={{
             fontSize: '11px', padding: '6px 14px', borderRadius: '20px', fontWeight: '500',
@@ -657,44 +727,103 @@ export default function NebenkostenabrechnungDetail() {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {costItems.map((item: any) => (
-                <div key={item.id} style={{ ...card, padding: '16px 24px' }}>
-                  {deleteConfirm === item.id ? (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <p style={{ fontSize: '14px', color: '#dc2626', margin: 0 }}>Position wirklich löschen?</p>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <button onClick={() => handleDeleteItem(item.id)}
-                          style={{ backgroundColor: '#dc2626', color: '#fff', padding: '6px 14px', borderRadius: '6px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>
-                          Ja, löschen
-                        </button>
-                        <button onClick={() => setDeleteConfirm(null)}
-                          style={{ backgroundColor: '#fff', color: '#666', padding: '6px 14px', borderRadius: '6px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer' }}>
-                          Abbrechen
-                        </button>
-                      </div>
+              {categoryGroups.map((grp: any) => {
+                const isMulti = grp.items.length > 1
+
+                if (!isMulti) {
+                  const item = grp.items[0]
+                  return (
+                    <div key={grp.category} style={{ ...card, padding: '16px 24px' }}>
+                      {deleteConfirm === item.id ? (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <p style={{ fontSize: '14px', color: '#dc2626', margin: 0 }}>Position wirklich löschen?</p>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button onClick={() => handleDeleteItem(item.id)}
+                              style={{ backgroundColor: '#dc2626', color: '#fff', padding: '6px 14px', borderRadius: '6px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>
+                              Ja, löschen
+                            </button>
+                            <button onClick={() => setDeleteConfirm(null)}
+                              style={{ backgroundColor: '#fff', color: '#666', padding: '6px 14px', borderRadius: '6px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer' }}>
+                              Abbrechen
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div>
+                            <p style={{ fontSize: '14px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 2px' }}>
+                              {getCatLabel(item.category)}
+                              {item.description && <span style={{ color: '#999', fontWeight: '400' }}> · {item.description}</span>}
+                            </p>
+                            <p style={{ fontSize: '12px', color: '#bbb', margin: 0 }}>{getKeyLabel(item.distribution_key)}</p>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                            <p style={{ fontSize: '16px', fontWeight: '500', color: '#1a1a1a', margin: 0, fontFamily: 'Georgia, serif' }}>
+                              {formatEur(Number(item.total_amount))}
+                            </p>
+                            <button onClick={() => setDeleteConfirm(item.id)}
+                              style={{ backgroundColor: '#fff', color: '#dc2626', padding: '6px 12px', borderRadius: '6px', border: '1px solid #fecaca', fontSize: '12px', cursor: 'pointer' }}>
+                              Löschen
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  ) : (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  )
+                }
+
+                const open = expandedGroups.has(grp.category)
+                const keyLabel = grp.keys.size === 1 ? getKeyLabel(Array.from(grp.keys)[0]) : 'gemischte Umlageschlüssel'
+                return (
+                  <div key={grp.category} style={{ ...card, padding: '16px 24px' }}>
+                    <div onClick={() => setExpandedGroups(prev => { const n = new Set(prev); n.has(grp.category) ? n.delete(grp.category) : n.add(grp.category); return n })}
+                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                       <div>
                         <p style={{ fontSize: '14px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 2px' }}>
-                          {getCatLabel(item.category)}
-                          {item.description && <span style={{ color: '#999', fontWeight: '400' }}> · {item.description}</span>}
+                          <span style={{ color: '#bbb', marginRight: '6px' }}>{open ? '▾' : '▸'}</span>
+                          {getCatLabel(grp.category)}
+                          <span style={{ color: '#999', fontWeight: '400' }}> · {grp.items.length} Belege</span>
                         </p>
-                        <p style={{ fontSize: '12px', color: '#bbb', margin: 0 }}>{getKeyLabel(item.distribution_key)}</p>
+                        <p style={{ fontSize: '12px', color: '#bbb', margin: 0 }}>{keyLabel}</p>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        <p style={{ fontSize: '16px', fontWeight: '500', color: '#1a1a1a', margin: 0, fontFamily: 'Georgia, serif' }}>
-                          {formatEur(Number(item.total_amount))}
-                        </p>
-                        <button onClick={() => setDeleteConfirm(item.id)}
-                          style={{ backgroundColor: '#fff', color: '#dc2626', padding: '6px 12px', borderRadius: '6px', border: '1px solid #fecaca', fontSize: '12px', cursor: 'pointer' }}>
-                          Löschen
-                        </button>
-                      </div>
+                      <p style={{ fontSize: '16px', fontWeight: '500', color: '#1a1a1a', margin: 0, fontFamily: 'Georgia, serif' }}>
+                        {formatEur(grp.total_amount)}
+                      </p>
                     </div>
-                  )}
-                </div>
-              ))}
+
+                    {open && (
+                      <div style={{ marginTop: '12px', borderTop: '1px solid #f5f4ef', paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {grp.items.map((item: any) => (
+                          <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            {deleteConfirm === item.id ? (
+                              <>
+                                <p style={{ fontSize: '13px', color: '#dc2626', margin: 0 }}>Beleg löschen?</p>
+                                <div style={{ display: 'flex', gap: '6px' }}>
+                                  <button onClick={() => handleDeleteItem(item.id)}
+                                    style={{ backgroundColor: '#dc2626', color: '#fff', padding: '4px 10px', borderRadius: '6px', border: 'none', fontSize: '12px', cursor: 'pointer' }}>Ja</button>
+                                  <button onClick={() => setDeleteConfirm(null)}
+                                    style={{ backgroundColor: '#fff', color: '#666', padding: '4px 10px', borderRadius: '6px', border: '1px solid #e8e6e0', fontSize: '12px', cursor: 'pointer' }}>Abbrechen</button>
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <p style={{ fontSize: '13px', color: '#666', margin: 0 }}>
+                                  {item.description || (item.expenses?.expense_date ? new Date(item.expenses.expense_date).toLocaleDateString('de-DE') : 'Einzelbetrag')}
+                                </p>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                  <span style={{ fontSize: '13px', color: '#1a1a1a' }}>{formatEur(Number(item.total_amount))}</span>
+                                  <button onClick={() => setDeleteConfirm(item.id)}
+                                    style={{ background: 'none', border: 'none', color: '#dc2626', fontSize: '12px', cursor: 'pointer', padding: 0 }}>Löschen</button>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>

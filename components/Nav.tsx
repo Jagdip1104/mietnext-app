@@ -46,6 +46,7 @@ const navStructure: NavItem[] = [
     children: [
       { label: 'Einladen', href: '/invite-tenant' },
       { label: 'Import', href: '/import' },
+      { label: 'Mietvertrag (Beta)', href: '/mietvertrag' },
       { label: 'Profil', href: '/profile' },
     ],
   },

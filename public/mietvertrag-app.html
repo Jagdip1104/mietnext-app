@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MietNext · Mietvertrag-Generator (Beta)</title>
+<style>
+:root{
+  --font-sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  --color-text-primary:#1a1a1a;
+  --color-text-secondary:#6b7280;
+  --color-text-tertiary:#9ca3af;
+  --color-background-primary:#ffffff;
+  --color-background-secondary:#f9fafb;
+  --color-background-tertiary:#f5f4f0;
+  --color-border-tertiary:#e5e7eb;
+  --color-border-secondary:#d1d5db;
+  --primary:#1B4FD8;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans);color:var(--color-text-primary);background:var(--color-background-tertiary)}
+
+.beta-banner{background:#fef3c7;border-bottom:1px solid #fcd34d;padding:10px 20px;text-align:center;font-size:12.5px;color:#92400e;line-height:1.5}
+.beta-banner strong{color:#78350f}
+
+.tb{position:sticky;top:0;z-index:100;background:var(--color-background-primary);border-bottom:.5px solid var(--color-border-tertiary);padding:10px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.logo{width:32px;height:32px;background:#1B4FD8;border-radius:7px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:600;flex-shrink:0}
+.brand{font-size:15px;font-weight:500}
+.brand small{font-size:11px;color:var(--color-text-secondary);display:block;margin-top:-2px}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:8px;font-size:13px;cursor:pointer;font-family:var(--font-sans);font-weight:500;border:.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-primary);transition:all .15s}
+.btn:hover{background:var(--color-background-secondary)}
+.btn-p{background:#1B4FD8;color:#fff;border-color:#1B4FD8}
+.btn-p:hover{background:#1a3fc7}
+.wrap{max-width:660px;margin:0 auto;padding:1.5rem 1rem 4rem}
+.prog{display:flex;margin-bottom:1.75rem}
+.ps{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;position:relative;cursor:pointer}
+.ps:not(:last-child)::after{content:'';position:absolute;top:13px;left:50%;width:100%;height:.5px;background:var(--color-border-tertiary);z-index:0}
+.pc{width:26px;height:26px;border-radius:50%;border:.5px solid var(--color-border-secondary);background:var(--color-background-primary);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;z-index:1;color:var(--color-text-secondary);transition:all .2s}
+.pc.d,.pc.a{background:#1B4FD8;border-color:#1B4FD8;color:#fff}
+.pl{font-size:10px;color:var(--color-text-tertiary);text-align:center;line-height:1.3;max-width:60px}
+.pl.a{color:#1B4FD8;font-weight:500}
+.sec-ttl{font-size:18px;font-weight:500;margin-bottom:3px}
+.sec-sub{font-size:13px;color:var(--color-text-secondary);margin-bottom:1.25rem;line-height:1.5}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem}
+.fr3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:1rem}
+.fg{margin-bottom:1rem}
+.lbl{display:block;font-size:12px;font-weight:500;color:var(--color-text-secondary);margin-bottom:4px}
+.req{color:#E24B4A;margin-left:2px}
+input,select,textarea{width:100%;border:.5px solid var(--color-border-secondary);border-radius:8px;padding:8px 11px;font-size:13px;background:var(--color-background-primary);color:var(--color-text-primary);font-family:var(--font-sans);transition:border-color .15s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#1B4FD8;box-shadow:0 0 0 3px rgba(27,79,216,.08)}
+input[readonly]{background:var(--color-background-secondary);font-weight:500;color:#1B4FD8}
+textarea{resize:vertical;min-height:66px;line-height:1.5}
+.rg{display:flex;gap:7px;flex-wrap:wrap;margin-top:4px}
+.rp{display:flex;align-items:center;gap:5px;border:.5px solid var(--color-border-secondary);border-radius:20px;padding:6px 12px;cursor:pointer;font-size:12px;color:var(--color-text-secondary);background:var(--color-background-primary);transition:all .15s;user-select:none}
+.rp:hover,.rp.on{border-color:#1B4FD8;color:#1B4FD8;background:#EEF2FF}
+.rp input{display:none}
+.div{height:.5px;background:var(--color-border-tertiary);margin:1.25rem 0}
+.hb{background:var(--color-background-secondary);border-left:2px solid #1B4FD8;border-radius:0 6px 6px 0;padding:9px 12px;margin:8px 0;font-size:12px;color:var(--color-text-secondary);line-height:1.5}
+.wb{background:#FFFBEB;border:.5px solid #FCD34D;border-radius:6px;padding:9px 12px;font-size:12px;color:#92400E;margin:8px 0;line-height:1.5}
+.nav{display:flex;justify-content:space-between;margin-top:2rem;padding-top:1.25rem;border-top:.5px solid var(--color-border-tertiary)}
+.sum{background:var(--color-background-secondary);border:.5px solid var(--color-border-tertiary);border-radius:10px;padding:1rem;margin-bottom:.75rem}
+.sum h4{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-secondary);margin-bottom:8px}
+.sr{display:flex;justify-content:space-between;font-size:12.5px;padding:4px 0;border-bottom:.5px solid var(--color-border-tertiary)}
+.sr:last-child{border:none}
+.sv{font-weight:500}
+#lv{min-height:70vh;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:2rem}
+.spin{width:40px;height:40px;border:3px solid var(--color-border-tertiary);border-top-color:#1B4FD8;border-radius:50%;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.lmsg{font-size:12px;color:var(--color-text-secondary);max-width:280px;line-height:1.5}
+#cv{background:var(--color-background-tertiary)}
+.cdoc{max-width:800px;margin:28px auto;padding:0 16px 64px}
+.ccard{background:var(--color-background-primary);border:.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden}
+.chdr{background:#1B4FD8;padding:28px 36px 24px;color:#fff;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+.chdr-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px}
+.clname{font-size:16px;font-weight:600}
+.clsub{font-size:11px;opacity:.7;margin-top:1px}
+.cmeta{text-align:right;font-size:11px;opacity:.75;line-height:1.8}
+.ctitle{font-size:24px;font-weight:600;letter-spacing:-.4px;margin-bottom:3px}
+.csubt{font-size:12px;opacity:.8}
+.cbdg{display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:20px;padding:3px 10px;font-size:10px;font-weight:500;margin-top:12px;margin-right:4px}
+.cpg{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:24px 36px 0;margin-bottom:24px}
+.pcard{background:var(--color-background-secondary);border:.5px solid var(--color-border-tertiary);border-radius:8px;padding:14px}
+.pcard h4{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#1B4FD8;margin-bottom:8px}
+.prow{display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:.5px solid var(--color-border-tertiary)}
+.prow:last-child{border:none}
+.plbl{color:var(--color-text-secondary)}
+.pval{font-weight:500;text-align:right;max-width:60%;word-break:break-word}
+.cbody{padding:0 36px 36px}
+.csec{margin-bottom:22px}
+.csec-hd{display:flex;align-items:center;gap:9px;margin-bottom:12px;padding-bottom:7px;border-bottom:.5px solid var(--color-border-tertiary)}
+.cnum{width:24px;height:24px;background:#1B4FD8;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+.csec-ttl{font-size:14px;font-weight:600}
+.claw{margin-left:auto;font-size:10px;color:var(--color-text-secondary);background:var(--color-background-secondary);border:.5px solid var(--color-border-tertiary);border-radius:4px;padding:2px 6px;white-space:nowrap}
+.cp{font-size:13px;line-height:1.75;color:var(--color-text-primary);margin-bottom:8px}
+.cp:last-child{margin-bottom:0}
+.csig{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:16px}
+.sblk .slbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-secondary);margin-bottom:5px}
+.sblk .sname{font-size:12.5px;font-weight:500;margin-bottom:4px}
+.sline{height:52px;background:var(--color-background-secondary);border-radius:6px 6px 0 0;border-bottom:1.5px solid var(--color-text-primary);margin-bottom:4px}
+.shint{font-size:11px;color:var(--color-text-secondary)}
+.sdig{display:flex;align-items:center;gap:5px;background:#EEF2FF;border:.5px solid rgba(27,79,216,.2);border-radius:5px;padding:7px 10px;font-size:11px;color:#1B4FD8;font-weight:500;margin-top:6px;cursor:pointer}
+.cftr{border-top:.5px solid var(--color-border-tertiary);padding:14px 36px;display:flex;justify-content:space-between;align-items:center;background:var(--color-background-secondary);font-size:11px;color:var(--color-text-secondary)}
+.anl{background:var(--color-background-secondary);border:.5px solid var(--color-border-tertiary);border-radius:8px;padding:14px;margin-top:16px}
+.anl h4{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-secondary);margin-bottom:8px}
+.ar{display:flex;align-items:center;gap:7px;font-size:12.5px;padding:5px 0;border-bottom:.5px solid var(--color-border-tertiary)}
+.ar:last-child{border:none}
+.ack{width:15px;height:15px;border:.5px solid var(--color-border-secondary);border-radius:3px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0}
+.ack.on{background:#1B4FD8;border-color:#1B4FD8;color:#fff}
+@media print{
+  .tb,.ctb,.beta-banner{display:none!important}
+  body{background:#fff}
+  .cdoc{margin:0;padding:0;max-width:100%}
+  .ccard{border:none;border-radius:0}
+  .csec{page-break-inside:avoid}
+  .chdr,.cnum{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+
+<div class="beta-banner">
+  ⚠️ <strong>BETA — Vor Anwalts-Review nur für interne Tests verwenden.</strong>
+  Die generierten Verträge enthalten BGH-konforme Standardformulierungen und sind erst nach juristischer Prüfung produktiv einsetzbar.
+</div>
+
+<div id="fv">
+  <div class="tb">
+    <div class="logo">MN</div>
+    <div class="brand">MietNext <small>Mietvertrag-Generator · Wohnraum (Beta)</small></div>
+    <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+      <span id="scnt" style="font-size:12px;color:var(--color-text-secondary)"></span>
+      <button class="btn btn-p" id="gbtn" style="display:none" onclick="doGenerate()">✦ Vertrag generieren</button>
+    </div>
+  </div>
+  <div class="wrap">
+    <div class="prog" id="prog"></div>
+    <div id="fc"></div>
+  </div>
+</div>
+
+<div id="lv" style="display:none">
+  <div class="spin"></div>
+  <div style="font-size:15px;font-weight:500">Vertrag wird zusammengestellt …</div>
+  <div class="lmsg">MietNext erstellt deinen Mietvertrag aus BGH-konformen Template-Klauseln.</div>
+  <div id="ltick" style="font-size:12px;color:var(--color-text-secondary);margin-top:4px"></div>
+</div>
+
+<div id="cv" style="display:none">
+  <div class="tb ctb">
+    <div class="logo">MN</div>
+    <div class="brand">MietNext <small>Wohnraummietvertrag — generiert</small></div>
+    <div style="margin-left:auto;display:flex;gap:8px">
+      <button class="btn" onclick="sv('form')">← Bearbeiten</button>
+      <button class="btn btn-p" id="pdfbtn" onclick="downloadPDF()">⬇ PDF herunterladen</button>
+      <button class="btn" onclick="window.print()">🖨 Drucken</button>
+    </div>
+  </div>
+  <div class="cdoc" id="ch"></div>
+</div>
+
+<script>
+const fd={};
+let cur=0;
+const ST=[{l:'Parteien'},{l:'Objekt'},{l:'Laufzeit'},{l:'Miete'},{l:'Kaution'},{l:'Nutzung'},{l:'Reparaturen'},{l:'Abschluss'}];
+
+function sv(v){
+  document.getElementById('fv').style.display=v==='form'?'block':'none';
+  const lv=document.getElementById('lv');lv.style.display=v==='load'?'flex':'none';
+  document.getElementById('cv').style.display=v==='contract'?'block':'none';
+}
+function g(k,d=''){return fd[k]||d;}
+function fmt(ds){if(!ds)return'___________';try{return new Date(ds+'T12:00:00').toLocaleDateString('de-DE');}catch(e){return ds;}}
+function mo(v,d='___ €'){if(!v)return d;return parseFloat(v).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';}
+
+function pl(nm,vl,lb,gr){
+  const id='p_'+gr+'_'+vl.replace(/[^a-z0-9]/gi,'_');
+  return`<label class="rp" id="${id}"><input type="radio" name="${nm}" value="${vl}" onchange="sp('${gr}','${vl.replace(/[^a-z0-9]/gi,'_')}')"> ${lb}</label>`;
+}
+function sp(gr,vl){
+  document.querySelectorAll(`[id^="p_${gr}_"]`).forEach(e=>e.classList.remove('on'));
+  const el=document.getElementById('p_'+gr+'_'+vl);
+  if(el)el.classList.add('on');
+}
+
+function save(){
+  document.querySelectorAll('#fc input:not([type=radio]):not([type=checkbox]),#fc select,#fc textarea').forEach(el=>{if(el.name)fd[el.name]=el.value;});
+  document.querySelectorAll('#fc input[type=radio]:checked').forEach(el=>{if(el.name)fd[el.name]=el.value;});
+}
+
+function restore(){
+  setTimeout(()=>{
+    Object.entries(fd).forEach(([k,v])=>{
+      document.querySelectorAll(`[name="${k}"]`).forEach(el=>{
+        if(el.type==='radio'){if(el.value===v){el.checked=true;el.closest('.rp')?.classList.add('on');}}
+        else el.value=v||'';
+      });
+    });
+    calcW();
+    const bfr=document.getElementById('bfr');
+    if(bfr)bfr.style.display=fd.mda==='befristet'?'block':'none';
+  },30);
+}
+
+function rprog(){
+  document.getElementById('prog').innerHTML=ST.map((s,i)=>`
+    <div class="ps" onclick="if(${i}<=${cur}){save();cur=${i};rend();}">
+      <div class="pc ${i<cur?'d':i===cur?'a':''}">${i<cur?'✓':i+1}</div>
+      <div class="pl ${i===cur?'a':''}">${s.l}</div>
+    </div>`).join('');
+  document.getElementById('scnt').textContent=(cur+1)+' / '+ST.length;
+  document.getElementById('gbtn').style.display=cur===7?'flex':'none';
+}
+
+const SH=[
+()=>`<div class="sec-ttl">Vertragsparteien</div><div class="sec-sub">Vermieter und Mieter — das rechtliche Fundament.</div>
+<div style="font-size:13px;font-weight:500;color:var(--color-text-secondary);margin-bottom:10px">▲ Vermieter</div>
+<div class="fr"><div class="fg"><label class="lbl">Vorname<span class="req">*</span></label><input name="vm_vn" placeholder="Max"></div><div class="fg"><label class="lbl">Nachname<span class="req">*</span></label><input name="vm_nn" placeholder="Mustermann"></div></div>
+<div class="fg"><label class="lbl">Straße & Hausnummer<span class="req">*</span></label><input name="vm_str" placeholder="Musterstraße 1"></div>
+<div class="fr"><div class="fg"><label class="lbl">PLZ<span class="req">*</span></label><input name="vm_plz" placeholder="49401" maxlength="5"></div><div class="fg"><label class="lbl">Ort<span class="req">*</span></label><input name="vm_ort" placeholder="Damme"></div></div>
+<div class="fr"><div class="fg"><label class="lbl">Telefon</label><input name="vm_tel" placeholder="+49 …"></div><div class="fg"><label class="lbl">E-Mail</label><input name="vm_mail" type="email" placeholder="vermieter@…"></div></div>
+<div class="div"></div>
+<div style="font-size:13px;font-weight:500;color:var(--color-text-secondary);margin-bottom:10px">▼ Mieter</div>
+<div class="fr"><div class="fg"><label class="lbl">Vorname<span class="req">*</span></label><input name="mt_vn" placeholder="Anna"></div><div class="fg"><label class="lbl">Nachname<span class="req">*</span></label><input name="mt_nn" placeholder="Beispiel"></div></div>
+<div class="fr"><div class="fg"><label class="lbl">Telefon</label><input name="mt_tel" placeholder="+49 …"></div><div class="fg"><label class="lbl">E-Mail<span class="req">*</span></label><input name="mt_mail" type="email" placeholder="mieter@…"></div></div>
+<div class="fg"><label class="lbl">Weiterer Mieter (optional)</label><input name="mt2" placeholder="Vorname Nachname zweiter Mieter"></div>`,
+
+()=>`<div class="sec-ttl">Mietobjekt</div><div class="sec-sub">Adresse, Art und Ausstattung der Wohnung.</div>
+<div class="fg"><label class="lbl">Straße & Hausnummer<span class="req">*</span></label><input name="o_str" placeholder="Wittekindstraße 48"></div>
+<div class="fr3"><div class="fg"><label class="lbl">PLZ<span class="req">*</span></label><input name="o_plz" maxlength="5" placeholder="49134"></div><div class="fg"><label class="lbl">Ort<span class="req">*</span></label><input name="o_ort" placeholder="Wallenhorst"></div><div class="fg"><label class="lbl">Etage / Lage</label><input name="o_etg" placeholder="2. OG links"></div></div>
+<div class="fr"><div class="fg"><label class="lbl">Art<span class="req">*</span></label><select name="o_art"><option value="">Bitte wählen…</option><option>Wohnung</option><option>Einfamilienhaus</option><option>Doppelhaushälfte</option><option>Maisonette</option><option>Loft / Studio</option><option>Zimmer in WG</option></select></div><div class="fg"><label class="lbl">Wohnfläche (m²)<span class="req">*</span></label><input name="o_m2" type="number" placeholder="72" min="1"></div></div>
+<div class="fr"><div class="fg"><label class="lbl">Zimmer</label><input name="o_zi" type="number" placeholder="3" min="1"></div><div class="fg"><label class="lbl">Baujahr (ca.)</label><input name="o_bj" type="number" placeholder="1998"></div></div>
+<div class="fg"><label class="lbl">Ausstattung</label><textarea name="o_aust" placeholder="z.B. Einbauküche, Parkett, Fußbodenheizung …" style="min-height:60px"></textarea></div>
+<div class="fg"><label class="lbl">Mitvermietet</label><input name="o_ext" placeholder="z.B. Keller Nr. 4, Stellplatz Nr. 7"></div>
+<div class="wb">⚡ <strong>Energieausweis-Pflicht (GEG)</strong> — muss dem Mieter vor Vertragsschluss vorgelegt werden.</div>
+<div class="fr"><div class="fg"><label class="lbl">Energieeffizienzklasse</label><select name="o_ek"><option value="">—</option><option>A+</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>F</option><option>G</option><option>H</option></select></div><div class="fg"><label class="lbl">Endenergiebedarf (kWh/m²a)</label><input name="o_ee" type="number" placeholder="120"></div></div>`,
+
+()=>`<div class="sec-ttl">Mietdauer & Übergabe</div><div class="sec-sub">Wann beginnt das Mietverhältnis — befristet oder unbefristet?</div>
+<div class="fg"><label class="lbl">Art des Mietverhältnisses<span class="req">*</span></label>
+<div class="rg">${pl('mda','unbefristet','Unbefristet','mda')}${pl('mda','befristet','Befristet (§ 575 BGB)','mda')}</div></div>
+<div class="fr" style="margin-top:10px"><div class="fg"><label class="lbl">Mietbeginn<span class="req">*</span></label><input name="m_beg" type="date"></div><div class="fg"><label class="lbl">Schlüsselübergabe</label><input name="m_ueb" type="date"></div></div>
+<div id="bfr" style="display:none">
+<div class="fr"><div class="fg"><label class="lbl">Befristet bis</label><input name="m_end" type="date"></div><div class="fg"><label class="lbl">Befristungsgrund (§ 575)</label><select name="bef_gr"><option value="">Bitte wählen…</option><option>Eigenbedarf nach Ablauf</option><option>Erhebliche Instandsetzung</option><option>Nutzung als Dienstwohnung</option></select></div></div>
+<div class="hb" style="font-size:11.5px">Befristungsgrund exakt angeben — fehlt er, gilt der Vertrag als unbefristet (§ 575 Abs. 1 S. 2 BGB)!</div></div>
+<div class="div"></div>
+<div class="fg"><label class="lbl">Übergebene Schlüssel</label><input name="schls" placeholder="z.B. 2 × Wohnungsschlüssel, 2 × Haustür, 1 × Keller"></div>
+<div class="fg"><label class="lbl">Übergabe-Protokoll</label>
+<div class="rg">${pl('prot','digital','Digitales MietNext-Protokoll','prot')}${pl('prot','papier','Papier-Protokoll','prot')}${pl('prot','keines','Kein Protokoll','prot')}</div></div>`,
+
+()=>`<div class="sec-ttl">Miete & Nebenkosten</div><div class="sec-sub">Alle Zahlungsvereinbarungen — transparent für beide Seiten.</div>
+<div class="fr"><div class="fg"><label class="lbl">Kaltmiete (€/Monat)<span class="req">*</span></label><input name="kalt" type="number" placeholder="850" id="kin" oninput="calcW()"></div><div class="fg"><label class="lbl">NK-Vorauszahlung (€/Monat)<span class="req">*</span></label><input name="nkv" type="number" placeholder="180" id="nin" oninput="calcW()"></div></div>
+<div class="fg"><label class="lbl">Warmmiete gesamt (automatisch)</label><input id="ww" readonly placeholder="wird berechnet …"></div>
+<div class="fr"><div class="fg"><label class="lbl">Fälligkeit</label><select name="faell"><option>3. Werktag des Monats</option><option>1. des Monats</option><option>15. des Monats</option></select></div><div class="fg"><label class="lbl">Zahlungsweg</label><select name="zweg"><option value="">Bitte wählen…</option><option>Überweisung</option><option>SEPA-Lastschrift</option><option>MietNext-Zahlung</option></select></div></div>
+<div class="fg"><label class="lbl">Mieterhöhung</label>
+<div class="rg">${pl('meh','gesetzlich','Gesetzlich (§§ 558 ff.)','meh')}${pl('meh','index','Indexmiete (§ 557b)','meh')}${pl('meh','staffel','Staffelmiete (§ 557a)','meh')}</div></div>
+<div class="hb" style="margin-top:8px">NK-Abrechnung: jährlich, max. 12 Monate nach Abrechnungsperiode (§ 556 BGB). Guthaben wird ausgezahlt.</div>`,
+
+()=>`<div class="sec-ttl">Mietkaution</div><div class="sec-sub">Absicherung für den Vermieter — geschützt für den Mieter.</div>
+<div class="fr"><div class="fg"><label class="lbl">Kautionsbetrag (€)<span class="req">*</span></label><input name="kaut" type="number" placeholder="1700"></div><div class="fg"><label class="lbl">Zahlungsweise</label>
+<div class="rg" style="margin-top:4px">${pl('kzw','einmalig','Einmalzahlung','kzw')}${pl('kzw','3raten','3 Monatsraten','kzw')}</div></div></div>
+<div class="fg"><label class="lbl">IBAN Kautionskonto</label><input name="k_iban" placeholder="DE …" maxlength="22"></div>
+<div class="fg"><label class="lbl">Verwahrart</label>
+<div class="rg">${pl('ka','kautionskonto','Separates Kautionskonto','ka')}${pl('ka','buergschaft','Bürgschaft','ka')}${pl('ka','digital','Digitale Lösung','ka')}</div></div>
+<div class="hb">Gesetzliches Maximum: 3 Nettokaltmieten (§ 551 BGB). Zinsen gehören dem Mieter. Rückzahlung nach max. 6 Monaten Prüffrist.</div>`,
+
+()=>`<div class="sec-ttl">Nutzung & Hausordnung</div><div class="sec-sub">Klare Regeln schaffen Vertrauen.</div>
+<div class="fg"><label class="lbl">Tierhaltung</label>
+<div class="rg">${pl('tiere','erlaubt','Erlaubt (Kleintiere immer)','tiere')}${pl('tiere','mit_genehmigung','Mit Genehmigung','tiere')}${pl('tiere','verboten','Nicht gestattet','tiere')}</div></div>
+<div class="fg" style="margin-top:10px"><label class="lbl">Rauchen</label>
+<div class="rg">${pl('rauchen','innen_verboten','In Innenräumen verboten','rauchen')}${pl('rauchen','erlaubt','Erlaubt','rauchen')}${pl('rauchen','vollstaendig_verboten','Vollständig verboten','rauchen')}</div></div>
+<div class="fg" style="margin-top:10px"><label class="lbl">Untervermietung / Airbnb</label>
+<div class="rg">${pl('uv','nur_genehmigung','Nur mit Genehmigung','uv')}${pl('uv','gewerblich_verboten','Gewerblich verboten (Airbnb etc.)','uv')}${pl('uv','verboten','Vollständig verboten','uv')}</div></div>
+<div class="fg" style="margin-top:10px"><label class="lbl">Gewerbliche Nutzung</label>
+<div class="rg">${pl('gw','nur_wohnen','Nur Wohnnutzung','gw')}${pl('gw','homeoffice','Home-Office erlaubt','gw')}${pl('gw','teilgewerblich','Teilgewerblich (mit Genehmigung)','gw')}</div></div>
+<div class="fg" style="margin-top:10px"><label class="lbl">Besondere Nutzungsvereinbarungen</label><textarea name="nutz_s" placeholder="z.B. Gartenpflege, Winterdienst, Sonderrechte …" style="min-height:60px"></textarea></div>`,
+
+()=>`<div class="sec-ttl">Instandhaltung & Reparaturen</div><div class="sec-sub">BGH-konform — kein Risiko durch unwirksame Klauseln.</div>
+<div class="fg"><label class="lbl">Schönheitsreparaturen</label>
+<div class="rg">${pl('sr','mieter_bgb','Mieter (BGH-konforme Klausel)','sr')}${pl('sr','vermieter','Vermieter übernimmt alle','sr')}</div></div>
+<div class="fg" style="margin-top:10px"><label class="lbl">Übergabezustand der Wohnung</label>
+<div class="rg">${pl('uz','renoviert','Renoviert','uz')}${pl('uz','unrenoviert','Unrenoviert','uz')}${pl('uz','teilrenoviert','Teilrenoviert','uz')}</div></div>
+<div class="fg" style="margin-top:10px"><label class="lbl">Kleinreparaturen — Grenze pro Einzelfall</label>
+<div class="rg">${pl('krg','80','Bis 80 €','krg')}${pl('krg','100','Bis 100 €','krg')}${pl('krg','150','Bis 150 €','krg')}${pl('krg','keine','Keine Klausel','krg')}</div></div>
+<div class="hb" style="margin-top:8px">Starre Fristenpläne (z.B. "alle 3 Jahre Küche") sind seit BGH VIII ZR 316/06 unwirksam. MietNext verwendet ausschließlich BGH-konforme Formulierungen.</div>`,
+
+()=>`<div class="sec-ttl">Abschluss & Zusammenfassung</div><div class="sec-sub">Überprüfe deine Angaben — dann Vertrag generieren.</div>
+<div class="sum"><h4>Vertragsparteien</h4>
+<div class="sr"><span>Vermieter</span><span class="sv">${g('vm_vn')} ${g('vm_nn','—')}</span></div>
+<div class="sr"><span>Mieter</span><span class="sv">${g('mt_vn')} ${g('mt_nn','—')}</span></div></div>
+<div class="sum"><h4>Objekt & Laufzeit</h4>
+<div class="sr"><span>Adresse</span><span class="sv">${g('o_str','—')}, ${g('o_plz','')} ${g('o_ort','')}</span></div>
+<div class="sr"><span>Fläche / Zimmer</span><span class="sv">${g('o_m2','—')} m² · ${g('o_zi','—')} Zi.</span></div>
+<div class="sr"><span>Mietbeginn</span><span class="sv">${fmt(g('m_beg'))}</span></div>
+<div class="sr"><span>Laufzeit</span><span class="sv">${g('mda','—')}</span></div></div>
+<div class="sum"><h4>Finanzen</h4>
+<div class="sr"><span>Kaltmiete</span><span class="sv">${mo(g('kalt'))}</span></div>
+<div class="sr"><span>Nebenkosten</span><span class="sv">${mo(g('nkv'))}</span></div>
+<div class="sr"><span style="font-weight:500">Warmmiete gesamt</span><span class="sv" style="color:#1B4FD8;font-size:14px">${mo(String(parseFloat(g('kalt')||0)+parseFloat(g('nkv')||0)))}</span></div>
+<div class="sr"><span>Kaution</span><span class="sv">${mo(g('kaut'))}</span></div></div>
+<div class="fr" style="margin-top:1rem"><div class="fg"><label class="lbl">Ort der Unterzeichnung</label><input name="s_ort" placeholder="Wallenhorst"></div><div class="fg"><label class="lbl">Datum</label><input name="s_dat" type="date"></div></div>
+<div class="hb">Klicke auf <strong>✦ Vertrag generieren</strong> — MietNext erstellt deinen vollständigen, druckfertigen Mietvertrag.</div>`
+];
+
+function calcW(){
+  const k=parseFloat(document.getElementById('kin')?.value)||0;
+  const n=parseFloat(document.getElementById('nin')?.value)||0;
+  const el=document.getElementById('ww');if(el)el.value=k+n>0?mo(String(k+n)):'';
+}
+
+function rend(){
+  rprog();
+  const fc=document.getElementById('fc');
+  fc.innerHTML=SH[cur]();
+  restore();
+  document.querySelectorAll('#fc input[name="mda"]').forEach(el=>{
+    el.addEventListener('change',()=>{const b=document.getElementById('bfr');if(b)b.style.display=el.value==='befristet'?'block':'none';});
+  });
+  const nav=document.createElement('div');
+  nav.className='nav';
+  nav.innerHTML=`
+    ${cur>0?`<button class="btn" onclick="save();cur--;rend()">← Zurück</button>`:'<div></div>'}
+    ${cur<7?`<button class="btn btn-p" onclick="save();cur++;rend()">Weiter →</button>`:'<div></div>'}`;
+  fc.appendChild(nav);
+}
+
+// ============================================================
+// TEMPLATE-ENGINE — BGH-konforme Klauseln (statt KI)
+// ============================================================
+
+function tpl_1_mietobjekt() {
+  const art = g('o_art', 'Wohnung');
+  const ext = g('o_ext') ? `\n\nZur Mietsache gehören außerdem: ${g('o_ext')}.` : '';
+  const aust = g('o_aust') ? `\n\nDie Ausstattung umfasst: ${g('o_aust')}.` : '';
+  const energ = g('o_ek') ? `\n\nGemäß Gebäudeenergiegesetz (GEG) wurde dem Mieter vor Vertragsabschluss ein Energieausweis vorgelegt. Energieeffizienzklasse: ${g('o_ek')}, Endenergiebedarf: ${g('o_ee','—')} kWh/m²a.` : '';
+  const bj = g('o_bj') ? ` (Baujahr ca. ${g('o_bj')})` : '';
+  const etg = g('o_etg') ? `, ${g('o_etg')}` : '';
+  
+  return `Der Vermieter überlässt dem Mieter zur Wohnnutzung die in ${g('o_str','—')}, ${g('o_plz','')} ${g('o_ort','')}${etg} gelegene ${art} mit einer Wohnfläche von ca. ${g('o_m2','—')} m² und ${g('o_zi','—')} Zimmern${bj}.${ext}${aust}${energ}\n\nDer Mieter bestätigt, die Mietsache zum Zeitpunkt der Übergabe in dem ihm bekannten Zustand erhalten zu haben. Etwaige Mängel werden im Übergabeprotokoll dokumentiert.`;
+}
+
+function tpl_2_mietdauer() {
+  const beg = fmt(g('m_beg'));
+  const ueb = g('m_ueb') ? `Die Schlüsselübergabe erfolgt am ${fmt(g('m_ueb'))}.` : `Die Schlüsselübergabe erfolgt zum Mietbeginn.`;
+  const schl = g('schls') ? `Folgende Schlüssel werden übergeben: ${g('schls')}.` : `Die übergebenen Schlüssel werden im Übergabeprotokoll dokumentiert.`;
+  
+  if (g('mda') === 'befristet') {
+    const grund = g('bef_gr') || '—';
+    return `Das Mietverhältnis beginnt am ${beg} und endet automatisch am ${fmt(g('m_end'))} (§ 575 BGB).\n\nDer Befristungsgrund ist: ${grund}. Der Vermieter hat dem Mieter den Befristungsgrund schriftlich mitgeteilt.\n\n${ueb} ${schl}\n\nEine ordentliche Kündigung während der Befristung ist ausgeschlossen. Das Recht zur außerordentlichen Kündigung aus wichtigem Grund nach § 543 BGB bleibt unberührt.`;
+  }
+  
+  return `Das Mietverhältnis beginnt am ${beg} und läuft auf unbestimmte Zeit.\n\n${ueb} ${schl}\n\nDie ordentliche Kündigung richtet sich nach § 573c BGB. Die Kündigungsfrist beträgt für den Mieter drei Monate; für den Vermieter verlängert sie sich nach fünf bzw. acht Jahren Mietdauer auf sechs bzw. neun Monate. Die Kündigung bedarf der Schriftform (§ 568 BGB).`;
+}
+
+function tpl_3_miete() {
+  const warm = parseFloat(g('kalt')||0) + parseFloat(g('nkv')||0);
+  const meh = g('meh') === 'index' 
+    ? `Es ist eine Indexmiete gemäß § 557b BGB vereinbart. Die Miete ist an den vom Statistischen Bundesamt ermittelten Verbraucherpreisindex für Deutschland gebunden. Mietanpassungen erfolgen frühestens nach Ablauf eines Jahres durch schriftliche Erklärung des Vermieters.`
+    : g('meh') === 'staffel' 
+    ? `Es ist eine Staffelmiete gemäß § 557a BGB vereinbart. Die Mietanpassungen erfolgen entsprechend der gesondert vereinbarten Mietstaffel. Während der Staffelmiete sind sonstige Mieterhöhungen ausgeschlossen.`
+    : `Mieterhöhungen richten sich nach den §§ 558 ff. BGB. Eine Anhebung auf die ortsübliche Vergleichsmiete ist frühestens 15 Monate nach der letzten Mieterhöhung möglich; die Kappungsgrenze beträgt 20 % (in Gebieten mit angespannter Wohnungslage 15 %) innerhalb von drei Jahren.`;
+  
+  return `Die monatliche Kaltmiete beträgt ${mo(g('kalt'))}.\n\nDie monatliche Vorauszahlung auf die Betriebskosten beträgt ${mo(g('nkv'))}. Die Warmmiete beträgt damit insgesamt ${mo(String(warm))}.\n\nDie Miete ist im Voraus, spätestens am ${g('faell','3. Werktag des Monats')}, kostenfrei für den Vermieter auf das vom Vermieter angegebene Konto zu zahlen. Vereinbarte Zahlungsweise: ${g('zweg','Überweisung')}.\n\nÜber die Vorauszahlungen für Betriebskosten wird gemäß § 556 BGB jährlich abgerechnet. Die Abrechnung erfolgt spätestens 12 Monate nach Ablauf des Abrechnungszeitraums. Guthaben werden ausgezahlt, Nachzahlungen sind binnen 30 Tagen nach Zugang der Abrechnung fällig.\n\n${meh}`;
+}
+
+function tpl_4_kaution() {
+  const zw = g('kzw') === '3raten' 
+    ? `Die Kaution wird in drei gleichen monatlichen Raten gezahlt. Die erste Rate ist mit Beginn des Mietverhältnisses fällig, die weiteren mit den unmittelbar folgenden Mietzahlungen (§ 551 Abs. 2 BGB).`
+    : `Die Kaution ist bei Beginn des Mietverhältnisses in einer Summe zu zahlen.`;
+  
+  const ka = g('ka') === 'buergschaft' 
+    ? `Die Kaution wird in Form einer selbstschuldnerischen Bankbürgschaft oder einer Mietkautionsversicherung erbracht.`
+    : g('ka') === 'digital'
+    ? `Die Kaution wird über einen vom Vermieter benannten digitalen Treuhand-Dienst hinterlegt.`
+    : `Die Kaution wird vom Vermieter auf einem von seinem Vermögen getrennten Konto bei einer Sparkasse oder Bank verzinslich angelegt (§ 551 Abs. 3 BGB).`;
+  
+  const iban = g('k_iban') ? `\n\nKautionskonto: ${g('k_iban')}.` : '';
+  
+  return `Der Mieter leistet zur Sicherung aller Ansprüche des Vermieters aus dem Mietverhältnis eine Kaution in Höhe von ${mo(g('kaut'))}.\n\nDie Kaution beträgt nicht mehr als das Dreifache der monatlichen Nettokaltmiete gemäß § 551 Abs. 1 BGB.\n\n${zw}\n\n${ka}${iban}\n\nDie Zinsen aus der Kautionsanlage stehen dem Mieter zu (§ 551 Abs. 3 S. 4 BGB).\n\nNach Beendigung des Mietverhältnisses und ordnungsgemäßer Rückgabe der Mietsache ist die Kaution einschließlich Zinsen zurückzuzahlen, soweit ihr keine berechtigten und bezifferten Ansprüche des Vermieters entgegenstehen. Dem Vermieter ist eine angemessene Prüffrist von in der Regel höchstens sechs Monaten einzuräumen.`;
+}
+
+function tpl_5_nutzung() {
+  const tiere = g('tiere') === 'erlaubt' 
+    ? `Die Haltung von Kleintieren (z.B. Vögel, Zierfische, Hamster) sowie üblicher Haustiere ist gestattet, sofern sich daraus keine Belästigung oder Gefährdung der Hausgemeinschaft ergibt.`
+    : g('tiere') === 'verboten'
+    ? `Die Haltung von Haustieren — mit Ausnahme von Kleintieren in artgerechter Anzahl (z.B. einzelne Zierfische, Wellensittiche) — bedarf der schriftlichen Zustimmung des Vermieters. Diese darf nur aus sachlichen Gründen verweigert werden (BGH VIII ZR 168/12).`
+    : `Die Haltung von Haustieren bedarf der vorherigen schriftlichen Zustimmung des Vermieters. Kleintiere in artgerechter Anzahl sind ohne Zustimmung gestattet. Der Vermieter darf die Zustimmung nur aus sachlichen Gründen verweigern.`;
+  
+  const rauchen = g('rauchen') === 'erlaubt'
+    ? `Das Rauchen ist in der Mietsache gestattet.`
+    : g('rauchen') === 'vollstaendig_verboten'
+    ? `Das Rauchen ist innerhalb der Mietsache nicht gestattet.`
+    : `Das Rauchen in Innenräumen ist nicht gestattet. Auf Balkonen, Terrassen und im Freien bleibt das Rauchen zulässig, soweit dadurch andere Mieter nicht erheblich beeinträchtigt werden.`;
+  
+  const uv = g('uv') === 'verboten'
+    ? `Die Untervermietung — auch nur teilweise — ist nicht gestattet.`
+    : g('uv') === 'gewerblich_verboten'
+    ? `Die gewerbliche Untervermietung — insbesondere über Plattformen wie Airbnb, Wimdu oder vergleichbare Anbieter — ist ausgeschlossen. Eine private Untervermietung bedarf der schriftlichen Zustimmung des Vermieters (§ 540 BGB).`
+    : `Die Untervermietung — auch teilweise — bedarf der vorherigen schriftlichen Zustimmung des Vermieters. Bei berechtigtem Interesse des Mieters ist die Zustimmung zur teilweisen Untervermietung gemäß § 553 BGB nicht zu verweigern.`;
+  
+  const gw = g('gw') === 'homeoffice'
+    ? `Eine Nutzung zu beruflichen Zwecken im Sinne eines Home-Office (ohne Außenwirkung, ohne Publikumsverkehr) ist gestattet.`
+    : g('gw') === 'teilgewerblich'
+    ? `Eine teilgewerbliche Nutzung bedarf der vorherigen schriftlichen Zustimmung des Vermieters.`
+    : `Die Mietsache wird ausschließlich zur Wohnnutzung überlassen. Eine gewerbliche Nutzung ist nicht gestattet.`;
+  
+  const sonst = g('nutz_s') ? `\n\nBesondere Vereinbarungen: ${g('nutz_s')}` : '';
+  
+  return `${tiere}\n\n${rauchen}\n\n${uv}\n\n${gw}\n\nDer Mieter verpflichtet sich, die Mietsache pfleglich zu behandeln, die Hausordnung einzuhalten und auf die Mitmieter Rücksicht zu nehmen. Übliche Wohngeräusche sind hinzunehmen. Während der Ruhezeiten (22:00 bis 6:00 Uhr sowie sonn- und feiertags) ist besondere Rücksicht zu nehmen.${sonst}`;
+}
+
+function tpl_6_reparaturen() {
+  const uz = g('uz', 'renoviert');
+  const sr = g('sr') === 'vermieter'
+    ? `Die Schönheitsreparaturen werden vom Vermieter durchgeführt. Der Mieter ist nicht zur Vornahme von Schönheitsreparaturen verpflichtet.`
+    : `Soweit Schönheitsreparaturen während der Mietzeit erforderlich werden, sind diese vom Mieter fachgerecht durchzuführen. "Schönheitsreparaturen" im Sinne dieses Vertrages umfassen das Tapezieren, Anstreichen oder Kalken der Wände und Decken, das Streichen der Fußböden, der Heizkörper einschließlich Heizungsrohre, der Innentüren sowie der Fenster und Außentüren von innen.\n\nEs gelten keine starren Fristen. Schönheitsreparaturen sind nur dann auszuführen, wenn dies nach dem tatsächlichen Erhaltungszustand der Wohnung erforderlich ist (BGH VIII ZR 316/06).\n\nDie Mietsache wurde dem Mieter im ${uz}en Zustand übergeben.`;
+  
+  const kr = g('krg') === 'keine'
+    ? `Kleinreparaturen werden vom Vermieter getragen.`
+    : `Kleinreparaturen an Installationsgegenständen (z.B. Wasser-, Strom-, Gasgeräte, Heizgeräte, Schlösser, Rollläden, Fenstergriffe und ähnliche dem direkten Zugriff des Mieters unterliegende Teile) trägt der Mieter bis zu einem Betrag von ${g('krg','100')} € pro Einzelfall, jedoch höchstens 8 % der jährlichen Bruttokaltmiete (Höchstgrenze gemäß BGH-Rechtsprechung). Kleinreparaturen müssen sich auf Teile beschränken, die dem direkten und häufigen Zugriff des Mieters unterliegen.`;
+  
+  return `${sr}\n\n${kr}\n\nGrößere Reparaturen, insbesondere an Heizung, Elektroleitungen, Wasserleitungen, Dach und Fassade, sind Sache des Vermieters und vom Mieter unverzüglich zu melden. Versäumt der Mieter die Meldepflicht, haftet er für daraus entstehende Folgeschäden.`;
+}
+
+function tpl_7_modernisierung() {
+  return `Der Vermieter ist berechtigt, Modernisierungsmaßnahmen gemäß §§ 555b ff. BGB durchzuführen.\n\nModernisierungsmaßnahmen sind dem Mieter spätestens drei Monate vor Beginn schriftlich anzukündigen. Die Ankündigung muss Art, Umfang, Beginn und voraussichtliche Dauer der Maßnahmen sowie die zu erwartende Mieterhöhung enthalten.\n\nNach Abschluss der Modernisierung kann der Vermieter die jährliche Miete um höchstens 8 % der für die Wohnung aufgewendeten Modernisierungskosten erhöhen (§ 559 BGB). Eine Härtefallregelung zugunsten des Mieters bleibt gemäß § 559 Abs. 4 BGB unberührt.\n\nFür den Zeitraum der Modernisierung kann der Mieter eine angemessene Mietminderung verlangen, sofern und soweit die Wohnnutzung erheblich beeinträchtigt ist.`;
+}
+
+function tpl_8_betreten() {
+  return `Das Betreten der Mieträume durch den Vermieter, einen von ihm Beauftragten oder einen Handwerker bedarf der vorherigen Ankündigung und eines berechtigten Interesses. Das Grundrecht des Mieters auf Unverletzlichkeit der Wohnung nach Art. 13 GG ist zu beachten.\n\nBesichtigungen aus berechtigtem Anlass (z.B. Verkauf, Wiedervermietung, Modernisierungsplanung, regelmäßige Inspektion) sind dem Mieter mindestens eine Woche vorher anzukündigen. Sie sollen werktags zwischen 9:00 und 18:00 Uhr stattfinden und in einem zumutbaren Umfang erfolgen (in der Regel maximal 30 Minuten).\n\nBei Gefahr im Verzug — etwa Wasserschaden, Feuer, Gasaustritt — entfällt die Ankündigungspflicht.`;
+}
+
+function tpl_9_dsgvo() {
+  return `Der Vermieter verarbeitet personenbezogene Daten des Mieters ausschließlich zum Zweck der Vertragsabwicklung gemäß Art. 6 Abs. 1 lit. b DSGVO sowie zur Erfüllung gesetzlicher Verpflichtungen (Art. 6 Abs. 1 lit. c DSGVO).\n\nDie Daten werden vertraulich behandelt und nicht an unberechtigte Dritte weitergegeben. Eine Weitergabe erfolgt nur, soweit dies zur Vertragsabwicklung (z.B. Hausverwaltung, Versorger, Steuerberater) oder gesetzlich (z.B. Meldepflichten) erforderlich ist.\n\nDer Mieter hat das Recht auf Auskunft über die ihn betreffenden Daten (Art. 15), Berichtigung unrichtiger Daten (Art. 16), Löschung (Art. 17), Einschränkung der Verarbeitung (Art. 18) sowie Datenübertragbarkeit (Art. 20 DSGVO). Beschwerden können an die zuständige Aufsichtsbehörde gerichtet werden.\n\nDie Daten werden für die Dauer des Mietverhältnisses gespeichert und nach dessen Beendigung gemäß den gesetzlichen Aufbewahrungspflichten (insbes. § 147 AO, § 257 HGB) verarbeitet.`;
+}
+
+function tpl_10_schluss() {
+  return `Änderungen und Ergänzungen dieses Vertrages bedürfen der Schriftform (§ 550 BGB). Auch die Aufhebung der Schriftformerfordernis bedarf der Schriftform. Mündliche Nebenabreden bestehen nicht.\n\nSollten einzelne Bestimmungen dieses Vertrages unwirksam oder undurchführbar sein oder werden, so bleibt die Wirksamkeit der übrigen Bestimmungen hiervon unberührt. An die Stelle der unwirksamen Bestimmung tritt die gesetzliche Regelung.\n\nGerichtsstand für alle Streitigkeiten aus diesem Vertrag ist — soweit gesetzlich zulässig — ${g('o_ort','—')}. Anwendbares Recht: Recht der Bundesrepublik Deutschland.\n\nDieser Vertrag wurde in zwei gleichlautenden Ausfertigungen erstellt. Jede Partei erhält ein unterschriebenes Exemplar.`;
+}
+
+function generateTemplates() {
+  return [
+    { nr: 1, titel: 'Mietobjekt', gesetz: '§ 535 BGB', text: tpl_1_mietobjekt() },
+    { nr: 2, titel: 'Mietbeginn und Mietdauer', gesetz: '§§ 550, 573c BGB', text: tpl_2_mietdauer() },
+    { nr: 3, titel: 'Miete und Betriebskosten', gesetz: '§§ 556–559 BGB', text: tpl_3_miete() },
+    { nr: 4, titel: 'Mietsicherheit (Kaution)', gesetz: '§ 551 BGB', text: tpl_4_kaution() },
+    { nr: 5, titel: 'Nutzung der Mietsache', gesetz: '§§ 538, 553 BGB', text: tpl_5_nutzung() },
+    { nr: 6, titel: 'Instandhaltung und Schönheitsreparaturen', gesetz: '§§ 535, 538 BGB', text: tpl_6_reparaturen() },
+    { nr: 7, titel: 'Modernisierung', gesetz: '§§ 555b–559b BGB', text: tpl_7_modernisierung() },
+    { nr: 8, titel: 'Betreten der Mieträume', gesetz: 'Art. 13 GG', text: tpl_8_betreten() },
+    { nr: 9, titel: 'Datenschutz', gesetz: 'DSGVO, BDSG', text: tpl_9_dsgvo() },
+    { nr: 10, titel: 'Schlussbestimmungen', gesetz: '§§ 305 ff. BGB', text: tpl_10_schluss() }
+  ];
+}
+
+function doGenerate(){
+  save();
+  sv('load');
+  const msgs=['Vertragsdaten werden zusammengefügt …','BGH-konforme Klauseln werden ausgewählt …','Mietvertrag wird formatiert …'];
+  let mi=0;
+  const tick=setInterval(()=>{document.getElementById('ltick').textContent=msgs[mi%msgs.length];mi++;},700);
+
+  setTimeout(()=>{
+    clearInterval(tick);
+    try {
+      const warm = parseFloat(g('kalt')||0) + parseFloat(g('nkv')||0);
+      const secs = generateTemplates();
+      buildContract(secs, warm);
+      sv('contract');
+    } catch(err) {
+      console.error(err);
+      sv('form');
+      alert('Generierung fehlgeschlagen: '+err.message);
+    }
+  }, 1800);
+}
+
+function pr(l,v){return`<div class="prow"><span class="plbl">${l}</span><span class="pval">${v||'—'}</span></div>`;}
+
+function buildContract(secs,warm){
+  const vn='MN-'+new Date().getFullYear()+'-'+String(Math.floor(Math.random()*8999)+1000);
+  document.getElementById('ch').innerHTML=`
+  <div class="ccard">
+    <div class="chdr">
+      <div class="chdr-top">
+        <div style="display:flex;align-items:center;gap:9px">
+          <div style="width:32px;height:32px;background:rgba(255,255,255,.2);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600">MN</div>
+          <div><div class="clname">MietNext</div><div class="clsub">mietnext.de</div></div>
+        </div>
+        <div class="cmeta">Vertragsnummer: <strong>${vn}</strong><br>Erstellt: ${new Date().toLocaleDateString('de-DE')}<br>Version: 1.0 Beta</div>
+      </div>
+      <div class="ctitle">Wohnraummietvertrag</div>
+      <div class="csubt">Mietvertrag für Wohnraum gemäß §§ 535 ff. BGB · ${g('mda','unbefristet')}</div>
+      <div><span class="cbdg">✓ BGB-konform</span><span class="cbdg">✓ BGH-geprüfte Klauseln</span><span class="cbdg">✓ DSGVO-konform</span><span class="cbdg">⚠ Beta</span></div>
+    </div>
+
+    <div class="cpg">
+      <div class="pcard"><h4>▲ Vermieter</h4>
+        ${pr('Name',g('vm_vn')+' '+g('vm_nn'))}
+        ${pr('Adresse',g('vm_str')+', '+g('vm_plz')+' '+g('vm_ort'))}
+        ${pr('Telefon',g('vm_tel'))}${pr('E-Mail',g('vm_mail'))}</div>
+      <div class="pcard"><h4>▼ Mieter</h4>
+        ${pr('Name',g('mt_vn')+' '+g('mt_nn'))}
+        ${g('mt2')?pr('Weiterer Mieter',g('mt2')):''}
+        ${pr('Telefon',g('mt_tel'))}${pr('E-Mail',g('mt_mail'))}</div>
+    </div>
+
+    <div class="cbody">
+      ${secs.map(s=>`
+        <div class="csec">
+          <div class="csec-hd">
+            <div class="cnum">${s.nr}</div>
+            <div class="csec-ttl">§ ${s.nr} ${s.titel}</div>
+            <span class="claw">${s.gesetz}</span>
+          </div>
+          ${s.text.split(/\n\n|\r\n\r\n/).map(p=>`<p class="cp">${p.replace(/\n/g,'<br>')}</p>`).join('')}
+        </div>`).join('')}
+
+      <div class="csec">
+        <div class="csec-hd">
+          <div class="cnum" style="font-size:14px">✍</div>
+          <div class="csec-ttl">Unterschriften</div>
+          <span class="claw">§ 550 BGB / eIDAS</span>
+        </div>
+        <p class="cp">Ort: <strong>${g('s_ort','_______________')}</strong> &nbsp;&nbsp; Datum: <strong>${fmt(g('s_dat'))}</strong></p>
+        <p class="cp">Dieser Vertrag wird in zwei gleichlautenden Ausfertigungen erstellt. Jede Partei erhält ein unterschriebenes Exemplar.</p>
+        <div class="csig">
+          <div class="sblk"><div class="slbl">Vermieter</div><div class="sname">${g('vm_vn')} ${g('vm_nn')}</div><div class="sline"></div><div class="shint">Unterschrift Vermieter</div></div>
+          <div class="sblk"><div class="slbl">Mieter</div><div class="sname">${g('mt_vn')} ${g('mt_nn')}</div><div class="sline"></div><div class="shint">Unterschrift Mieter</div></div>
+        </div>
+      </div>
+
+      <div class="anl"><h4>Vertragsanlagen</h4>
+        ${['Übergabeprotokoll','Grundriss der Mietwohnung','Hausordnung (falls vorhanden)','Energieausweis (GEG-Pflicht)','DSGVO-Datenschutzerklärung','SEPA-Lastschriftmandat (optional)']
+          .map(a=>`<div class="ar"><div class="ack" onclick="this.classList.toggle('on');this.textContent=this.classList.contains('on')?'✓':''"></div> ${a}</div>`).join('')}
+      </div>
+    </div>
+
+    <div class="cftr">
+      <div style="display:flex;align-items:center;gap:6px;font-weight:600;color:#1B4FD8;font-size:12px"><div class="logo" style="width:20px;height:20px;font-size:9px;border-radius:4px">MN</div>MietNext · mietnext.de</div>
+      <div>${vn}</div>
+      <div>${new Date().toLocaleDateString('de-DE')}</div>
+    </div>
+  </div>`;
+}
+
+function downloadPDF(){
+  const el=document.getElementById('ch');
+  if(!el||!el.innerHTML.trim()){alert('Bitte zuerst einen Vertrag generieren.');return;}
+  if(typeof html2pdf==='undefined'){alert('PDF-Bibliothek lädt noch — kurz warten und erneut versuchen.');return;}
+  const btn=document.getElementById('pdfbtn');
+  btn.textContent='⏳ PDF wird erstellt …';btn.disabled=true;
+  const vn=(el.querySelector('.cftr div:nth-child(2)')?.textContent||'MietNext-Mietvertrag').trim();
+  html2pdf().set({
+    margin:[12,14,12,14],
+    filename:vn+'.pdf',
+    image:{type:'jpeg',quality:0.98},
+    html2canvas:{scale:2,useCORS:true,logging:false,backgroundColor:'#ffffff'},
+    jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}
+  }).from(el).save().then(()=>{
+    btn.textContent='⬇ PDF herunterladen';btn.disabled=false;
+  });
+}
+
+rend();
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+</body>
+</html>

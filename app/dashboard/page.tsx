@@ -512,7 +512,7 @@ export default function Dashboard() {
         </div>
 
         {/* === Action Items + Auslastung === */}
-        <div className="flex flex-col gap-3 md:grid md:grid-cols-[1.5fr_1fr]" style={{ marginBottom: '1.5rem' }}>
+        <div className="flex flex-col gap-3 md:grid md:grid-cols-2" style={{ marginBottom: '1.5rem' }}>
           <div style={cardStyle}>
             <div style={cardHeaderStyle}>
               <h3 style={cardTitleStyle}>📋 Was steht an?</h3>
@@ -555,15 +555,38 @@ export default function Dashboard() {
               <h3 style={cardTitleStyle}>📊 Auslastung & Mix</h3>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <svg width="100" height="100" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="40" fill="none" stroke="#f3f4f6" strokeWidth="14" />
-                <circle cx="50" cy="50" r="40" fill="none" stroke={donutColor} strokeWidth="14"
-                  strokeDasharray={`${donutFill} ${donutCircum}`}
-                  transform="rotate(-90 50 50)" strokeLinecap="round" />
-                <text x="50" y="56" textAnchor="middle" fontSize="18" fontWeight="500" fill="#1a1a1a">
-                  {occupancyRate}%
-                </text>
-              </svg>
+              {(() => {
+                const c2pi = 2 * Math.PI * 40
+                const totalU = stats.units || 1
+                const segs: Array<{color: string, count: number}> = []
+                if (stats.woUnits > 0) segs.push({ color: '#1d9e75', count: stats.woUnits })
+                if (stats.gewerbeUnits > 0) segs.push({ color: '#7F77DD', count: stats.gewerbeUnits })
+                if (stats.lagerUnits > 0) segs.push({ color: '#a16207', count: stats.lagerUnits })
+                if (stats.stellplatzUnits > 0) segs.push({ color: '#6b7280', count: stats.stellplatzUnits })
+                let offset = 0
+                const arcs = segs.map(s => {
+                  const arcLen = (s.count / totalU) * c2pi
+                  const arc = { color: s.color, dasharray: arcLen + ' ' + c2pi, dashoffset: -offset }
+                  offset += arcLen
+                  return arc
+                })
+                return (
+                  <svg width="100" height="100" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="40" fill="none" stroke="#f3f4f6" strokeWidth="14" />
+                    {arcs.map((a, i) => (
+                      <circle key={i} cx="50" cy="50" r="40" fill="none" stroke={a.color} strokeWidth="14"
+                        strokeDasharray={a.dasharray} strokeDashoffset={a.dashoffset}
+                        transform="rotate(-90 50 50)" />
+                    ))}
+                    <text x="50" y="48" textAnchor="middle" fontSize="16" fontWeight="500" fill="#1a1a1a">
+                      {occupancyRate}%
+                    </text>
+                    <text x="50" y="62" textAnchor="middle" fontSize="8" fill="#6b7280">
+                      vermietet
+                    </text>
+                  </svg>
+                )
+              })()}
               <div style={{ flex: 1, fontSize: '12px', color: '#6b7280', lineHeight: 1.7 }}>
                 <strong style={{ color: '#1a1a1a' }}>{stats.occupiedUnits} von {stats.units}</strong> vermietet
                 <div style={{ marginTop: '8px' }}>

@@ -13,6 +13,12 @@ interface ActionItem {
   href?: string
 }
 
+interface MonthlyData {
+  month: string
+  label: string
+  income: number
+}
+
 interface Activity {
   icon: string
   text: string
@@ -39,6 +45,7 @@ interface Stats {
   gewerbeUnits: number
   lagerUnits: number
   stellplatzUnits: number
+  monthlyChart: MonthlyData[]
 }
 
 const NULL_UUID = '00000000-0000-0000-0000-000000000000'
@@ -283,6 +290,26 @@ export default function Dashboard() {
     const lagerUnits = (units || []).filter((u: any) => u.type === 'lager').length
     const stellplatzUnits = (units || []).filter((u: any) => u.type === 'stellplatz').length
 
+    // === Monthly Chart (12 Monate) ===
+    const monthsAgo12 = dateStr(new Date(today.getFullYear() - 1, today.getMonth(), 1))
+    const { data: yearlyPayments } = await supabase
+      .from('payments').select('amount, due_date, status')
+      .in('contract_id', contractIdsSafe)
+      .eq('status', 'paid')
+      .gte('due_date', monthsAgo12)
+      .lte('due_date', lastDayMonth)
+
+    const monthLabels = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez']
+    const monthlyChart: MonthlyData[] = []
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(today.getFullYear(), today.getMonth() - i, 1)
+      const monthKey = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')
+      const monthIncome = (yearlyPayments || [])
+        .filter((p: any) => p.due_date && p.due_date.startsWith(monthKey))
+        .reduce((s: number, p: any) => s + Number(p.amount || 0), 0)
+      monthlyChart.push({ month: monthKey, label: monthLabels[d.getMonth()], income: monthIncome })
+    }
+
     setStats({
       properties: properties?.length || 0,
       units: units?.length || 0,
@@ -302,7 +329,8 @@ export default function Dashboard() {
       woUnits,
       gewerbeUnits,
       lagerUnits,
-      stellplatzUnits
+      stellplatzUnits,
+      monthlyChart
     })
     setLoading(false)
   }
@@ -523,6 +551,53 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* === Einnahmen-Chart === */}
+        <div style={{...cardStyle, marginBottom: '1.5rem'}}>
+          <div style={cardHeaderStyle}>
+            <h3 style={cardTitleStyle}>📈 Einnahmen-Trend (12 Monate)</h3>
+            <span style={{fontSize: '11px', color: '#9ca3af'}}>
+              Gesamt: {fmtCurrency(stats.monthlyChart.reduce((s, m) => s + m.income, 0))}
+            </span>
+          </div>
+          {(() => {
+            const data = stats.monthlyChart
+            const maxVal = Math.max(...data.map(d => d.income), 100)
+            const w = 100, h = 140, padL = 50, padR = 10, padT = 10, padB = 25
+            const chartW = (w * data.length) - padL - padR
+            const stepX = chartW / (data.length - 1)
+            const points = data.map((d, i) => {
+              const x = padL + i * stepX
+              const y = padT + (h - padT - padB) * (1 - d.income / maxVal)
+              return {x, y, ...d}
+            })
+            const polyPts = points.map(p => p.x + ',' + p.y).join(' ')
+            const areaPts = polyPts + ' ' + points[points.length-1].x + ',' + (h - padB) + ' ' + padL + ',' + (h - padB)
+            return (
+              <div style={{position: 'relative', overflowX: 'auto'}}>
+                <svg viewBox={`0 0 ${w * data.length} ${h}`} width="100%" height={h} style={{minWidth: '500px', display: 'block'}}>
+                  <line x1={padL} y1={padT} x2={padL} y2={h - padB} stroke="#e5e7eb" strokeWidth="0.5"/>
+                  <line x1={padL} y1={h - padB} x2={w * data.length - padR} y2={h - padB} stroke="#e5e7eb" strokeWidth="0.5"/>
+                  <text x={padL - 5} y={padT + 4} fontSize="9" textAnchor="end" fill="#9ca3af">{fmtCurrency(maxVal)}</text>
+                  <text x={padL - 5} y={h - padB + 3} fontSize="9" textAnchor="end" fill="#9ca3af">0 €</text>
+                  <polygon fill="#1B4FD8" fillOpacity="0.08" points={areaPts}/>
+                  <polyline fill="none" stroke="#1B4FD8" strokeWidth="2" points={polyPts}/>
+                  {points.map((p, i) => (
+                    <g key={i}>
+                      <circle cx={p.x} cy={p.y} r={i === points.length-1 ? 4 : 3} fill="#1B4FD8" stroke="white" strokeWidth={i === points.length-1 ? 2 : 0}/>
+                      <text x={p.x} y={h - padB + 14} fontSize="10" textAnchor="middle" fill="#6b7280">{p.label}</text>
+                      {p.income > 0 && (
+                        <text x={p.x} y={p.y - 8} fontSize="9" textAnchor="middle" fill="#1B4FD8" fontWeight="500">
+                          {Math.round(p.income / 1000)}k
+                        </text>
+                      )}
+                    </g>
+                  ))}
+                </svg>
+              </div>
+            )
+          })()}
         </div>
 
         {/* === Activity + Smart Insight === */}

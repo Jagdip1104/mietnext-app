@@ -135,8 +135,8 @@ export default function Dashboard() {
       .from('payments').select('amount')
       .in('contract_id', contractIdsSafe)
       .eq('status', 'paid')
-      .gte('paid_date', firstDayMonth)
-      .lte('paid_date', lastDayMonth)
+      .gte('due_date', firstDayMonth)
+      .lte('due_date', lastDayMonth)
     const monthlyIncome = (paidThisMonth || []).reduce((s: number, p: any) => s + Number(p.amount || 0), 0)
 
     // Previous month for trend
@@ -144,8 +144,8 @@ export default function Dashboard() {
       .from('payments').select('amount')
       .in('contract_id', contractIdsSafe)
       .eq('status', 'paid')
-      .gte('paid_date', firstDayPrev)
-      .lte('paid_date', lastDayPrev)
+      .gte('due_date', firstDayPrev)
+      .lte('due_date', lastDayPrev)
     const prevMonthlyIncome = (paidPrev || []).reduce((s: number, p: any) => s + Number(p.amount || 0), 0)
 
     // Pending + Late

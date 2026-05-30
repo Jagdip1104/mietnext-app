@@ -272,9 +272,16 @@ export default function NebenkostenabrechnungDetail() {
 
   // Berechnet Soll-Vorauszahlung aus Vertrag
   const getCalculatedPrepayments = (unit: any): number => {
-    if (!statement || !unit.utilities_amount) return 0
+    if (!statement) return 0
     const contract = getContractForUnit(unit.id)
     if (!contract) return 0
+    // Priorisiere contract.utility_advance (echter Vertragswert),
+    // Fallback nur wenn nicht gesetzt (null/undefined) -> unit.utilities_amount
+    const monthlyAdvance =
+      contract.utility_advance !== null && contract.utility_advance !== undefined
+        ? Number(contract.utility_advance)
+        : Number(unit.utilities_amount || 0)
+    if (monthlyAdvance <= 0) return 0
     const year      = statement.year
     const yearStart = new Date(`${year}-01-01`)
     const yearEnd   = new Date(`${year}-12-31`)
@@ -284,7 +291,7 @@ export default function NebenkostenabrechnungDetail() {
     const effEnd    = end   < yearEnd   ? end   : yearEnd
     if (effStart > effEnd) return 0
     const months = Math.min(Math.round((effEnd.getTime() - effStart.getTime()) / (1000 * 60 * 60 * 24 * 30.44)) + 1, 12)
-    return Number(unit.utilities_amount) * months
+    return monthlyAdvance * months
   }
 
   // Gibt manuelle Überschreibung zurück, sonst Soll-Berechnung
@@ -417,7 +424,7 @@ export default function NebenkostenabrechnungDetail() {
         doc.setTextColor(100, 100, 100)
         doc.text(`Geleistete Vorauszahlungen${isManual ? ' (tatsächlich)' : ''}:`, 22, y)
         doc.setTextColor(26, 26, 26)
-        doc.text(`− ${formatEur(prepays)}`, 190, y, { align: 'right' })
+        doc.text(`- ${formatEur(prepays)}`, 190, y, { align: 'right' })
         y += 5
 
         doc.setDrawColor(26, 26, 26)
@@ -431,7 +438,7 @@ export default function NebenkostenabrechnungDetail() {
         doc.setTextColor(80, 80, 80)
         doc.text(isNach ? 'NACHZAHLUNG:' : 'GUTHABEN:', 22, y)
         doc.setTextColor(r, g, b)
-        doc.text(`${isNach ? '+' : '−'} ${formatEur(Math.abs(balance))}`, 190, y, { align: 'right' })
+        doc.text(`${isNach ? '+' : '-'} ${formatEur(Math.abs(balance))}`, 190, y, { align: 'right' })
         y += 9
 
         doc.setFontSize(8)
@@ -721,6 +728,11 @@ export default function NebenkostenabrechnungDetail() {
                         <p style={{ fontSize: '13px', color: '#888', margin: 0 }}>
                           {contract ? contract.tenants?.full_name : '⚠ Kein aktiver Mieter – Kosten trägt Vermieter'}
                         </p>
+                        {contract && calculated === 0 && allocated > 0 && !isManual && (
+                          <p style={{ fontSize: '12px', color: '#d97706', margin: '4px 0 0' }}>
+                            ⚠ Keine NK-Vorauszahlung im Vertrag hinterlegt → ganzer Anteil als Nachzahlung. Falls Inklusivmiete: korrekt.
+                          </p>
+                        )}
                       </div>
 
                       <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start' }}>

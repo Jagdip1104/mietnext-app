@@ -81,6 +81,8 @@ export default function NebenkostenabrechnungDetail() {
   const [availableExpenses, setAvailableExpenses] = useState<any[]>([])
   const [selectedExpenseIds, setSelectedExpenseIds] = useState<Set<string>>(new Set())
   const [importing, setImporting] = useState(false)
+  const [importKeys, setImportKeys] = useState<Record<string, string>>({})
+  const [editItem, setEditItem] = useState<any>(null)
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
 
   useEffect(() => { if (id) loadData() }, [id])
@@ -166,6 +168,44 @@ export default function NebenkostenabrechnungDetail() {
     loadData()
   }
 
+  const openEditItem = (item: any) => {
+    const ua: Record<string, string> = {}
+    if (item.unit_amounts) for (const k of Object.keys(item.unit_amounts)) ua[k] = String(item.unit_amounts[k])
+    setEditItem({
+      id: item.id,
+      category: item.category,
+      description: item.description || '',
+      total_amount: String(item.total_amount),
+      distribution_key: item.distribution_key,
+      unit_amounts: ua,
+    })
+  }
+
+  const handleEditUnitAmount = (unitId: string, value: string) => {
+    setEditItem((prev: any) => {
+      const updated = { ...prev.unit_amounts, [unitId]: value }
+      const total = Object.values(updated).reduce((s: number, v: any) => s + (parseFloat(v) || 0), 0)
+      return { ...prev, unit_amounts: updated, total_amount: total.toFixed(2) }
+    })
+  }
+
+  const handleUpdateItem = async () => {
+    if (!editItem || !editItem.total_amount) return
+    setSaving(true)
+    const upd: any = {
+      category: editItem.category,
+      distribution_key: editItem.distribution_key,
+      total_amount: parseFloat(editItem.total_amount),
+      description: editItem.description || null,
+      unit_amounts: editItem.distribution_key === 'per_unit' ? editItem.unit_amounts : null,
+    }
+    const { error } = await supabase.from('utility_cost_items').update(upd).eq('id', editItem.id)
+    setSaving(false)
+    if (error) { alert('Fehler: ' + error.message); return }
+    setEditItem(null)
+    loadData()
+  }
+
   // 📥 Modal öffnen + Expenses laden
   const openImportModal = async () => {
     if (!statement?.property_id || !statement?.year) return
@@ -182,6 +222,12 @@ export default function NebenkostenabrechnungDetail() {
     const filtered = (data || []).filter((e: any) => !importedIds.has(e.id))
     setAvailableExpenses(filtered)
     setSelectedExpenseIds(new Set(filtered.map((e: any) => e.id)))
+    const keyDefaults: Record<string, string> = {}
+    filtered.forEach((e: any) => {
+      const betrkvCat = EXPENSE_TO_BETRKV[e.category] || 'sonstige'
+      keyDefaults[e.id] = BETRKV_CATEGORIES.find((c: any) => c.value === betrkvCat)?.defaultKey || 'sqm'
+    })
+    setImportKeys(keyDefaults)
     setShowImportModal(true)
   }
 
@@ -202,7 +248,7 @@ export default function NebenkostenabrechnungDetail() {
       .filter((e: any) => selectedExpenseIds.has(e.id))
       .map((e: any) => {
         const betrkvCat = EXPENSE_TO_BETRKV[e.category] || 'sonstige'
-        const distKey = BETRKV_CATEGORIES.find((c: any) => c.value === betrkvCat)?.defaultKey || 'sqm'
+        const distKey = importKeys[e.id] || BETRKV_CATEGORIES.find((c: any) => c.value === betrkvCat)?.defaultKey || 'sqm'
         return {
           statement_id: id,
           category: betrkvCat,
@@ -761,6 +807,10 @@ export default function NebenkostenabrechnungDetail() {
                             <p style={{ fontSize: '16px', fontWeight: '500', color: '#1a1a1a', margin: 0, fontFamily: 'Georgia, serif' }}>
                               {formatEur(Number(item.total_amount))}
                             </p>
+                            <button onClick={() => openEditItem(item)}
+                              style={{ backgroundColor: '#fff', color: '#1a1a1a', padding: '6px 12px', borderRadius: '6px', border: '1px solid #e8e6e0', fontSize: '12px', cursor: 'pointer' }}>
+                              Bearbeiten
+                            </button>
                             <button onClick={() => setDeleteConfirm(item.id)}
                               style={{ backgroundColor: '#fff', color: '#dc2626', padding: '6px 12px', borderRadius: '6px', border: '1px solid #fecaca', fontSize: '12px', cursor: 'pointer' }}>
                               Löschen
@@ -812,6 +862,8 @@ export default function NebenkostenabrechnungDetail() {
                                 </p>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                   <span style={{ fontSize: '13px', color: '#1a1a1a' }}>{formatEur(Number(item.total_amount))}</span>
+                                  <button onClick={() => openEditItem(item)}
+                                    style={{ background: 'none', border: 'none', color: '#1a1a1a', fontSize: '12px', cursor: 'pointer', padding: 0 }}>Bearbeiten</button>
                                   <button onClick={() => setDeleteConfirm(item.id)}
                                     style={{ background: 'none', border: 'none', color: '#dc2626', fontSize: '12px', cursor: 'pointer', padding: 0 }}>Löschen</button>
                                 </div>
@@ -987,6 +1039,65 @@ export default function NebenkostenabrechnungDetail() {
           </div>
         )}
       </div>
+    {editItem && (
+      <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '20px' }}>
+        <div style={{ backgroundColor: '#fff', borderRadius: '12px', maxWidth: '600px', width: '100%', maxHeight: '85vh', overflowY: 'auto' }}>
+          <div style={{ padding: '20px 24px', borderBottom: '1px solid #e8e6e0' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: '500', color: '#1a1a1a', margin: 0, fontFamily: 'Georgia, serif' }}>Position bearbeiten</h2>
+          </div>
+          <div style={{ padding: '20px 24px' }}>
+            <div className="flex flex-col gap-4 md:grid md:grid-cols-2" style={{ marginBottom: '16px' }}>
+              <div style={{ gridColumn: 'span 2' }}>
+                <label style={lbl}>Kostenkategorie</label>
+                <select value={editItem.category} onChange={e => setEditItem((pp: any) => ({ ...pp, category: e.target.value }))} style={inp}>
+                  {BETRKV_CATEGORIES.map((cat: any) => (<option key={cat.value} value={cat.value}>{cat.label}</option>))}
+                </select>
+              </div>
+              <div>
+                <label style={lbl}>Umlageschlüssel</label>
+                <select value={editItem.distribution_key} onChange={e => setEditItem((pp: any) => ({ ...pp, distribution_key: e.target.value }))} style={inp}>
+                  {DISTRIBUTION_KEYS.map((dk: any) => (<option key={dk.value} value={dk.value}>{dk.label}</option>))}
+                </select>
+              </div>
+              {editItem.distribution_key !== 'per_unit' && (
+                <div>
+                  <label style={lbl}>Gesamtbetrag (€)</label>
+                  <input type="number" value={editItem.total_amount} onChange={e => setEditItem((pp: any) => ({ ...pp, total_amount: e.target.value }))} style={inp} />
+                </div>
+              )}
+              <div style={{ gridColumn: 'span 2' }}>
+                <label style={lbl}>Beschreibung</label>
+                <input type="text" value={editItem.description} onChange={e => setEditItem((pp: any) => ({ ...pp, description: e.target.value }))} style={inp} />
+              </div>
+            </div>
+            {editItem.distribution_key === 'per_unit' && (
+              <div style={{ backgroundColor: '#fafaf8', borderRadius: '8px', padding: '16px', marginBottom: '16px' }}>
+                <p style={{ fontSize: '12px', color: '#999', margin: '0 0 12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Betrag je Einheit</p>
+                <div className="flex flex-col gap-3 md:grid md:grid-cols-2">
+                  {units.map((unit: any) => (
+                    <div key={unit.id}>
+                      <label style={{ fontSize: '13px', color: '#666', marginBottom: '4px', display: 'block' }}>{unit.name}</label>
+                      <input type="number" value={editItem.unit_amounts[unit.id] || ''} onChange={e => handleEditUnitAmount(unit.id, e.target.value)} placeholder="0.00" style={inp} />
+                    </div>
+                  ))}
+                </div>
+                <p style={{ fontSize: '13px', color: '#666', margin: '12px 0 0' }}>Summe: <strong>{formatEur(parseFloat(editItem.total_amount) || 0)}</strong></p>
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={handleUpdateItem} disabled={saving || !editItem.total_amount}
+                style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer', opacity: saving || !editItem.total_amount ? 0.4 : 1 }}>
+                {saving ? 'Speichern...' : 'Speichern'}
+              </button>
+              <button onClick={() => setEditItem(null)}
+                style={{ backgroundColor: '#fff', color: '#666', padding: '10px 20px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer' }}>
+                Abbrechen
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
     {showImportModal && (
       <div style={{
         position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)',
@@ -1038,8 +1149,18 @@ export default function NebenkostenabrechnungDetail() {
                     {e.description && ` · ${e.description}`}
                   </p>
                   <p style={{ fontSize: '11px', color: '#bbb', margin: '2px 0 0' }}>
-                    → BetrKV: {EXPENSE_TO_BETRKV[e.category] || 'sonstige'}
+                    → BetrKV: {getCatLabel(EXPENSE_TO_BETRKV[e.category] || 'sonstige')}
                   </p>
+                  <div onClick={ev => ev.stopPropagation()} onMouseDown={ev => ev.stopPropagation()} style={{ marginTop: '6px' }}>
+                    <select
+                      value={importKeys[e.id] || 'sqm'}
+                      onChange={ev => setImportKeys(prev => ({ ...prev, [e.id]: ev.target.value }))}
+                      style={{ fontSize: '12px', border: '1px solid #e8e6e0', borderRadius: '6px', padding: '4px 8px', color: '#1a1a1a', backgroundColor: '#fff' }}>
+                      {DISTRIBUTION_KEYS.map((dk: any) => (
+                        <option key={dk.value} value={dk.value}>{dk.label}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </label>
             ))}

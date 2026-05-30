@@ -48,6 +48,10 @@ interface Stats {
   gewerbeUnits: number
   lagerUnits: number
   stellplatzUnits: number
+  woUnitsOccupied: number
+  gewerbeUnitsOccupied: number
+  lagerUnitsOccupied: number
+  stellplatzUnitsOccupied: number
   monthlyChart: MonthlyData[]
 }
 
@@ -298,9 +302,13 @@ export default function Dashboard() {
 
     // Unit type breakdown
     const woUnits = (units || []).filter((u: any) => u.type === 'wohnung').length
+    const woUnitsOccupied = (units || []).filter((u: any) => u.type === 'wohnung' && u.is_occupied).length
     const gewerbeUnits = (units || []).filter((u: any) => u.type === 'gewerbe').length
+    const gewerbeUnitsOccupied = (units || []).filter((u: any) => u.type === 'gewerbe' && u.is_occupied).length
     const lagerUnits = (units || []).filter((u: any) => u.type === 'lager').length
+    const lagerUnitsOccupied = (units || []).filter((u: any) => u.type === 'lager' && u.is_occupied).length
     const stellplatzUnits = (units || []).filter((u: any) => u.type === 'stellplatz').length
+    const stellplatzUnitsOccupied = (units || []).filter((u: any) => u.type === 'stellplatz' && u.is_occupied).length
 
     // === Monthly Chart (12 Monate) ===
     const monthsAgo12 = dateStr(new Date(today.getFullYear() - 1, today.getMonth(), 1))
@@ -353,6 +361,10 @@ export default function Dashboard() {
       gewerbeUnits,
       lagerUnits,
       stellplatzUnits,
+      woUnitsOccupied,
+      gewerbeUnitsOccupied,
+      lagerUnitsOccupied,
+      stellplatzUnitsOccupied,
       monthlyChart
     })
     setLoading(false)
@@ -559,10 +571,10 @@ export default function Dashboard() {
                 const c2pi = 2 * Math.PI * 40
                 const totalU = stats.units || 1
                 const segs: Array<{color: string, count: number}> = []
-                if (stats.woUnits > 0) segs.push({ color: '#1d9e75', count: stats.woUnits })
-                if (stats.gewerbeUnits > 0) segs.push({ color: '#7F77DD', count: stats.gewerbeUnits })
-                if (stats.lagerUnits > 0) segs.push({ color: '#a16207', count: stats.lagerUnits })
-                if (stats.stellplatzUnits > 0) segs.push({ color: '#6b7280', count: stats.stellplatzUnits })
+                if (stats.woUnitsOccupied > 0) segs.push({ color: '#1d9e75', count: stats.woUnitsOccupied })
+                if (stats.gewerbeUnitsOccupied > 0) segs.push({ color: '#7F77DD', count: stats.gewerbeUnitsOccupied })
+                if (stats.lagerUnitsOccupied > 0) segs.push({ color: '#a16207', count: stats.lagerUnitsOccupied })
+                if (stats.stellplatzUnitsOccupied > 0) segs.push({ color: '#6b7280', count: stats.stellplatzUnitsOccupied })
                 let offset = 0
                 const arcs = segs.map(s => {
                   const arcLen = (s.count / totalU) * c2pi
@@ -590,10 +602,10 @@ export default function Dashboard() {
               <div style={{ flex: 1, fontSize: '12px', color: '#6b7280', lineHeight: 1.7 }}>
                 <strong style={{ color: '#1a1a1a' }}>{stats.occupiedUnits} von {stats.units}</strong> vermietet
                 <div style={{ marginTop: '8px' }}>
-                  {stats.woUnits > 0 && <div><span style={{ color: '#1d9e75' }}>●</span> {stats.woUnits} Wohnung{stats.woUnits === 1 ? '' : 'en'}</div>}
-                  {stats.gewerbeUnits > 0 && <div><span style={{ color: '#7F77DD' }}>●</span> {stats.gewerbeUnits} Gewerbe</div>}
-                  {stats.lagerUnits > 0 && <div><span style={{ color: '#a16207' }}>●</span> {stats.lagerUnits} Lager</div>}
-                  {stats.stellplatzUnits > 0 && <div><span style={{ color: '#6b7280' }}>●</span> {stats.stellplatzUnits} Stellplatz</div>}
+                  {stats.woUnits > 0 && <div><span style={{ color: '#1d9e75' }}>●</span> {stats.woUnitsOccupied}/{stats.woUnits} Wohnung{stats.woUnits === 1 ? '' : 'en'}</div>}
+                  {stats.gewerbeUnits > 0 && <div><span style={{ color: '#7F77DD' }}>●</span> {stats.gewerbeUnitsOccupied}/{stats.gewerbeUnits} Gewerbe</div>}
+                  {stats.lagerUnits > 0 && <div><span style={{ color: '#a16207' }}>●</span> {stats.lagerUnitsOccupied}/{stats.lagerUnits} Lager</div>}
+                  {stats.stellplatzUnits > 0 && <div><span style={{ color: '#6b7280' }}>●</span> {stats.stellplatzUnitsOccupied}/{stats.stellplatzUnits} Stellplatz</div>}
                   {stats.vacantUnits > 0 && (
                     <div style={{ color: '#dc2626', marginTop: '4px' }}>
                       <span>●</span> {stats.vacantUnits} leer

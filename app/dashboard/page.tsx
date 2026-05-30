@@ -17,6 +17,7 @@ interface MonthlyData {
   month: string
   label: string
   income: number
+  expected: number
 }
 
 interface Activity {
@@ -32,6 +33,8 @@ interface Stats {
   vacantUnits: number
   tenants: number
   monthlyIncome: number
+  monthlyExpected: number
+  paymentQuote: number
   prevMonthlyIncome: number
   forecast30Days: number
   pendingPayments: number
@@ -145,6 +148,15 @@ export default function Dashboard() {
       .gte('due_date', firstDayMonth)
       .lte('due_date', lastDayMonth)
     const monthlyIncome = (paidThisMonth || []).reduce((s: number, p: any) => s + Number(p.amount || 0), 0)
+
+    // Soll diesen Monat (egal welcher Status)
+    const { data: expectedThisMonth } = await supabase
+      .from('payments').select('amount')
+      .in('contract_id', contractIdsSafe)
+      .gte('due_date', firstDayMonth)
+      .lte('due_date', lastDayMonth)
+    const monthlyExpected = (expectedThisMonth || []).reduce((s: number, p: any) => s + Number(p.amount || 0), 0)
+    const paymentQuote = monthlyExpected > 0 ? Math.round((monthlyIncome / monthlyExpected) * 100) : 0
 
     // Previous month for trend
     const { data: paidPrev } = await supabase
@@ -299,6 +311,12 @@ export default function Dashboard() {
       .gte('due_date', monthsAgo12)
       .lte('due_date', lastDayMonth)
 
+    const { data: yearlyExpected } = await supabase
+      .from('payments').select('amount, due_date')
+      .in('contract_id', contractIdsSafe)
+      .gte('due_date', monthsAgo12)
+      .lte('due_date', lastDayMonth)
+
     const monthLabels = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez']
     const monthlyChart: MonthlyData[] = []
     for (let i = 11; i >= 0; i--) {
@@ -307,7 +325,10 @@ export default function Dashboard() {
       const monthIncome = (yearlyPayments || [])
         .filter((p: any) => p.due_date && p.due_date.startsWith(monthKey))
         .reduce((s: number, p: any) => s + Number(p.amount || 0), 0)
-      monthlyChart.push({ month: monthKey, label: monthLabels[d.getMonth()], income: monthIncome })
+      const monthExpected = (yearlyExpected || [])
+        .filter((p: any) => p.due_date && p.due_date.startsWith(monthKey))
+        .reduce((s: number, p: any) => s + Number(p.amount || 0), 0)
+      monthlyChart.push({ month: monthKey, label: monthLabels[d.getMonth()], income: monthIncome, expected: monthExpected })
     }
 
     setStats({
@@ -317,6 +338,8 @@ export default function Dashboard() {
       vacantUnits: vacantUnits.length,
       tenants: tenants?.length || 0,
       monthlyIncome,
+      monthlyExpected,
+      paymentQuote,
       prevMonthlyIncome,
       forecast30Days,
       pendingPayments,
@@ -438,13 +461,22 @@ export default function Dashboard() {
         }}>
           <div style={kpiCardStyle}>
             <div style={kpiLabelStyle}>Einnahmen diesen Monat</div>
-            <div style={{ ...kpiValueStyle, color: '#16a34a' }}>{fmtCurrency(stats.monthlyIncome)}</div>
-            <div style={{
-              fontSize: '11.5px',
-              color: trendUp ? '#16a34a' : trendDown ? '#dc2626' : '#9ca3af'
-            }}>
-              {trendUp ? '↑' : trendDown ? '↓' : '→'} {Math.abs(trendPct)}% vs. Vormonat ({fmtCurrency(stats.prevMonthlyIncome)})
+            <div style={{ ...kpiValueStyle, color: stats.paymentQuote >= 95 ? '#16a34a' : stats.paymentQuote >= 70 ? '#d97706' : '#dc2626' }}>
+              {fmtCurrency(stats.monthlyIncome)}
             </div>
+            <div style={{ fontSize: '11.5px', color: '#6b7280', marginBottom: '4px' }}>
+              {stats.paymentQuote}% Quote · Soll {fmtCurrency(stats.monthlyExpected)}
+            </div>
+            {stats.monthlyExpected > stats.monthlyIncome && (
+              <div style={{ fontSize: '11px', color: '#d97706' }}>
+                {fmtCurrency(stats.monthlyExpected - stats.monthlyIncome)} noch offen
+              </div>
+            )}
+            {stats.monthlyExpected > 0 && stats.paymentQuote === 100 && (
+              <div style={{ fontSize: '11px', color: '#16a34a' }}>
+                ✓ Komplett bezahlt
+              </div>
+            )}
           </div>
 
           <div style={kpiCardStyle}>
@@ -557,13 +589,14 @@ export default function Dashboard() {
         <div style={{...cardStyle, marginBottom: '1.5rem'}}>
           <div style={cardHeaderStyle}>
             <h3 style={cardTitleStyle}>📈 Einnahmen-Trend (12 Monate)</h3>
-            <span style={{fontSize: '11px', color: '#9ca3af'}}>
-              Gesamt: {fmtCurrency(stats.monthlyChart.reduce((s, m) => s + m.income, 0))}
-            </span>
+            <div style={{display: 'flex', gap: '12px', fontSize: '11px', color: '#6b7280', alignItems: 'center'}}>
+              <span><span style={{display: 'inline-block', width: '12px', height: '2px', background: '#1B4FD8', marginRight: '4px', verticalAlign: 'middle'}}></span>Ist</span>
+              <span><span style={{display: 'inline-block', width: '12px', height: '0', borderTop: '1.5px dashed #9ca3af', marginRight: '4px', verticalAlign: 'middle'}}></span>Soll</span>
+            </div>
           </div>
           {(() => {
             const data = stats.monthlyChart
-            const maxVal = Math.max(...data.map(d => d.income), 100)
+            const maxVal = Math.max(...data.map(d => Math.max(d.income, d.expected)), 100)
             const w = 100, h = 140, padL = 50, padR = 10, padT = 10, padB = 25
             const chartW = (w * data.length) - padL - padR
             const stepX = chartW / (data.length - 1)
@@ -574,6 +607,11 @@ export default function Dashboard() {
             })
             const polyPts = points.map(p => p.x + ',' + p.y).join(' ')
             const areaPts = polyPts + ' ' + points[points.length-1].x + ',' + (h - padB) + ' ' + padL + ',' + (h - padB)
+            const expectedPts = data.map((d, i) => {
+              const x = padL + i * stepX
+              const y = padT + (h - padT - padB) * (1 - d.expected / maxVal)
+              return x + ',' + y
+            }).join(' ')
             return (
               <div style={{position: 'relative', overflowX: 'auto'}}>
                 <svg viewBox={`0 0 ${w * data.length} ${h}`} width="100%" height={h} style={{minWidth: '500px', display: 'block'}}>
@@ -582,6 +620,7 @@ export default function Dashboard() {
                   <text x={padL - 5} y={padT + 4} fontSize="9" textAnchor="end" fill="#9ca3af">{fmtCurrency(maxVal)}</text>
                   <text x={padL - 5} y={h - padB + 3} fontSize="9" textAnchor="end" fill="#9ca3af">0 €</text>
                   <polygon fill="#1B4FD8" fillOpacity="0.08" points={areaPts}/>
+                  <polyline fill="none" stroke="#9ca3af" strokeWidth="1.5" strokeDasharray="4,3" points={expectedPts}/>
                   <polyline fill="none" stroke="#1B4FD8" strokeWidth="2" points={polyPts}/>
                   {points.map((p, i) => (
                     <g key={i}>

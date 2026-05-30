@@ -56,6 +56,8 @@ export default function KostenPage() {
   const [showForm, setShowForm]       = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [showBulkForm, setShowBulkForm] = useState(false)
+  const [bulkRows, setBulkRows] = useState<any[]>([])
   
   // Beleg-Upload States
   const [receiptFile, setReceiptFile] = useState<File | null>(null)
@@ -296,6 +298,52 @@ export default function KostenPage() {
     loadData(userId!)
   }
 
+  const openBulkForm = () => {
+    const today = new Date().toISOString().split('T')[0]
+    const pid = filterProperty || ''
+    setBulkRows([
+      { property_id: pid, category: '', amount: '', expense_date: today, description: '' },
+      { property_id: pid, category: '', amount: '', expense_date: today, description: '' },
+      { property_id: pid, category: '', amount: '', expense_date: today, description: '' },
+    ])
+    setShowBulkForm(true)
+    setTimeout(() => document.getElementById('bulkcard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
+  }
+  const updateBulkRow = (i: number, field: string, value: string) =>
+    setBulkRows(prev => prev.map((r: any, idx: number) => idx === i ? { ...r, [field]: value } : r))
+  const addBulkRow = () => setBulkRows(prev => {
+    const last: any = prev[prev.length - 1] || {}
+    const today = new Date().toISOString().split('T')[0]
+    return [...prev, { property_id: last.property_id || '', category: '', amount: '', expense_date: last.expense_date || today, description: '' }]
+  })
+  const removeBulkRow = (i: number) => setBulkRows(prev => prev.filter((_: any, idx: number) => idx !== i))
+
+  const handleBulkSave = async () => {
+    const valid = bulkRows.filter((r: any) => r.property_id && r.category && r.amount && parseFloat(r.amount) > 0 && r.expense_date)
+    if (valid.length === 0) { alert('Mindestens eine Zeile mit Objekt, Kategorie, Betrag und Datum ausfüllen.'); return }
+    setLoading(true)
+    const rows = valid.map((r: any) => {
+      const cat = EXPENSE_CATEGORIES.find((c: any) => c.value === r.category)
+      return {
+        owner_id: userId,
+        property_id: r.property_id,
+        category: r.category,
+        custom_category: null,
+        amount: parseFloat(r.amount),
+        expense_date: r.expense_date,
+        description: r.description || null,
+        invoice_number: null,
+        umlagefaehig: cat?.umlagefaehig ?? false,
+      }
+    })
+    const { error } = await supabase.from('expenses').insert(rows)
+    setLoading(false)
+    if (error) { alert('Fehler: ' + error.message); return }
+    setShowBulkForm(false)
+    setBulkRows([])
+    loadData(userId!)
+  }
+
   // Gefilterte Ausgaben
   const filtered = expenses.filter((e: any) => {
     if (filterProperty && e.property_id !== filterProperty) return false
@@ -335,10 +383,16 @@ export default function KostenPage() {
             <h1 style={{ fontSize: '28px', fontWeight: '400', color: '#1a1a1a', margin: '0 0 4px', fontFamily: 'Georgia, serif' }}>Kostenerfassung</h1>
             <p style={{ fontSize: '14px', color: '#999', margin: 0 }}>Umlagefähige und nicht umlagefähige Kosten pro Objekt</p>
           </div>
-          <button onClick={() => { setShowForm(true); setTimeout(() => document.getElementById('formcard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50) }}
-            style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>
-            + Kosten erfassen
-          </button>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <button onClick={openBulkForm}
+              style={{ backgroundColor: '#fff', color: '#1a1a1a', padding: '10px 20px', borderRadius: '8px', border: '1.5px solid #1a1a1a', fontSize: '13px', fontWeight: '500', cursor: 'pointer' }}>
+              + Mehrere
+            </button>
+            <button onClick={() => { setShowForm(true); setTimeout(() => document.getElementById('formcard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50) }}
+              style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>
+              + Kosten erfassen
+            </button>
+          </div>
         </div>
 
         {/* ── Summary Cards ── */}
@@ -577,6 +631,50 @@ export default function KostenPage() {
                 {loading ? 'Speichern...' : 'Speichern'}
               </button>
               <button onClick={() => setShowForm(false)}
+                style={{ backgroundColor: '#fff', color: '#666', padding: '10px 20px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer' }}>
+                Abbrechen
+              </button>
+            </div>
+          </div>
+        )}
+
+        {showBulkForm && (
+          <div id="bulkcard" className="scroll-mt-24" style={{ ...card, marginBottom: '24px' }}>
+            <h2 style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 6px', fontFamily: 'Georgia, serif' }}>Mehrere Kosten erfassen</h2>
+            <p style={{ fontSize: '13px', color: '#999', margin: '0 0 16px' }}>Schnelle Erfassung ohne Beleg/Scan — Belege später je Position via Bearbeiten ergänzen.</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {bulkRows.map((row: any, i: number) => (
+                <div key={i} className="flex flex-col gap-2 md:grid md:grid-cols-[1.2fr_1.4fr_110px_140px_auto] md:items-center md:gap-2">
+                  <select value={row.property_id} onChange={e => updateBulkRow(i, 'property_id', e.target.value)} style={inp}>
+                    <option value="">Objekt...</option>
+                    {properties.map((pr: any) => <option key={pr.id} value={pr.id}>{pr.name}</option>)}
+                  </select>
+                  <select value={row.category} onChange={e => updateBulkRow(i, 'category', e.target.value)} style={inp}>
+                    <option value="">Kategorie...</option>
+                    <optgroup label="✅ Umlagefähig">
+                      {EXPENSE_CATEGORIES.filter((cc: any) => cc.umlagefaehig).map((cc: any) => (<option key={cc.value} value={cc.value}>{cc.label}</option>))}
+                    </optgroup>
+                    <optgroup label="❌ Nicht umlagefähig">
+                      {EXPENSE_CATEGORIES.filter((cc: any) => !cc.umlagefaehig).map((cc: any) => (<option key={cc.value} value={cc.value}>{cc.label}</option>))}
+                    </optgroup>
+                  </select>
+                  <input type="number" value={row.amount} onChange={e => updateBulkRow(i, 'amount', e.target.value)} placeholder="€" style={inp} />
+                  <input type="date" value={row.expense_date} onChange={e => updateBulkRow(i, 'expense_date', e.target.value)} style={inp} />
+                  <button onClick={() => removeBulkRow(i)} title="Zeile entfernen"
+                    style={{ background: 'none', border: 'none', color: '#dc2626', fontSize: '18px', cursor: 'pointer', padding: '0 8px' }}>✕</button>
+                </div>
+              ))}
+            </div>
+            <button onClick={addBulkRow}
+              style={{ marginTop: '12px', backgroundColor: '#fff', color: '#1a1a1a', padding: '8px 14px', borderRadius: '8px', border: '1px dashed #ccc', fontSize: '13px', cursor: 'pointer' }}>
+              + Zeile
+            </button>
+            <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+              <button onClick={handleBulkSave} disabled={loading}
+                style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer', opacity: loading ? 0.4 : 1 }}>
+                {loading ? 'Speichern...' : 'Alle speichern'}
+              </button>
+              <button onClick={() => setShowBulkForm(false)}
                 style={{ backgroundColor: '#fff', color: '#666', padding: '10px 20px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer' }}>
                 Abbrechen
               </button>

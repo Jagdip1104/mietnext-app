@@ -83,6 +83,12 @@ export default function NebenkostenabrechnungDetail() {
   const [importing, setImporting] = useState(false)
   const [importKeys, setImportKeys] = useState<Record<string, string>>({})
   const [editItem, setEditItem] = useState<any>(null)
+  const [showBulkForm, setShowBulkForm] = useState(false)
+  const [bulkRows, setBulkRows] = useState<any[]>([
+    { category: '', distribution_key: 'sqm', total_amount: '', description: '' },
+    { category: '', distribution_key: 'sqm', total_amount: '', description: '' },
+    { category: '', distribution_key: 'sqm', total_amount: '', description: '' },
+  ])
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
 
   useEffect(() => { if (id) loadData() }, [id])
@@ -159,6 +165,45 @@ export default function NebenkostenabrechnungDetail() {
     setNewItem({ category: '', description: '', total_amount: '', distribution_key: 'sqm', unit_amounts: {} })
     setShowAddForm(false)
     setSaving(false)
+    loadData()
+  }
+
+  const updateBulkRow = (i: number, field: string, value: string) => {
+    setBulkRows(prev => prev.map((r: any, idx: number) => {
+      if (idx !== i) return r
+      const updated: any = { ...r, [field]: value }
+      if (field === 'category') {
+        const cat = BETRKV_CATEGORIES.find((c: any) => c.value === value)
+        let dk = cat?.defaultKey || 'sqm'
+        if (dk === 'per_unit') dk = 'sqm'
+        updated.distribution_key = dk
+      }
+      return updated
+    }))
+  }
+  const addBulkRow = () => setBulkRows(prev => [...prev, { category: '', distribution_key: 'sqm', total_amount: '', description: '' }])
+  const removeBulkRow = (i: number) => setBulkRows(prev => prev.filter((_: any, idx: number) => idx !== i))
+
+  const handleBulkAdd = async () => {
+    const valid = bulkRows.filter((r: any) => r.category && r.total_amount && parseFloat(r.total_amount) > 0)
+    if (valid.length === 0) { alert('Mindestens eine Zeile mit Kategorie + Betrag ausfüllen.'); return }
+    setSaving(true)
+    const toInsert = valid.map((r: any) => ({
+      statement_id: id,
+      category: r.category,
+      description: r.description || null,
+      total_amount: parseFloat(r.total_amount),
+      distribution_key: r.distribution_key,
+    }))
+    const { error } = await supabase.from('utility_cost_items').insert(toInsert)
+    setSaving(false)
+    if (error) { alert('Fehler: ' + error.message); return }
+    setBulkRows([
+      { category: '', distribution_key: 'sqm', total_amount: '', description: '' },
+      { category: '', distribution_key: 'sqm', total_amount: '', description: '' },
+      { category: '', distribution_key: 'sqm', total_amount: '', description: '' },
+    ])
+    setShowBulkForm(false)
     loadData()
   }
 
@@ -675,7 +720,7 @@ export default function NebenkostenabrechnungDetail() {
               </div>
             )}
 
-            {!showAddForm && (
+            {!showAddForm && !showBulkForm && (
               <button onClick={openImportModal}
                 style={{ backgroundColor: '#fff', color: '#1a1a1a', padding: '10px 20px',
                   borderRadius: '8px', border: '1.5px solid #1a1a1a', fontSize: '13px',
@@ -684,10 +729,17 @@ export default function NebenkostenabrechnungDetail() {
               </button>
             )}
 
-            {!showAddForm && (
+            {!showAddForm && !showBulkForm && (
               <button onClick={() => setShowAddForm(true)}
                 style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '8px 16px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>
                 + Position hinzufügen
+              </button>
+            )}
+
+            {!showAddForm && !showBulkForm && (
+              <button onClick={() => setShowBulkForm(true)}
+                style={{ backgroundColor: '#fff', color: '#1a1a1a', padding: '8px 16px', borderRadius: '8px', border: '1.5px solid #1a1a1a', fontSize: '13px', fontWeight: '500', cursor: 'pointer', marginLeft: '8px' }}>
+                + Mehrere erfassen
               </button>
             )}
           </div>
@@ -760,6 +812,42 @@ export default function NebenkostenabrechnungDetail() {
                   {saving ? 'Speichern...' : 'Speichern'}
                 </button>
                 <button onClick={() => { setShowAddForm(false); setNewItem({ category: '', description: '', total_amount: '', distribution_key: 'sqm', unit_amounts: {} }) }}
+                  style={{ backgroundColor: '#fff', color: '#666', padding: '10px 20px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer' }}>
+                  Abbrechen
+                </button>
+              </div>
+            </div>
+          )}
+
+          {showBulkForm && (
+            <div style={{ ...card, marginBottom: '12px' }}>
+              <p style={{ fontSize: '13px', color: '#666', margin: '0 0 12px' }}>Mehrere Positionen auf einmal erfassen</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {bulkRows.map((row: any, i: number) => (
+                  <div key={i} className="flex flex-col gap-2 md:grid md:grid-cols-[1fr_1fr_120px_auto] md:items-center md:gap-2">
+                    <select value={row.category} onChange={e => updateBulkRow(i, 'category', e.target.value)} style={inp}>
+                      <option value="">Kategorie...</option>
+                      {BETRKV_CATEGORIES.map((cat: any) => (<option key={cat.value} value={cat.value}>{cat.label}</option>))}
+                    </select>
+                    <select value={row.distribution_key} onChange={e => updateBulkRow(i, 'distribution_key', e.target.value)} style={inp}>
+                      {DISTRIBUTION_KEYS.filter((dk: any) => dk.value !== 'per_unit').map((dk: any) => (<option key={dk.value} value={dk.value}>{dk.label}</option>))}
+                    </select>
+                    <input type="number" value={row.total_amount} onChange={e => updateBulkRow(i, 'total_amount', e.target.value)} placeholder="Betrag €" style={inp} />
+                    <button onClick={() => removeBulkRow(i)} title="Zeile entfernen"
+                      style={{ background: 'none', border: 'none', color: '#dc2626', fontSize: '18px', cursor: 'pointer', padding: '0 8px' }}>✕</button>
+                  </div>
+                ))}
+              </div>
+              <button onClick={addBulkRow}
+                style={{ marginTop: '12px', backgroundColor: '#fff', color: '#1a1a1a', padding: '8px 14px', borderRadius: '8px', border: '1px dashed #ccc', fontSize: '13px', cursor: 'pointer' }}>
+                + Zeile
+              </button>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+                <button onClick={handleBulkAdd} disabled={saving}
+                  style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer', opacity: saving ? 0.4 : 1 }}>
+                  {saving ? 'Speichern...' : 'Alle speichern'}
+                </button>
+                <button onClick={() => setShowBulkForm(false)}
                   style={{ backgroundColor: '#fff', color: '#666', padding: '10px 20px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer' }}>
                   Abbrechen
                 </button>

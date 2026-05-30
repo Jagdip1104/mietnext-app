@@ -773,7 +773,7 @@ export default function NebenkostenabrechnungDetail() {
                 }
 
                 const open = expandedGroups.has(grp.category)
-                const keyLabel = grp.keys.size === 1 ? getKeyLabel(Array.from(grp.keys)[0]) : 'gemischte Umlageschlüssel'
+                const keyLabel = grp.keys.size === 1 ? getKeyLabel(Array.from(grp.keys)[0] as string) : 'gemischte Umlageschlüssel'
                 return (
                   <div key={grp.category} style={{ ...card, padding: '16px 24px' }}>
                     <div onClick={() => setExpandedGroups(prev => { const n = new Set(prev); n.has(grp.category) ? n.delete(grp.category) : n.add(grp.category); return n })}

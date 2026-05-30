@@ -554,15 +554,21 @@ function downloadPDF(){
   btn.textContent='⏳ PDF wird erstellt …';btn.disabled=true;
   const vn=(el.querySelector('.cftr div:nth-child(2)')?.textContent||'MietNext-Mietvertrag').trim();
   
-  // Clone das Element für PDF-Rendering (verhindert Layout-Issues im iframe)
-  const clone=el.cloneNode(true);
-  clone.style.width='760px';
-  clone.style.maxWidth='760px';
-  clone.style.margin='0';
-  clone.style.padding='0';
+  // Render direkt auf .ccard (ohne .cdoc Wrapper, der Padding hat)
+  const target=el.querySelector('.ccard')||el;
+  
+  // Force fixe Breite während Rendering
+  const origStyles={
+    width:target.style.width,
+    maxWidth:target.style.maxWidth,
+    margin:target.style.margin
+  };
+  target.style.width='780px';
+  target.style.maxWidth='780px';
+  target.style.margin='0';
   
   html2pdf().set({
-    margin:[10,10,10,10],
+    margin:[8,8,8,8],
     filename:vn+'.pdf',
     image:{type:'jpeg',quality:0.95},
     html2canvas:{
@@ -570,15 +576,23 @@ function downloadPDF(){
       useCORS:true,
       logging:false,
       backgroundColor:'#ffffff',
-      windowWidth:800,
-      letterRendering:true
+      width:780,
+      windowWidth:780,
+      scrollX:0,
+      scrollY:0
     },
     jsPDF:{unit:'mm',format:'a4',orientation:'portrait',compress:true},
     pagebreak:{mode:['css','legacy'],avoid:['.csec','.csig','.anl','.cpg']}
-  }).from(clone).save().then(()=>{
+  }).from(target).save().then(()=>{
+    target.style.width=origStyles.width;
+    target.style.maxWidth=origStyles.maxWidth;
+    target.style.margin=origStyles.margin;
     btn.textContent='⬇ PDF herunterladen';btn.disabled=false;
   }).catch(err=>{
     console.error(err);
+    target.style.width=origStyles.width;
+    target.style.maxWidth=origStyles.maxWidth;
+    target.style.margin=origStyles.margin;
     btn.textContent='⬇ PDF herunterladen';btn.disabled=false;
     alert('PDF-Erstellung fehlgeschlagen: '+err.message);
   });

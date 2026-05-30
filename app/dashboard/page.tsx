@@ -419,7 +419,7 @@ export default function Dashboard() {
   return (
     <>
       <Nav />
-      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '1.5rem 1.25rem 4rem' }}>
+      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '1.5rem 1.25rem 6rem' }}>
         <PlanUsageBanner />
 
         {/* === Header === */}
@@ -455,10 +455,7 @@ export default function Dashboard() {
         </div>
 
         {/* === KPI Cards === */}
-        <div style={{
-          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: '12px', marginBottom: '1.5rem'
-        }}>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3" style={{ marginBottom: '1.5rem' }}>
           <div style={kpiCardStyle}>
             <div style={kpiLabelStyle}>Einnahmen diesen Monat</div>
             <div style={{ ...kpiValueStyle, color: stats.paymentQuote >= 95 ? '#16a34a' : stats.paymentQuote >= 70 ? '#d97706' : '#dc2626' }}>
@@ -515,7 +512,7 @@ export default function Dashboard() {
         </div>
 
         {/* === Action Items + Auslastung === */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '12px', marginBottom: '1.5rem' }}>
+        <div className="flex flex-col gap-3 md:grid md:grid-cols-[1.5fr_1fr]" style={{ marginBottom: '1.5rem' }}>
           <div style={cardStyle}>
             <div style={cardHeaderStyle}>
               <h3 style={cardTitleStyle}>📋 Was steht an?</h3>
@@ -614,7 +611,7 @@ export default function Dashboard() {
             }).join(' ')
             return (
               <div style={{position: 'relative', overflowX: 'auto'}}>
-                <svg viewBox={`0 0 ${w * data.length} ${h}`} width="100%" height={h} style={{minWidth: '500px', display: 'block'}}>
+                <svg viewBox={`0 0 ${w * data.length} ${h}`} width="100%" height={h} style={{display: 'block'}}>
                   <line x1={padL} y1={padT} x2={padL} y2={h - padB} stroke="#e5e7eb" strokeWidth="0.5"/>
                   <line x1={padL} y1={h - padB} x2={w * data.length - padR} y2={h - padB} stroke="#e5e7eb" strokeWidth="0.5"/>
                   <text x={padL - 5} y={padT + 4} fontSize="9" textAnchor="end" fill="#9ca3af">{fmtCurrency(maxVal)}</text>
@@ -640,7 +637,7 @@ export default function Dashboard() {
         </div>
 
         {/* === Activity + Smart Insight === */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '1.5rem' }}>
+        <div className="flex flex-col gap-3 md:grid md:grid-cols-2" style={{ marginBottom: '1.5rem' }}>
           <div style={cardStyle}>
             <div style={cardHeaderStyle}>
               <h3 style={cardTitleStyle}>📈 Letzte Aktivität</h3>
@@ -686,7 +683,7 @@ export default function Dashboard() {
           <div style={cardHeaderStyle}>
             <h3 style={cardTitleStyle}>⚡ Schnellzugriff</h3>
           </div>
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <div className="flex flex-wrap gap-2">
             <a href="/properties" style={qaPrimaryStyle}>+ Objekt anlegen</a>
             <a href="/import" style={qaStyle}>📥 Excel-Import</a>
             <a href="/units" style={qaStyle}>+ Einheit</a>

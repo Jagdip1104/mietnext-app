@@ -28,6 +28,7 @@ const BETRKV_CATEGORIES = [
 const DISTRIBUTION_KEYS = [
   { value: 'sqm',      label: 'Nach Wohnfläche m²'                          },
   { value: 'equal',    label: 'Gleichmäßig pro Einheit'                     },
+  { value: 'persons',  label: 'Nach Personenzahl'                           },
   { value: 'per_unit', label: 'Einzelbeträge je Einheit (z.B. Ista/Techem)' },
 ]
 
@@ -374,6 +375,7 @@ export default function NebenkostenabrechnungDetail() {
 
   // ─── Berechnungen ────────────────────────────────────────────────────────────
   const totalSqm = units.reduce((s: number, u: any) => s + (Number(u.size_sqm) || 0), 0)
+  const totalPersons = units.reduce((s: number, u: any) => s + (Number(u.person_count) || 0), 0)
   const unitCount = units.length
   const fmtNum = (n: any) => Number(n || 0).toLocaleString('de-DE', { maximumFractionDigits: 1 })
 
@@ -381,6 +383,7 @@ export default function NebenkostenabrechnungDetail() {
     const total = Number(item.total_amount)
     if (item.distribution_key === 'sqm')      return totalSqm > 0 ? (Number(unit.size_sqm) || 0) / totalSqm * total : 0
     if (item.distribution_key === 'equal')    return units.length > 0 ? total / units.length : 0
+    if (item.distribution_key === 'persons')  return totalPersons > 0 ? (Number(unit.person_count) || 0) / totalPersons * total : 0
     if (item.distribution_key === 'per_unit') return Number((item.unit_amounts || {})[unit.id] || 0)
     return 0
   }
@@ -552,6 +555,7 @@ export default function NebenkostenabrechnungDetail() {
           let vert = 'gemischt'
           if (keyVal === 'sqm') vert = `${fmtNum(unit.size_sqm)} / ${fmtNum(totalSqm)} m²`
           else if (keyVal === 'equal') vert = `1 / ${unitCount} Einh.`
+          else if (keyVal === 'persons') vert = `${fmtNum(unit.person_count)} / ${fmtNum(totalPersons)} Pers.`
           else if (keyVal === 'per_unit') vert = 'Einzelbetrag'
           doc.setTextColor(140, 140, 140); doc.setFontSize(8)
           doc.text(vert, 116, y)

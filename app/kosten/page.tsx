@@ -1,51 +1,12 @@
 'use client'
 
+import { EXPENSE_CATEGORIES } from '@/lib/categories'
+
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Nav from '@/components/Nav'
 
-const EXPENSE_CATEGORIES = [
-  // ── Umlagefähig (§2 BetrKV) ──────────────────────────────────────────────
-  { value: 'grundsteuer',        label: 'Grundsteuer',                               umlagefaehig: true  },
-  { value: 'wasser',             label: 'Wasserversorgung',                          umlagefaehig: true  },
-  { value: 'abwasser',           label: 'Entwässerung / Abwasser',                   umlagefaehig: true  },
-  { value: 'heizung',            label: 'Heizkosten',                                umlagefaehig: true  },
-  { value: 'warmwasser',         label: 'Warmwasserversorgung',                      umlagefaehig: true  },
-  { value: 'heizung_warmwasser', label: 'Heizung + Warmwasser (verbunden)',          umlagefaehig: true  },
-  { value: 'aufzug',             label: 'Aufzug (Betrieb + Wartung)',                umlagefaehig: true  },
-  { value: 'strassenreinigung',  label: 'Straßenreinigung + Winterdienst',           umlagefaehig: true  },
-  { value: 'muell',              label: 'Müllbeseitigung',                           umlagefaehig: true  },
-  { value: 'gebaeudereinigung',  label: 'Gebäudereinigung',                          umlagefaehig: true  },
-  { value: 'ungeziefer',         label: 'Ungezieferbekämpfung (laufend)',            umlagefaehig: true  },
-  { value: 'gartenpflege',       label: 'Gartenpflege',                              umlagefaehig: true  },
-  { value: 'allgemeinstrom',     label: 'Allgemeinstrom / Gemeinschaftsbeleuchtung', umlagefaehig: true  },
-  { value: 'schornstein',        label: 'Schornsteinreinigung',                      umlagefaehig: true  },
-  { value: 'versicherung_uml',   label: 'Gebäude- & Haftpflichtversicherung',       umlagefaehig: true  },
-  { value: 'hauswart_uml',       label: 'Hausmeister (umlagefähige Tätigkeiten)',   umlagefaehig: true  },
-  { value: 'antenne',            label: 'Gemeinschaftsantenne / SAT',               umlagefaehig: true  },
-  { value: 'waeschepflege',      label: 'Wäschepflege-Einrichtungen',               umlagefaehig: true  },
-  { value: 'rauchmelder',        label: 'Rauchwarnmelder (Wartung / Miete)',        umlagefaehig: true  },
-  { value: 'co2_umlage',         label: 'CO₂-Kostenanteil Mieter (ab 2023)',        umlagefaehig: true  },
-  { value: 'dachrinne',          label: 'Dachrinnenreinigung',                      umlagefaehig: true  },
-  { value: 'pool_sauna',         label: 'Pool / Sauna / Gemeinschaftsanlage',       umlagefaehig: true  },
-  { value: 'sonstige_uml',       label: 'Sonstige Betriebskosten §2 Nr.17 …',      umlagefaehig: true  },
-  // ── Nicht umlagefähig ─────────────────────────────────────────────────────
-  { value: 'instandhaltung',     label: 'Instandhaltung / Reparaturen',             umlagefaehig: false },
-  { value: 'modernisierung',     label: 'Modernisierung / Sanierung',               umlagefaehig: false },
-  { value: 'hausverwaltung',     label: 'Hausverwaltungsgebühren',                  umlagefaehig: false },
-  { value: 'steuerberatung',     label: 'Steuerberatung / Buchhaltung',             umlagefaehig: false },
-  { value: 'rechtskosten',       label: 'Rechtskosten / Anwalt',                   umlagefaehig: false },
-  { value: 'versicherung_nicht', label: 'Mietausfall- / Rechtsschutzversicherung',  umlagefaehig: false },
-  { value: 'kredit',             label: 'Kreditzinsen / Finanzierung',              umlagefaehig: false },
-  { value: 'weg_ruecklagen',     label: 'WEG-Rücklagen',                            umlagefaehig: false },
-  { value: 'neuvermietung',      label: 'Neuvermietung / Makler / Inserate',        umlagefaehig: false },
-  { value: 'leerstand',          label: 'Leerstandskosten',                         umlagefaehig: false },
-  { value: 'anschaffung',        label: 'Anschaffungen (Geräte, Ausstattung)',      umlagefaehig: false },
-  { value: 'hauswart_nicht',     label: 'Hausmeister (Verwaltungstätigkeiten)',     umlagefaehig: false },
-  { value: 'bankgebuehren',      label: 'Bankgebühren / Kontoführung',              umlagefaehig: false },
-  { value: 'sonstige_nicht',     label: 'Sonstige nicht umlagefähige Kosten …',    umlagefaehig: false },
-]
 
 const UMLAGE_CATS  = new Set(EXPENSE_CATEGORIES.filter((c: any) => c.umlagefaehig).map((c: any) => c.value))
 const SONSTIGE     = new Set(['sonstige_uml', 'sonstige_nicht'])

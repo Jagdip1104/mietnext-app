@@ -1,57 +1,14 @@
 'use client'
 
+import { BETRKV_CATEGORIES, DISTRIBUTION_KEYS, EXPENSE_TO_BETRKV } from '@/lib/categories'
+
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter, useParams } from 'next/navigation'
 import Nav from '@/components/Nav'
 
-const BETRKV_CATEGORIES = [
-  { value: 'grundsteuer',        label: '§2 Nr.1  – Grundsteuer',                            defaultKey: 'sqm'      },
-  { value: 'wasser',             label: '§2 Nr.2  – Wasserversorgung',                        defaultKey: 'persons'      },
-  { value: 'entwasserung',       label: '§2 Nr.3  – Entwässerung / Abwasser',                 defaultKey: 'persons'      },
-  { value: 'heizung',            label: '§2 Nr.4  – Heizkosten (Ista/Techem)',                defaultKey: 'per_unit' },
-  { value: 'warmwasser',         label: '§2 Nr.5  – Warmwasser (Ista/Techem)',                defaultKey: 'per_unit' },
-  { value: 'heizung_warmwasser', label: '§2 Nr.6  – Heizung + Warmwasser (verbunden)',        defaultKey: 'per_unit' },
-  { value: 'aufzug',             label: '§2 Nr.7  – Aufzug',                                  defaultKey: 'sqm'    },
-  { value: 'strassenreinigung',  label: '§2 Nr.8  – Straßenreinigung / Müllbeseitigung',      defaultKey: 'persons'      },
-  { value: 'gebaeudereinigung',  label: '§2 Nr.9  – Gebäudereinigung / Ungezieferbekämpfung', defaultKey: 'sqm'      },
-  { value: 'gartenpflege',       label: '§2 Nr.10 – Gartenpflege',                            defaultKey: 'sqm'      },
-  { value: 'allgemeinstrom',     label: '§2 Nr.11 – Allgemeinstrom / Beleuchtung',             defaultKey: 'sqm'    },
-  { value: 'schornstein',        label: '§2 Nr.12 – Schornsteinreinigung',                    defaultKey: 'sqm'    },
-  { value: 'versicherung',       label: '§2 Nr.13 – Sach- und Haftpflichtversicherung',       defaultKey: 'sqm'      },
-  { value: 'hauswart',           label: '§2 Nr.14 – Hauswart / Hausmeister',                  defaultKey: 'sqm'      },
-  { value: 'antenne',            label: '§2 Nr.15 – Gemeinschaftsantenne / Kabel / Internet', defaultKey: 'equal'    },
-  { value: 'waeschepflege',      label: '§2 Nr.16 – Wäschepflege-Einrichtungen',              defaultKey: 'equal'    },
-  { value: 'sonstige',           label: '§2 Nr.17 – Sonstige Betriebskosten',                 defaultKey: 'sqm'      },
-]
 
-const DISTRIBUTION_KEYS = [
-  { value: 'sqm',      label: 'Nach Wohnfläche m²'                          },
-  { value: 'equal',    label: 'Gleichmäßig pro Einheit'                     },
-  { value: 'persons',  label: 'Nach Personenzahl'                           },
-  { value: 'per_unit', label: 'Einzelbeträge je Einheit (z.B. Ista/Techem)' },
-]
 
-// Mapping: Expenses-Kategorien → BetrKV-Kategorien (für Import aus /kosten)
-const EXPENSE_TO_BETRKV: Record<string, string> = {
-  grundsteuer: 'grundsteuer',
-  wasser: 'wasser', abwasser: 'entwasserung',
-  heizung: 'heizung', warmwasser: 'warmwasser',
-  heizung_warmwasser: 'heizung_warmwasser',
-  aufzug: 'aufzug',
-  strassenreinigung: 'strassenreinigung', muell: 'strassenreinigung',
-  gebaeudereinigung: 'gebaeudereinigung', ungeziefer: 'gebaeudereinigung',
-  gartenpflege: 'gartenpflege',
-  allgemeinstrom: 'allgemeinstrom',
-  schornstein: 'schornstein',
-  versicherung_uml: 'versicherung',
-  hauswart_uml: 'hauswart',
-  antenne: 'antenne',
-  waeschepflege: 'waeschepflege',
-  rauchmelder: 'sonstige', co2_umlage: 'sonstige',
-  dachrinne: 'sonstige', pool_sauna: 'sonstige',
-  sonstige_uml: 'sonstige',
-}
 
 export default function NebenkostenabrechnungDetail() {
   const router = useRouter()

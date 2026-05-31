@@ -23,6 +23,7 @@ export default function Units() {
   const [rooms, setRooms] = useState('')
   const [rentAmount, setRentAmount] = useState('')
   const [utilitiesAmount, setUtilitiesAmount] = useState('')
+  const [personCount, setPersonCount] = useState('1')
   const [vatRate, setVatRate] = useState('19')
   const [usageType, setUsageType] = useState('')
   const [parkingType, setParkingType] = useState('garage')
@@ -63,6 +64,7 @@ export default function Units() {
     setSizeSqm(u.size_sqm?.toString() || ''); setRooms(u.rooms?.toString() || '')
     setRentAmount(u.rent_amount?.toString() || '')
     setUtilitiesAmount(u.utilities_amount?.toString() || '')
+    setPersonCount(u.person_count?.toString() || '1')
     setVatRate(u.vat_rate?.toString() || '19')
     setUsageType(u.usage_type || '')
     setParkingType(u.parking_type || 'garage'); setVatApplicable(u.vat_applicable || false)
@@ -73,7 +75,7 @@ export default function Units() {
     setShowForm(false); setEditingId(null); setType('wohnung'); setName('')
     setUnitCode('')
     setSelectedProperty(''); setFloor(''); setSizeSqm(''); setRooms('')
-    setRentAmount(''); setUtilitiesAmount(''); setVatRate('19')
+    setRentAmount(''); setUtilitiesAmount(''); setVatRate('19'); setPersonCount('1')
     setUsageType(''); setParkingType('garage')
     setVatApplicable(false); setNotes('')
   }
@@ -113,6 +115,7 @@ export default function Units() {
       size_sqm: sizeSqm ? parseFloat(sizeSqm) : null,
       rent_amount: rentAmount ? parseFloat(rentAmount) : 0,
       utilities_amount: utilitiesAmount ? parseFloat(utilitiesAmount) : 0,
+      person_count: personCount ? parseInt(personCount) : 1,
     }
     if (type === 'wohnung') { data.floor = floor ? parseInt(floor) : null; data.rooms = rooms ? parseFloat(rooms) : null }
     if (type === 'gewerbe') {
@@ -314,6 +317,7 @@ export default function Units() {
               {type === 'wohnung' && (<>
                 <div><label style={label}>Etage</label><input value={floor} onChange={e => setFloor(e.target.value)} placeholder="z.B. 1" type="number" style={input} /></div>
                 <div><label style={label}>Zimmer</label><input value={rooms} onChange={e => setRooms(e.target.value)} placeholder="z.B. 3" type="number" style={input} /></div>
+                <div><label style={label}>Personen im Haushalt</label><input value={personCount} onChange={e => setPersonCount(e.target.value)} placeholder="z.B. 2" type="number" style={input} /></div>
                 <div><label style={label}>Fläche (m²)</label><input value={sizeSqm} onChange={e => setSizeSqm(e.target.value)} placeholder="z.B. 75" type="number" style={input} /></div>
                 <div><label style={label}>Soll-Kaltmiete (€)</label><input value={rentAmount} onChange={e => setRentAmount(e.target.value)} placeholder="z.B. 950" type="number" style={input} /></div>
                 <div style={{ gridColumn: 'span 2' }}><label style={label}>Nebenkosten (€/Monat)</label><input value={utilitiesAmount} onChange={e => setUtilitiesAmount(e.target.value)} placeholder="z.B. 150" type="number" style={input} /></div>

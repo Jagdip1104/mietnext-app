@@ -404,8 +404,9 @@ export default function NebenkostenabrechnungDetail() {
     const effStart  = start > yearStart ? start : yearStart
     const effEnd    = end   < yearEnd   ? end   : yearEnd
     if (effStart > effEnd) return 0
-    const periodMonths = Math.round((yearEnd.getTime() - yearStart.getTime()) / (1000 * 60 * 60 * 24 * 30.44)) + 1
-    const months = Math.min(Math.round((effEnd.getTime() - effStart.getTime()) / (1000 * 60 * 60 * 24 * 30.44)) + 1, periodMonths)
+    const monthsBetween = (a: Date, b: Date) => (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth()) + 1
+    const periodMonths = monthsBetween(yearStart, yearEnd)
+    const months = Math.min(monthsBetween(effStart, effEnd), periodMonths)
     return monthlyAdvance * months
   }
 
@@ -538,20 +539,6 @@ export default function NebenkostenabrechnungDetail() {
           doc.setTextColor(30, 30, 30)
           doc.text(formatEur(grpShare), 190, y, { align: 'right' })
           y += 7
-          if (grp.items.length > 1) {
-            doc.setFontSize(7.5)
-            doc.setTextColor(150, 150, 150)
-            grp.items.forEach((it: any) => {
-              const dateStr = it.expenses?.expense_date ? new Date(it.expenses.expense_date).toLocaleDateString('de-DE') : ''
-              const sub = (it.description || dateStr || 'Einzelbetrag').toString()
-              doc.text(`- ${sub.length > 48 ? sub.slice(0, 45) + '…' : sub}`, 26, y)
-              doc.text(formatEur(Number(it.total_amount)), 130, y, { align: 'right' })
-              y += 4.5
-            })
-            doc.setFontSize(9)
-            doc.setTextColor(30, 30, 30)
-            y += 1
-          }
           doc.setDrawColor(240, 238, 234)
           doc.setLineWidth(0.2)
           doc.line(20, y - 3, 190, y - 3)

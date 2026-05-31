@@ -446,6 +446,13 @@ export default function NebenkostenabrechnungDetail() {
   const getKeyLabel = (v: string) => DISTRIBUTION_KEYS.find((d: any) => d.value === v)?.label || v
 
   // ─── PDF Export ──────────────────────────────────────────────────────────────
+  const fmtDE = (d: any) => {
+    const dt = new Date(d)
+    const dd = String(dt.getDate()).padStart(2, '0')
+    const mm = String(dt.getMonth() + 1).padStart(2, '0')
+    return `${dd}.${mm}.${dt.getFullYear()}`
+  }
+
   const generatePDF = async () => {
     setPdfLoading(true)
     try {
@@ -488,8 +495,8 @@ export default function NebenkostenabrechnungDetail() {
         doc.setFontSize(10)
         doc.setFont('helvetica', 'normal')
         doc.setTextColor(120, 120, 120)
-        const pStart = periodStart ? new Date(periodStart).toLocaleDateString('de-DE') : `01.01.${statement.year}`
-        const pEnd   = periodEnd   ? new Date(periodEnd).toLocaleDateString('de-DE')   : `31.12.${statement.year}`
+        const pStart = periodStart ? fmtDE(periodStart) : `01.01.${statement.year}`
+        const pEnd   = periodEnd   ? fmtDE(periodEnd)   : `31.12.${statement.year}`
         doc.text(`Abrechnungszeitraum: ${pStart} - ${pEnd}`, 105, 43, { align: 'center' })
         doc.setDrawColor(220, 218, 214)
         doc.setLineWidth(0.4)
@@ -532,8 +539,9 @@ export default function NebenkostenabrechnungDetail() {
           doc.setFont('helvetica', 'normal')
           doc.setFontSize(9)
           doc.setTextColor(30, 30, 30)
-          const label = getCatLabel(grp.category)
-          doc.text(label.length > 55 ? label.slice(0, 52) + '…' : label, 22, y)
+          const keyTxt = grp.keys.size === 1 ? getKeyLabel(Array.from(grp.keys)[0] as string) : 'gemischt'
+          const label = getCatLabel(grp.category) + ' · ' + keyTxt
+          doc.text(label.length > 62 ? label.slice(0, 59) + '…' : label, 22, y)
           doc.setTextColor(120, 120, 120)
           doc.text(formatEur(grp.total_amount), 130, y, { align: 'right' })
           doc.setTextColor(30, 30, 30)
@@ -647,7 +655,7 @@ export default function NebenkostenabrechnungDetail() {
         doc.setFontSize(8)
         doc.setFont('helvetica', 'normal')
         doc.setTextColor(160, 160, 160)
-        doc.text(`Erstellt am ${new Date().toLocaleDateString('de-DE')} · MietNext`, 20, 281)
+        doc.text(`Erstellt am ${fmtDE(new Date())} · MietNext`, 20, 281)
         doc.text(`Seite ${pageIndex + 1} von ${activeUnits.length}`, 190, 281, { align: 'right' })
       })
 

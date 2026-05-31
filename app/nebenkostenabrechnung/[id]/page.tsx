@@ -374,6 +374,8 @@ export default function NebenkostenabrechnungDetail() {
 
   // ─── Berechnungen ────────────────────────────────────────────────────────────
   const totalSqm = units.reduce((s: number, u: any) => s + (Number(u.size_sqm) || 0), 0)
+  const unitCount = units.length
+  const fmtNum = (n: any) => Number(n || 0).toLocaleString('de-DE', { maximumFractionDigits: 1 })
 
   const getUnitShare = (item: any, unit: any): number => {
     const total = Number(item.total_amount)

@@ -529,8 +529,9 @@ export default function NebenkostenabrechnungDetail() {
         doc.setFontSize(8.5)
         doc.setFont('helvetica', 'bold')
         doc.setTextColor(26, 26, 26)
-        doc.text('Kostenposition', 22, y)
-        doc.text('Gesamtkosten', 130, y, { align: 'right' })
+        doc.text('Kostenart', 22, y)
+        doc.text('Gesamtkosten', 110, y, { align: 'right' })
+        doc.text('Verteilung', 116, y)
         doc.text('Ihr Anteil', 190, y, { align: 'right' })
         y += 5
 
@@ -539,12 +540,20 @@ export default function NebenkostenabrechnungDetail() {
           doc.setFont('helvetica', 'normal')
           doc.setFontSize(9)
           doc.setTextColor(30, 30, 30)
-          const keyTxt = grp.keys.size === 1 ? getKeyLabel(Array.from(grp.keys)[0] as string) : 'gemischt'
-          const label = getCatLabel(grp.category) + ' · ' + keyTxt
-          doc.text(label.length > 62 ? label.slice(0, 59) + '…' : label, 22, y)
+          let lab = getCatLabel(grp.category)
+          const dash = lab.indexOf('– ')
+          if (dash >= 0) lab = lab.slice(dash + 2)
+          doc.text(lab.length > 40 ? lab.slice(0, 37) + '…' : lab, 22, y)
           doc.setTextColor(120, 120, 120)
-          doc.text(formatEur(grp.total_amount), 130, y, { align: 'right' })
-          doc.setTextColor(30, 30, 30)
+          doc.text(formatEur(grp.total_amount), 110, y, { align: 'right' })
+          const keyVal = grp.keys.size === 1 ? Array.from(grp.keys)[0] as string : 'mixed'
+          let vert = 'gemischt'
+          if (keyVal === 'sqm') vert = `${fmtNum(unit.size_sqm)} / ${fmtNum(totalSqm)} m²`
+          else if (keyVal === 'equal') vert = `1 / ${unitCount} Einh.`
+          else if (keyVal === 'per_unit') vert = 'Einzelbetrag'
+          doc.setTextColor(140, 140, 140); doc.setFontSize(8)
+          doc.text(vert, 116, y)
+          doc.setFontSize(9); doc.setTextColor(30, 30, 30)
           doc.text(formatEur(grpShare), 190, y, { align: 'right' })
           y += 7
           doc.setDrawColor(240, 238, 234)

@@ -51,6 +51,7 @@ export default function NebenkostenabrechnungDetail() {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
   const [personEdits, setPersonEdits] = useState<Record<string, string>>({})
   const [savingPersons, setSavingPersons] = useState(false)
+  const [personEditMode, setPersonEditMode] = useState(false)
 
   useEffect(() => { if (id) loadData() }, [id])
 
@@ -345,6 +346,7 @@ export default function NebenkostenabrechnungDetail() {
     setPersonEdits({})
     await loadData()
     setSavingPersons(false)
+    setPersonEditMode(false)
   }
 
   const saveManualPrepayment = async (unitId: string) => {
@@ -1036,10 +1038,17 @@ export default function NebenkostenabrechnungDetail() {
           <div style={{ ...card, marginBottom: '32px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
               <h2 style={{ fontSize: '16px', fontWeight: '500', color: '#1a1a1a', margin: 0 }}>Personen je Einheit</h2>
-              <button onClick={savePersonCounts} disabled={savingPersons}
-                style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '8px 16px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer', opacity: savingPersons ? 0.5 : 1 }}>
-                {savingPersons ? 'Speichern...' : 'Speichern'}
-              </button>
+              {personEditMode ? (
+                <button onClick={savePersonCounts} disabled={savingPersons}
+                  style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '8px 16px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer', opacity: savingPersons ? 0.5 : 1 }}>
+                  {savingPersons ? 'Speichern...' : 'Speichern'}
+                </button>
+              ) : (
+                <button onClick={() => setPersonEditMode(true)}
+                  style={{ backgroundColor: '#fff', color: '#1a1a1a', padding: '8px 16px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer' }}>
+                  Bearbeiten
+                </button>
+              )}
             </div>
             <p style={{ fontSize: '12px', color: '#999', margin: '0 0 12px' }}>Für die Verteilung „Nach Personenzahl". 0 = aus der Personen-Umlage raus (z.B. Garage, Leerstand).</p>
             {units.every((u: any) => Number(u.person_count) === 1) && (
@@ -1049,9 +1058,9 @@ export default function NebenkostenabrechnungDetail() {
               {units.map((u: any) => (
                 <div key={u.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', padding: '4px 0', borderBottom: '1px solid #f5f4ef' }}>
                   <span style={{ fontSize: '14px', color: '#1a1a1a' }}>{u.name}</span>
-                  <input type="number" min="0" value={personEdits[u.id] ?? String(u.person_count ?? 1)}
+                  <input type="number" min="0" disabled={!personEditMode} value={personEdits[u.id] ?? String(u.person_count ?? 1)}
                     onChange={e => setPersonEdits(prev => ({ ...prev, [u.id]: e.target.value }))}
-                    style={{ width: '70px', border: '1px solid #e8e6e0', borderRadius: '6px', padding: '6px 8px', fontSize: '14px', textAlign: 'right' as const, outline: 'none', color: '#1a1a1a' }} />
+                    style={{ width: '70px', border: '1px solid #e8e6e0', borderRadius: '6px', padding: '6px 8px', fontSize: '14px', textAlign: 'right' as const, outline: 'none', color: personEditMode ? '#1a1a1a' : '#999', backgroundColor: personEditMode ? '#fff' : '#f9f8f5', cursor: personEditMode ? 'text' : 'default' }} />
                 </div>
               ))}
             </div>

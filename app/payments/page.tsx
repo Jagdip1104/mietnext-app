@@ -21,7 +21,7 @@ export default function Payments() {
   const [status, setStatus] = useState('pending')
   const [filterProperty, setFilterProperty] = useState<string>('all')
   const [filterStatus, setFilterStatus] = useState<string>('all')
-  const [filterYear, setFilterYear] = useState<string>('all')
+  const [filterYear, setFilterYear] = useState<string>('month')
   const [loading, setLoading] = useState(false)
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
@@ -100,6 +100,9 @@ export default function Payments() {
 
   // Filter logic
   const todayISO = new Date().toISOString().slice(0, 10)
+  const _now = new Date()
+  const curYear = _now.getFullYear()
+  const curMonth = _now.getMonth()
   const effectiveStatus = (p: any) => {
     if (p.status === 'paid') return 'paid'
     if (p.status === 'late') return 'late'
@@ -108,7 +111,13 @@ export default function Payments() {
   const filteredPayments = payments.filter((p: any) => {
     if (filterProperty !== 'all' && p.contracts?.units?.properties?.name !== filterProperty) return false
     if (filterStatus !== 'all' && effectiveStatus(p) !== filterStatus) return false
-    if (filterYear !== 'all' && new Date(p.due_date).getFullYear().toString() !== filterYear) return false
+    if (filterYear === 'month') {
+      const d = new Date(p.due_date)
+      const sameMonth = d.getFullYear() === curYear && d.getMonth() === curMonth
+      if (!sameMonth && effectiveStatus(p) !== 'late') return false
+    } else if (filterYear !== 'all' && new Date(p.due_date).getFullYear().toString() !== filterYear) {
+      return false
+    }
     return true
   })
 
@@ -223,6 +232,7 @@ export default function Payments() {
               <option value="late">Überfällig</option>
             </select>
             <select value={filterYear} onChange={e => setFilterYear(e.target.value)} style={input}>
+              <option value="month">Dieser Monat</option>
               <option value="all">Alle Jahre</option>
               {yearOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
             </select>

@@ -142,6 +142,7 @@ export default function GuvPage() {
       doc.line(20, 54, 190, 54)
 
       let y = 64
+      const ensureSpace = (need: number = 8) => { if (y + need > 268) { doc.addPage(); y = 20 } }
 
       // ── EINNAHMEN ──
       doc.setFillColor(240, 253, 244)
@@ -154,6 +155,7 @@ export default function GuvPage() {
       y += 6
 
       payments.forEach((p: any) => {
+        ensureSpace(6)
         doc.setFont('helvetica', 'normal')
         doc.setFontSize(9)
         doc.setTextColor(50, 50, 50)
@@ -174,6 +176,7 @@ export default function GuvPage() {
       doc.line(20, y, 190, y)
       y += 10
 
+      ensureSpace(24)
       // ── AUSGABEN – Umlagefähig ──
       doc.setFillColor(254, 242, 242)
       doc.rect(20, y - 5, 170, 8, 'F')
@@ -185,6 +188,7 @@ export default function GuvPage() {
       y += 6
 
       expUml.forEach((e: any) => {
+        ensureSpace(6)
         doc.setFont('helvetica', 'normal')
         doc.setFontSize(9)
         doc.setTextColor(50, 50, 50)
@@ -199,6 +203,7 @@ export default function GuvPage() {
 
       y += 4
 
+      ensureSpace(24)
       // ── AUSGABEN – Nicht umlagefähig ──
       doc.setFillColor(254, 242, 242)
       doc.rect(20, y - 5, 170, 8, 'F')
@@ -210,6 +215,7 @@ export default function GuvPage() {
       y += 6
 
       expNicht.forEach((e: any) => {
+        ensureSpace(6)
         doc.setFont('helvetica', 'normal')
         doc.setFontSize(9)
         doc.setTextColor(50, 50, 50)
@@ -224,6 +230,7 @@ export default function GuvPage() {
 
       y += 6
 
+      ensureSpace(45)
       // ── Gesamt Ausgaben ──
       doc.setDrawColor(180, 178, 174)
       doc.setLineWidth(0.4)

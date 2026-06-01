@@ -141,7 +141,7 @@ export default function NebenkostenabrechnungDetail() {
       if (field === 'category') {
         const cat = BETRKV_CATEGORIES.find((c: any) => c.value === value)
         let dk = cat?.defaultKey || 'sqm'
-        if (dk === 'per_unit') dk = 'sqm'
+        /* per_unit bleibt per_unit (Bulk) */
         updated.distribution_key = dk
       }
       return updated
@@ -237,7 +237,7 @@ export default function NebenkostenabrechnungDetail() {
     filtered.forEach((e: any) => {
       const betrkvCat = EXPENSE_TO_BETRKV[e.category] || 'sonstige'
       const _dk = BETRKV_CATEGORIES.find((c: any) => c.value === betrkvCat)?.defaultKey || 'sqm'
-      keyDefaults[e.id] = _dk === 'per_unit' ? 'sqm' : _dk
+      keyDefaults[e.id] = _dk
     })
     setImportKeys(keyDefaults)
     setShowImportModal(true)
@@ -261,7 +261,7 @@ export default function NebenkostenabrechnungDetail() {
       .map((e: any) => {
         const betrkvCat = EXPENSE_TO_BETRKV[e.category] || 'sonstige'
         let distKey = importKeys[e.id] || BETRKV_CATEGORIES.find((c: any) => c.value === betrkvCat)?.defaultKey || 'sqm'
-        if (distKey === 'per_unit') distKey = 'sqm'
+        /* per_unit bleibt per_unit (Import) */
         return {
           statement_id: id,
           category: betrkvCat,
@@ -301,7 +301,21 @@ export default function NebenkostenabrechnungDetail() {
     loadData()
   }
 
+  const isEinzelbetragOffen = (item: any) => {
+    if (item.distribution_key !== 'per_unit') return false
+    const ua = item.unit_amounts || {}
+    return units.some((u: any) => {
+      const v = ua[u.id]
+      return v === undefined || v === null || v === '' || isNaN(Number(v))
+    })
+  }
+
   const handleFinalize = async () => {
+    const offen = costItems.filter(isEinzelbetragOffen)
+    if (offen.length > 0) {
+      alert('Bitte zuerst die Einzelbeträge erfassen — es fehlen noch Werte bei: ' + offen.map((i: any) => BETRKV_CATEGORIES.find((c: any) => c.value === i.category)?.label || i.description || 'Kostenposition').join(', '))
+      return
+    }
     await supabase.from('utility_statements').update({ status: 'finalized' }).eq('id', id)
     loadData()
   }
@@ -880,7 +894,7 @@ export default function NebenkostenabrechnungDetail() {
                       {BETRKV_CATEGORIES.map((cat: any) => (<option key={cat.value} value={cat.value}>{cat.label}</option>))}
                     </select>
                     <select value={row.distribution_key} onChange={e => updateBulkRow(i, 'distribution_key', e.target.value)} style={inp}>
-                      {DISTRIBUTION_KEYS.filter((dk: any) => dk.value !== 'per_unit').map((dk: any) => (<option key={dk.value} value={dk.value}>{dk.label}</option>))}
+                      {DISTRIBUTION_KEYS.map((dk: any) => (<option key={dk.value} value={dk.value}>{dk.label}</option>))}
                     </select>
                     <input type="number" value={row.total_amount} onChange={e => updateBulkRow(i, 'total_amount', e.target.value)} placeholder="Betrag €" style={inp} />
                     <button onClick={() => removeBulkRow(i)} title="Zeile entfernen"
@@ -1158,18 +1172,34 @@ export default function NebenkostenabrechnungDetail() {
 
             {/* ── Aktionen ── */}
             <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {statement.status === 'draft' && (
-                <div style={{ padding: '20px 24px', backgroundColor: '#f0fdf4', borderRadius: '12px', border: '1px solid #bbf7d0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <p style={{ fontSize: '14px', fontWeight: '500', color: '#15803d', margin: '0 0 2px' }}>Abrechnung abschließen</p>
-                    <p style={{ fontSize: '13px', color: '#16a34a', margin: 0 }}>Status auf "Abgeschlossen" – danach PDF exportieren</p>
+              {statement.status === 'draft' && (() => {
+                const offen = costItems.filter(isEinzelbetragOffen)
+                if (offen.length > 0) {
+                  return (
+                    <div style={{ padding: '20px 24px', backgroundColor: '#fffbeb', borderRadius: '12px', border: '1px solid #fed7aa' }}>
+                      <p style={{ fontSize: '14px', fontWeight: '500', color: '#b45309', margin: '0 0 6px' }}>⚠ Einzelbeträge fehlen — Abschließen noch nicht möglich</p>
+                      <p style={{ fontSize: '13px', color: '#92400e', margin: '0 0 10px' }}>Bei diesen Positionen ist „Einzelbeträge je Einheit" gewählt, aber noch nicht für jede Einheit ein Wert erfasst. Bitte über „Bearbeiten" eintragen (0 für ausgeschlossene Einheiten):</p>
+                      <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                        {offen.map((i: any) => (
+                          <li key={i.id} style={{ fontSize: '13px', color: '#92400e', marginBottom: '2px' }}>{BETRKV_CATEGORIES.find((c: any) => c.value === i.category)?.label || i.description || 'Kostenposition'}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )
+                }
+                return (
+                  <div style={{ padding: '20px 24px', backgroundColor: '#f0fdf4', borderRadius: '12px', border: '1px solid #bbf7d0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                    <div>
+                      <p style={{ fontSize: '14px', fontWeight: '500', color: '#15803d', margin: '0 0 2px' }}>Abrechnung abschließen</p>
+                      <p style={{ fontSize: '13px', color: '#16a34a', margin: 0 }}>Status auf „Abgeschlossen" – danach PDF exportieren</p>
+                    </div>
+                    <button onClick={handleFinalize}
+                      style={{ backgroundColor: '#16a34a', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>
+                      ✓ Abrechnung abschließen
+                    </button>
                   </div>
-                  <button onClick={handleFinalize}
-                    style={{ backgroundColor: '#16a34a', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>
-                    ✓ Abrechnung abschließen
-                  </button>
-                </div>
-              )}
+                )
+              })()}
 
               {statement.status === 'finalized' && (
                 <>
@@ -1321,7 +1351,7 @@ export default function NebenkostenabrechnungDetail() {
                       value={importKeys[e.id] || 'sqm'}
                       onChange={ev => setImportKeys(prev => ({ ...prev, [e.id]: ev.target.value }))}
                       style={{ fontSize: '12px', border: '1px solid #e8e6e0', borderRadius: '6px', padding: '4px 8px', color: '#1a1a1a', backgroundColor: '#fff' }}>
-                      {DISTRIBUTION_KEYS.filter((dk: any) => dk.value !== 'per_unit').map((dk: any) => (
+                      {DISTRIBUTION_KEYS.map((dk: any) => (
                         <option key={dk.value} value={dk.value}>{dk.label}</option>
                       ))}
                     </select>

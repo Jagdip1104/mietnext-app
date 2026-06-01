@@ -143,7 +143,7 @@ export default function Payments() {
         <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-6 mb-10">
           <div>
             <h1 style={{ fontSize: '28px', fontWeight: '400', color: '#1a1a1a', margin: '0 0 4px', fontFamily: 'Georgia, serif' }}>Zahlungen</h1>
-            <p style={{ fontSize: '14px', color: '#999', margin: 0 }}>{payments.length} Zahlungen gesamt</p>
+            <p style={{ fontSize: '14px', color: '#999', margin: 0 }}>{filteredPayments.length === payments.length ? `${payments.length} Zahlungen gesamt` : `${filteredPayments.length} von ${payments.length} Zahlungen`}</p>
           </div>
           <button onClick={() => { setShowForm(true); setTimeout(() => document.getElementById('formcard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50) }} style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>
             + Zahlung erfassen
@@ -293,8 +293,8 @@ export default function Payments() {
                           {p.contracts?.tenants?.full_name}
                         </p>
                         <p style={{ fontSize: '13px', color: '#bbb', margin: 0 }}>
-                          Fällig: {new Date(p.due_date).toLocaleDateString('de-DE')}
-                          {p.paid_date && ` · Bezahlt: ${new Date(p.paid_date).toLocaleDateString('de-DE')}`}
+                          Fällig: {new Date(p.due_date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                          {p.paid_date && ` · Bezahlt: ${new Date(p.paid_date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}`}
                         </p>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>

@@ -49,6 +49,8 @@ export default function NebenkostenabrechnungDetail() {
     { category: '', distribution_key: 'sqm', total_amount: '', description: '' },
   ])
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
+  const [personEdits, setPersonEdits] = useState<Record<string, string>>({})
+  const [savingPersons, setSavingPersons] = useState(false)
 
   useEffect(() => { if (id) loadData() }, [id])
 
@@ -316,6 +318,21 @@ export default function NebenkostenabrechnungDetail() {
   }
 
   // ─── Manuelle Vorauszahlung speichern ───────────────────────────────────────
+  const savePersonCounts = async () => {
+    setSavingPersons(true)
+    for (const u of units) {
+      const v = personEdits[u.id]
+      if (v === undefined) continue
+      const num = v === '' ? 0 : parseInt(v)
+      if (!isNaN(num) && num !== Number(u.person_count)) {
+        await supabase.from('units').update({ person_count: num }).eq('id', u.id)
+      }
+    }
+    setPersonEdits({})
+    await loadData()
+    setSavingPersons(false)
+  }
+
   const saveManualPrepayment = async (unitId: string) => {
     const value   = parseFloat(editPrepaymentValue)
     const updated = { ...manualPrepayments, [unitId]: isNaN(value) ? null : value }
@@ -1000,6 +1017,33 @@ export default function NebenkostenabrechnungDetail() {
             </div>
           )}
         </div>
+
+        {statement.status === 'draft' && costItems.some((i: any) => i.distribution_key === 'persons') && (
+          <div style={{ ...card, marginBottom: '32px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
+              <h2 style={{ fontSize: '16px', fontWeight: '500', color: '#1a1a1a', margin: 0 }}>Personen je Einheit</h2>
+              <button onClick={savePersonCounts} disabled={savingPersons}
+                style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '8px 16px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer', opacity: savingPersons ? 0.5 : 1 }}>
+                {savingPersons ? 'Speichern...' : 'Speichern'}
+              </button>
+            </div>
+            <p style={{ fontSize: '12px', color: '#999', margin: '0 0 12px' }}>Für die Verteilung „Nach Personenzahl". 0 = aus der Personen-Umlage raus (z.B. Garage, Leerstand).</p>
+            {units.every((u: any) => Number(u.person_count) === 1) && (
+              <p style={{ fontSize: '12px', color: '#d97706', backgroundColor: '#fffbeb', border: '1px solid #fed7aa', borderRadius: '8px', padding: '8px 12px', margin: '0 0 12px' }}>⚠ Alle Einheiten stehen auf 1 — trag die echten Personenzahlen ein, sonst entspricht das „gleichmäßig".</p>
+            )}
+            <div className="flex flex-col gap-2 md:grid md:grid-cols-2 md:gap-x-6">
+              {units.map((u: any) => (
+                <div key={u.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', padding: '4px 0', borderBottom: '1px solid #f5f4ef' }}>
+                  <span style={{ fontSize: '14px', color: '#1a1a1a' }}>{u.name}</span>
+                  <input type="number" min="0" value={personEdits[u.id] ?? String(u.person_count ?? 1)}
+                    onChange={e => setPersonEdits(prev => ({ ...prev, [u.id]: e.target.value }))}
+                    style={{ width: '70px', border: '1px solid #e8e6e0', borderRadius: '6px', padding: '6px 8px', fontSize: '14px', textAlign: 'right' as const, outline: 'none', color: '#1a1a1a' }} />
+                </div>
+              ))}
+            </div>
+            <p style={{ fontSize: '12px', color: '#bbb', margin: '12px 0 0' }}>Summe: {units.reduce((s: number, u: any) => s + (personEdits[u.id] !== undefined ? (parseInt(personEdits[u.id]) || 0) : (Number(u.person_count) || 0)), 0)} Personen</p>
+          </div>
+        )}
 
         {/* ── Ergebnisse pro Einheit ── */}
         {costItems.length > 0 && (

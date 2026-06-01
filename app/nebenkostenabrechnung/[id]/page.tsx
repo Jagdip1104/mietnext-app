@@ -1018,7 +1018,7 @@ export default function NebenkostenabrechnungDetail() {
           )}
         </div>
 
-        {statement.status === 'draft' && costItems.some((i: any) => i.distribution_key === 'persons') && (
+        {statement.status === 'draft' && units.length > 1 && costItems.some((i: any) => i.distribution_key === 'persons') && (
           <div style={{ ...card, marginBottom: '32px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
               <h2 style={{ fontSize: '16px', fontWeight: '500', color: '#1a1a1a', margin: 0 }}>Personen je Einheit</h2>

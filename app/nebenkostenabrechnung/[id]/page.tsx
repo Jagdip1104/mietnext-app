@@ -725,7 +725,7 @@ export default function NebenkostenabrechnungDetail() {
 
         {/* ── Kostenpositionen ── */}
         <div style={{ marginBottom: '32px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <div className="flex flex-col gap-3 md:flex-row md:justify-between md:items-center" style={{ marginBottom: '16px' }}>
             <h2 style={{ fontSize: '16px', fontWeight: '500', color: '#1a1a1a', margin: 0 }}>Kostenpositionen</h2>
             {mismatchedItems.length > 0 && (
               <div style={{
@@ -914,7 +914,7 @@ export default function NebenkostenabrechnungDetail() {
                           </div>
                         </div>
                       ) : (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div className="flex flex-col gap-3 md:flex-row md:justify-between md:items-center">
                           <div>
                             <p style={{ fontSize: '14px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 2px' }}>
                               {getCatLabel(item.category)}
@@ -922,8 +922,8 @@ export default function NebenkostenabrechnungDetail() {
                             </p>
                             <p style={{ fontSize: '12px', color: '#bbb', margin: 0 }}>{getKeyLabel(item.distribution_key)}</p>
                           </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                            <p style={{ fontSize: '16px', fontWeight: '500', color: '#1a1a1a', margin: 0, fontFamily: 'Georgia, serif' }}>
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <p style={{ fontSize: '16px', fontWeight: '500', color: '#1a1a1a', margin: 0, fontFamily: 'Georgia, serif', whiteSpace: 'nowrap' }}>
                               {formatEur(Number(item.total_amount))}
                             </p>
                             <button onClick={() => openEditItem(item)}
@@ -946,7 +946,7 @@ export default function NebenkostenabrechnungDetail() {
                 return (
                   <div key={grp.category} style={{ ...card, padding: '16px 24px' }}>
                     <div onClick={() => setExpandedGroups(prev => { const n = new Set(prev); n.has(grp.category) ? n.delete(grp.category) : n.add(grp.category); return n })}
-                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+                      className="flex flex-col gap-2 md:flex-row md:justify-between md:items-center" style={{ cursor: 'pointer' }}>
                       <div>
                         <p style={{ fontSize: '14px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 2px' }}>
                           <span style={{ color: '#bbb', marginRight: '6px' }}>{open ? '▾' : '▸'}</span>
@@ -955,7 +955,7 @@ export default function NebenkostenabrechnungDetail() {
                         </p>
                         <p style={{ fontSize: '12px', color: '#bbb', margin: 0 }}>{keyLabel}</p>
                       </div>
-                      <p style={{ fontSize: '16px', fontWeight: '500', color: '#1a1a1a', margin: 0, fontFamily: 'Georgia, serif' }}>
+                      <p style={{ fontSize: '16px', fontWeight: '500', color: '#1a1a1a', margin: 0, fontFamily: 'Georgia, serif', whiteSpace: 'nowrap' }}>
                         {formatEur(grp.total_amount)}
                       </p>
                     </div>

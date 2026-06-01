@@ -234,7 +234,8 @@ export default function NebenkostenabrechnungDetail() {
     const keyDefaults: Record<string, string> = {}
     filtered.forEach((e: any) => {
       const betrkvCat = EXPENSE_TO_BETRKV[e.category] || 'sonstige'
-      keyDefaults[e.id] = BETRKV_CATEGORIES.find((c: any) => c.value === betrkvCat)?.defaultKey || 'sqm'
+      const _dk = BETRKV_CATEGORIES.find((c: any) => c.value === betrkvCat)?.defaultKey || 'sqm'
+      keyDefaults[e.id] = _dk === 'per_unit' ? 'sqm' : _dk
     })
     setImportKeys(keyDefaults)
     setShowImportModal(true)
@@ -257,7 +258,8 @@ export default function NebenkostenabrechnungDetail() {
       .filter((e: any) => selectedExpenseIds.has(e.id))
       .map((e: any) => {
         const betrkvCat = EXPENSE_TO_BETRKV[e.category] || 'sonstige'
-        const distKey = importKeys[e.id] || BETRKV_CATEGORIES.find((c: any) => c.value === betrkvCat)?.defaultKey || 'sqm'
+        let distKey = importKeys[e.id] || BETRKV_CATEGORIES.find((c: any) => c.value === betrkvCat)?.defaultKey || 'sqm'
+        if (distKey === 'per_unit') distKey = 'sqm'
         return {
           statement_id: id,
           category: betrkvCat,
@@ -1275,7 +1277,7 @@ export default function NebenkostenabrechnungDetail() {
                       value={importKeys[e.id] || 'sqm'}
                       onChange={ev => setImportKeys(prev => ({ ...prev, [e.id]: ev.target.value }))}
                       style={{ fontSize: '12px', border: '1px solid #e8e6e0', borderRadius: '6px', padding: '4px 8px', color: '#1a1a1a', backgroundColor: '#fff' }}>
-                      {DISTRIBUTION_KEYS.map((dk: any) => (
+                      {DISTRIBUTION_KEYS.filter((dk: any) => dk.value !== 'per_unit').map((dk: any) => (
                         <option key={dk.value} value={dk.value}>{dk.label}</option>
                       ))}
                     </select>

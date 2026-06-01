@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
-import { Home, Building2, Wallet, Bell, MoreHorizontal, X } from 'lucide-react'
+import { Home, Building2, Wallet, Bell, MoreHorizontal, X, User } from 'lucide-react'
 
 interface NavChild {
   label: string
@@ -173,9 +173,14 @@ export default function Nav() {
         <Link href="/dashboard" className="text-lg font-semibold text-[#1a1a1a]" style={{ fontFamily: 'Georgia, serif' }}>
           MietNext
         </Link>
-        <Link href="/pricing" className="text-[11px] font-medium bg-[#dcfce7] text-[#16a34a] px-2.5 py-1 rounded-full hover:bg-[#bbf7d0] transition-colors cursor-pointer">
-          {planLabels[plan] || plan}
-        </Link>
+        <div className="flex items-center gap-2.5">
+          <Link href="/pricing" className="text-[11px] font-medium bg-[#dcfce7] text-[#16a34a] px-2.5 py-1 rounded-full hover:bg-[#bbf7d0] transition-colors cursor-pointer">
+            {planLabels[plan] || plan}
+          </Link>
+          <Link href="/profile" aria-label="Profil" className="flex items-center justify-center w-8 h-8 rounded-full border border-[#e8e6e0] text-[#666] hover:text-[#1a1a1a] hover:border-[#1a1a1a] transition-colors">
+            <User size={16} />
+          </Link>
+        </div>
       </nav>
 
       {/* === Mobile Bottom Nav === */}

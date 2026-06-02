@@ -23,24 +23,22 @@ export default function PlanUsageBanner() {
   const isAtLimit   = info.currentUnits >= info.limit && info.limit !== Infinity
   const isNearLimit = info.percentUsed >= 80 && !isAtLimit && info.limit !== Infinity
 
-  const bg     = isAtLimit ? '#fee2e2' : isNearLimit ? '#fef3c7' : '#f0fdf4'
-  const text   = isAtLimit ? '#991b1b' : isNearLimit ? '#92400e' : '#166534'
-  const border = isAtLimit ? '#fecaca' : isNearLimit ? '#fde68a' : '#bbf7d0'
-  const bar    = isAtLimit ? '#dc2626' : isNearLimit ? '#f59e0b' : '#22c55e'
+  const text = isAtLimit ? '#dc2626' : '#1a1a1a'
+  const bar  = isAtLimit ? '#dc2626' : isNearLimit ? '#d97706' : '#16a34a'
 
   return (
     <div style={{
-      backgroundColor: bg, padding: '16px 20px', borderRadius: '12px',
-      marginBottom: '24px', border: `1px solid ${border}`,
+      backgroundColor: '#fafaf8', padding: '14px 18px', borderRadius: '12px',
+      marginBottom: '24px', border: '1px solid #e8e6e0',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', marginBottom: info.limit !== Infinity ? '10px' : 0 }}>
         <div>
           <p style={{ margin: 0, fontSize: '14px', fontWeight: '500', color: text }}>
             {info.limit === Infinity
-              ? `✨ ${info.planName}: Unbegrenzte Einheiten · Aktuell: ${info.currentUnits}`
+              ? `${info.planName} · Unbegrenzte Einheiten · Aktuell: ${info.currentUnits}`
               : isAtLimit
-                ? `⚠️ Limit erreicht: ${info.currentUnits} von ${info.limit} Einheiten (${info.planName})`
-                : `${info.planName}: ${info.currentUnits} von ${info.limit} Einheiten`}
+                ? `Limit erreicht · ${info.currentUnits} von ${info.limit} Einheiten (${info.planName})`
+                : `${info.planName} · ${info.currentUnits} von ${info.limit} Einheiten`}
           </p>
           {isAtLimit && (
             <p style={{ margin: '4px 0 0', fontSize: '12px', color: text }}>
@@ -50,17 +48,21 @@ export default function PlanUsageBanner() {
         </div>
         {info.limit !== Infinity && (
           <button onClick={() => router.push('/pricing')}
-            style={{
-              padding: '6px 14px', fontSize: '12px', fontWeight: '500',
-              backgroundColor: bar, color: '#fff', border: 'none',
-              borderRadius: '6px', cursor: 'pointer', whiteSpace: 'nowrap' as const,
+            style={isAtLimit ? {
+              padding: '7px 14px', fontSize: '12px', fontWeight: '500',
+              backgroundColor: '#1a1a1a', color: '#fff', border: 'none',
+              borderRadius: '8px', cursor: 'pointer', whiteSpace: 'nowrap' as const,
+            } : {
+              padding: '4px 4px', fontSize: '12px', fontWeight: '500',
+              backgroundColor: 'transparent', color: '#666', border: 'none',
+              cursor: 'pointer', whiteSpace: 'nowrap' as const,
             }}>
             {isAtLimit ? 'Jetzt upgraden →' : 'Plan ansehen →'}
           </button>
         )}
       </div>
       {info.limit !== Infinity && (
-        <div style={{ height: '6px', backgroundColor: '#fff', borderRadius: '3px', overflow: 'hidden' }}>
+        <div style={{ height: '6px', backgroundColor: '#f1efe8', borderRadius: '3px', overflow: 'hidden' }}>
           <div style={{ width: `${info.percentUsed}%`, height: '100%', backgroundColor: bar, transition: 'width 0.3s' }} />
         </div>
       )}

@@ -4,98 +4,8 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Nav from '@/components/Nav'
-
-const PLANS = [
-  {
-    id: 'free',
-    name: 'Free',
-    price: 0,
-    priceId: null,
-    einheiten: '3 Einheiten',
-    color: '#888',
-    bg: '#fafaf8',
-    border: '#e8e6e0',
-    features: [
-      '✅ 3 Einheiten',
-      '✅ Objekte, Mieter, Verträge',
-      '✅ Zahlungsübersicht',
-      '✅ Tickets',
-      '❌ PDF Export',
-      '❌ NK-Abrechnung',
-      '❌ GuV + Kosten',
-      '❌ Excel-Import',
-      '❌ Bankkonto',
-    ],
-    cta: 'Kostenlos starten',
-  },
-  {
-    id: 'starter',
-    name: 'Starter',
-    price: 19,
-    priceId: 'price_1TWjBLC2lxIY4GthiRV6tYo3',
-    einheiten: '15 Einheiten',
-    color: '#2563eb',
-    bg: '#eff6ff',
-    border: '#bfdbfe',
-    popular: true,
-    features: [
-      '✅ 15 Einheiten',
-      '✅ Alles aus Free',
-      '✅ PDF Export',
-      '✅ NK-Abrechnung',
-      '✅ GuV + Kostenerfassung',
-      '✅ Excel-Import',
-      '🔜 Bankkonto (coming soon)',
-      '✅ E-Mail Support',
-      '❌ KI-Ausweis-Scan',
-    ],
-    cta: 'Starter wählen',
-  },
-  {
-    id: 'business',
-    name: 'Business',
-    price: 49,
-    priceId: 'price_1TWjDVC2lxIY4GthvtN0Jdxu',
-    einheiten: '50 Einheiten',
-    color: '#16a34a',
-    bg: '#f0fdf4',
-    border: '#bbf7d0',
-    features: [
-      '✅ 50 Einheiten',
-      '✅ Alles aus Starter',
-      '✅ KI-Ausweis-Scan',
-      '🔜 Bankkonto (coming soon)',
-      '✅ Priorität Support',
-      '✅ Früher Zugang zu neuen Features',
-      '',
-      '',
-      '',
-    ],
-    cta: 'Business wählen',
-  },
-  {
-    id: 'enterprise',
-    name: 'Enterprise',
-    price: 199,
-    priceId: 'price_1TWjDqC2lxIY4GthwMqCklKB',
-    einheiten: 'Unbegrenzte Einheiten',
-    color: '#7c3aed',
-    bg: '#f5f3ff',
-    border: '#ddd6fe',
-    features: [
-      '✅ Unbegrenzte Einheiten',
-      '✅ Alles aus Business',
-      '🔜 Bankkonto-Anbindung',
-      '✅ Dedicated Support',
-      '✅ Onboarding-Call',
-      '✅ SLA Garantie',
-      '',
-      '',
-      '',
-    ],
-    cta: 'Enterprise wählen',
-  },
-]
+import { colors } from '@/lib/theme'
+import { PLANS } from '@/lib/plan-features'
 
 export default function PricingPage() {
   const [userId, setUserId]     = useState<string | null>(null)
@@ -118,10 +28,8 @@ export default function PricingPage() {
   }, [])
 
   const handleSubscribe = async (priceId: string | null, planId: string) => {
-    if (planId === 'free') { router.push('/dashboard'); return }
-    if (!userId) { router.push('/login'); return }
-    if (currentPlan === planId) return
-
+    if (!priceId) { router.push('/register'); return }
+    if (!userId) return
     setLoading(planId)
     const res = await fetch('/api/stripe/create-checkout', {
       method: 'POST',
@@ -129,7 +37,7 @@ export default function PricingPage() {
       body: JSON.stringify({ priceId }),
     })
     const { url, error } = await res.json()
-    if (error) { alert('Fehler: ' + error); setLoading(null); return }
+    if (error) { alert(error); setLoading(null); return }
     window.location.href = url
   }
 
@@ -147,87 +55,95 @@ export default function PricingPage() {
   }
 
   return (
-    <main style={{ backgroundColor: '#fafaf8', minHeight: '100vh' }}>
+    <main style={{ backgroundColor: colors.surface, minHeight: '100vh' }}>
       <Nav />
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '64px 48px' }}>
 
         <div style={{ textAlign: 'center', marginBottom: '56px' }}>
-          <h1 style={{ fontSize: '36px', fontWeight: '400', color: '#1a1a1a', margin: '0 0 12px', fontFamily: 'Georgia, serif' }}>
+          <h1 style={{ fontSize: '36px', fontWeight: '400', color: colors.text, margin: '0 0 12px', fontFamily: 'Georgia, serif' }}>
             Einfache, transparente Preise
           </h1>
-          <p style={{ fontSize: '16px', color: '#999', margin: '0 0 24px' }}>
+          <p style={{ fontSize: '16px', color: colors.textMuted, margin: '0 0 24px' }}>
             Starte kostenlos · Upgrade jederzeit · Kündige jederzeit
           </p>
           {currentPlan !== 'free' && (
             <button onClick={handlePortal} disabled={loading === 'portal'}
-              style={{ backgroundColor: '#fff', color: '#666', padding: '10px 24px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '14px', cursor: 'pointer' }}>
+              style={{ backgroundColor: colors.white, color: colors.textSecondary, padding: '10px 24px', borderRadius: '8px', border: `1px solid ${colors.border}`, fontSize: '14px', cursor: 'pointer' }}>
               {loading === 'portal' ? 'Lädt...' : 'Abo verwalten / kündigen →'}
             </button>
           )}
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', alignItems: 'start' }}>
-          {PLANS.map(plan => (
-            <div key={plan.id} style={{
-              backgroundColor: '#fff',
-              border: plan.popular ? `2px solid ${plan.color}` : '1px solid #e8e6e0',
-              borderRadius: '16px',
-              padding: '28px 24px',
-              position: 'relative' as const,
-            }}>
-              {plan.popular && (
-                <div style={{
-                  position: 'absolute' as const, top: '-12px', left: '50%', transform: 'translateX(-50%)',
-                  backgroundColor: plan.color, color: '#fff',
-                  fontSize: '11px', fontWeight: '500', padding: '4px 14px', borderRadius: '20px',
-                  whiteSpace: 'nowrap' as const,
-                }}>
-                  Beliebteste Wahl
-                </div>
-              )}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4" style={{ gap: '16px', alignItems: 'start' }}>
+          {PLANS.map((plan: any) => {
+            const isPopular = plan.highlight === true
+            const isCurrent = currentPlan === plan.id
+            const isFree = plan.id === 'free'
+            return (
+              <div key={plan.id} style={{
+                backgroundColor: isPopular ? colors.text : colors.white,
+                border: `1px solid ${isPopular ? colors.text : colors.border}`,
+                borderRadius: '16px', padding: '28px 24px', position: 'relative' as const,
+              }}>
+                {isPopular && (
+                  <div style={{
+                    position: 'absolute' as const, top: '-12px', left: '50%', transform: 'translateX(-50%)',
+                    backgroundColor: colors.accent, color: colors.white,
+                    fontSize: '11px', fontWeight: '500', padding: '4px 14px', borderRadius: '20px', whiteSpace: 'nowrap' as const,
+                  }}>Beliebteste Wahl</div>
+                )}
 
-              <p style={{ fontSize: '13px', fontWeight: '500', color: plan.color, margin: '0 0 8px', textTransform: 'uppercase' as const, letterSpacing: '0.5px' }}>
-                {plan.name}
-              </p>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', margin: '0 0 4px' }}>
-                <p style={{ fontSize: '36px', fontWeight: '300', color: '#1a1a1a', margin: 0, fontFamily: 'Georgia, serif' }}>
-                  {plan.price === 0 ? '0' : plan.price}
+                <p style={{ fontSize: '13px', fontWeight: '500', color: isPopular ? '#bbb' : colors.textMuted, margin: '0 0 8px', textTransform: 'uppercase' as const, letterSpacing: '0.5px' }}>
+                  {plan.name}
                 </p>
-                <p style={{ fontSize: '14px', color: '#999', margin: 0 }}>€ / Monat</p>
-              </div>
-              <p style={{ fontSize: '12px', color: '#bbb', margin: '0 0 20px' }}>{plan.einheiten}</p>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', margin: '0 0 4px' }}>
+                  <p style={{ fontSize: '36px', fontWeight: '300', color: isPopular ? colors.white : colors.text, margin: 0, fontFamily: 'Georgia, serif' }}>
+                    {plan.price === 0 ? '0' : plan.price}
+                  </p>
+                  <p style={{ fontSize: '14px', color: colors.textMuted, margin: 0 }}>€ / Monat</p>
+                </div>
+                <p style={{ fontSize: '12px', color: isPopular ? '#888' : colors.textHint, margin: '0 0 20px' }}>{plan.einheiten}</p>
 
-              <button
-                onClick={() => handleSubscribe(plan.priceId, plan.id)}
-                disabled={loading === plan.id || currentPlan === plan.id}
-                style={{
-                  width: '100%', padding: '12px', borderRadius: '8px',
-                  fontSize: '14px', fontWeight: '500', cursor: currentPlan === plan.id ? 'default' : 'pointer',
-                  border: 'none',
-                  backgroundColor: currentPlan === plan.id ? '#f0ede6' : plan.id === 'free' ? '#f0ede6' : plan.color,
-                  color: currentPlan === plan.id ? '#999' : plan.id === 'free' ? '#1a1a1a' : '#fff',
-                  opacity: loading === plan.id ? 0.7 : 1,
-                  marginBottom: '20px',
-                  transition: 'opacity 0.15s',
-                }}>
-                {loading === plan.id ? 'Lädt...' : currentPlan === plan.id ? '✓ Aktueller Plan' : plan.cta}
-              </button>
+                <button
+                  onClick={() => handleSubscribe(plan.priceId, plan.id)}
+                  disabled={loading === plan.id || isCurrent}
+                  style={{
+                    width: '100%', padding: '12px', borderRadius: '8px', fontSize: '14px', fontWeight: '500',
+                    cursor: isCurrent ? 'default' : 'pointer', marginBottom: '20px', transition: 'opacity 0.15s',
+                    border: isCurrent ? `1px solid ${colors.border}` : isPopular ? 'none' : `1px solid ${isFree ? colors.border : colors.text}`,
+                    backgroundColor: isCurrent ? 'transparent' : isPopular ? colors.white : isFree ? colors.white : colors.text,
+                    color: isCurrent ? colors.textMuted : isPopular ? colors.text : isFree ? colors.text : colors.white,
+                    opacity: loading === plan.id ? 0.7 : 1,
+                  }}>
+                  {loading === plan.id ? 'Lädt...' : isCurrent ? '✓ Aktueller Plan' : plan.cta}
+                </button>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {plan.features.filter(f => f).map((f, i) => (
-                  <p key={i} style={{ fontSize: '13px', color: '#555', margin: 0, lineHeight: '1.4' }}>{f}</p>
-                ))}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {plan.features.map((f: any, i: number) => {
+                    const included = f.v === true || f.v === 'soon'
+                    return (
+                      <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                        <span style={{ fontSize: '14px', lineHeight: '1.35', flexShrink: 0, color: included ? colors.accent : (isPopular ? '#555' : '#d8d6d0') }}>
+                          {included ? '✓' : '–'}
+                        </span>
+                        <span style={{ fontSize: '13px', lineHeight: '1.4', color: f.v === false ? (isPopular ? '#777' : colors.textHint) : (isPopular ? '#e8e6e0' : colors.textSecondary) }}>
+                          {f.t}{f.v === 'soon' ? <span style={{ color: isPopular ? '#888' : colors.textHint }}> (bald)</span> : ''}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
 
         <div style={{ textAlign: 'center', marginTop: '48px' }}>
-          <p style={{ fontSize: '13px', color: '#bbb' }}>
+          <p style={{ fontSize: '13px', color: colors.textHint }}>
             Alle Preise inkl. 19% MwSt. · Monatlich kündbar · Zahlung per Kreditkarte oder SEPA
           </p>
-          <p style={{ fontSize: '13px', color: '#bbb', margin: '8px 0 0' }}>
-            Im Test-Modus: Testkarte <strong style={{ color: '#555' }}>4242 4242 4242 4242</strong> · Datum: beliebig · CVC: beliebig
+          <p style={{ fontSize: '13px', color: colors.textHint, margin: '8px 0 0' }}>
+            Im Test-Modus: Testkarte <strong style={{ color: colors.textSecondary }}>4242 4242 4242 4242</strong> · Datum: beliebig · CVC: beliebig
           </p>
         </div>
       </div>

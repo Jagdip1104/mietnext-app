@@ -24,7 +24,7 @@ export const colors = {
   warningBorder: '#fed7aa',
 
   // NUR in Diagrammen verwenden (kategoriale Daten):
-  chart: { wohnung: '#16a34a', gewerbe: '#8b5cf6', lager: '#d97706' },
+  chart: { wohnung: '#334155', gewerbe: '#7F77DD', lager: '#a16207' },
 } as const
 
 // Plan-Stufen: Gewicht statt Farbe (leer -> hell -> grün -> schwarz)

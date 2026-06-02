@@ -573,7 +573,7 @@ export default function Dashboard() {
                 const c2pi = 2 * Math.PI * 40
                 const totalU = stats.units || 1
                 const segs: Array<{color: string, count: number}> = []
-                if (stats.woUnitsOccupied > 0) segs.push({ color: '#1d9e75', count: stats.woUnitsOccupied })
+                if (stats.woUnitsOccupied > 0) segs.push({ color: '#334155', count: stats.woUnitsOccupied })
                 if (stats.gewerbeUnitsOccupied > 0) segs.push({ color: '#7F77DD', count: stats.gewerbeUnitsOccupied })
                 if (stats.lagerUnitsOccupied > 0) segs.push({ color: '#a16207', count: stats.lagerUnitsOccupied })
                 if (stats.stellplatzUnitsOccupied > 0) segs.push({ color: '#6b7280', count: stats.stellplatzUnitsOccupied })
@@ -604,7 +604,7 @@ export default function Dashboard() {
               <div style={{ flex: 1, fontSize: '12px', color: '#6b7280', lineHeight: 1.7 }}>
                 <strong style={{ color: '#1a1a1a' }}>{stats.occupiedUnits} von {stats.units}</strong> vermietet
                 <div style={{ marginTop: '8px' }}>
-                  {stats.woUnits > 0 && <div><span style={{ color: '#1d9e75' }}>●</span> {stats.woUnitsOccupied}/{stats.woUnits} Wohnung{stats.woUnits === 1 ? '' : 'en'}</div>}
+                  {stats.woUnits > 0 && <div><span style={{ color: '#334155' }}>●</span> {stats.woUnitsOccupied}/{stats.woUnits} Wohnung{stats.woUnits === 1 ? '' : 'en'}</div>}
                   {stats.gewerbeUnits > 0 && <div><span style={{ color: '#7F77DD' }}>●</span> {stats.gewerbeUnitsOccupied}/{stats.gewerbeUnits} Gewerbe</div>}
                   {stats.lagerUnits > 0 && <div><span style={{ color: '#a16207' }}>●</span> {stats.lagerUnitsOccupied}/{stats.lagerUnits} Lager</div>}
                   {stats.stellplatzUnits > 0 && <div><span style={{ color: '#6b7280' }}>●</span> {stats.stellplatzUnitsOccupied}/{stats.stellplatzUnits} Stellplatz</div>}

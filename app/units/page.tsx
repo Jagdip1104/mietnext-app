@@ -222,8 +222,8 @@ export default function Units() {
       )
     : units
 
-  const typeColor: any = { wohnung: '#666666', gewerbe: '#666666', stellplatz: '#666666', lager: '#666666', sonstige: '#666666' }
-  const typeBg: any = { wohnung: '#f1efe8', gewerbe: '#f1efe8', stellplatz: '#f1efe8', lager: '#f1efe8', sonstige: '#f1efe8' }
+  const typeColor: any = { wohnung: '#334155', gewerbe: '#7F77DD', stellplatz: '#6b7280', lager: '#a16207', sonstige: '#6b7280' }
+  const typeBg: any = { wohnung: '#eef0f3', gewerbe: '#eeedfe', stellplatz: '#f1efe8', lager: '#faeeda', sonstige: '#f1efe8' }
   const typeLabel: any = { wohnung: 'Wohnung', gewerbe: 'Gewerbe', stellplatz: 'Stellplatz', lager: 'Lager', sonstige: 'Sonstige' }
 
   const card = { backgroundColor: '#fff', border: '1px solid #e8e6e0', borderRadius: '12px', padding: '24px' }

@@ -29,8 +29,8 @@ export const colors = {
 
 // Plan-Stufen: Gewicht statt Farbe (leer -> hell -> grün -> schwarz)
 export const planBadge: Record<string, any> = {
-  free:       { background: 'transparent', color: '#666666', border: '1px solid #e8e6e0' },
-  starter:    { background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0' },
-  business:   { background: '#16a34a', color: '#ffffff', border: '1px solid #16a34a' },
-  enterprise: { background: '#1a1a1a', color: '#ffffff', border: '1px solid #1a1a1a' },
+  free:       { background: '#f1efe8', color: '#666666' },
+  starter:    { background: '#1a1a1a', color: '#ffffff' },
+  business:   { background: '#1a1a1a', color: '#ffffff' },
+  enterprise: { background: '#1a1a1a', color: '#ffffff' },
 }

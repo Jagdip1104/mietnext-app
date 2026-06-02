@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { planBadge } from '@/lib/theme'
 import { Home, Building2, Wallet, Bell, MoreHorizontal, X, User } from 'lucide-react'
 
 interface NavChild {
@@ -157,7 +158,7 @@ export default function Nav() {
           </div>
 
           <div className="flex items-center gap-3">
-            <Link href="/pricing" className="text-[11px] font-medium bg-[#dcfce7] text-[#16a34a] px-2.5 py-1 rounded-full hover:bg-[#bbf7d0] transition-colors cursor-pointer">
+            <Link href="/pricing" className="text-[11px] font-medium px-2.5 py-1 rounded-full transition-colors cursor-pointer" style={planBadge[plan] || planBadge.free}>
               {planLabels[plan] || plan}
             </Link>
             <span className="text-[12px] text-[#999] truncate max-w-[160px]">{email}</span>
@@ -174,7 +175,7 @@ export default function Nav() {
           MietNext
         </Link>
         <div className="flex items-center gap-2.5">
-          <Link href="/pricing" className="text-[11px] font-medium bg-[#dcfce7] text-[#16a34a] px-2.5 py-1 rounded-full hover:bg-[#bbf7d0] transition-colors cursor-pointer">
+          <Link href="/pricing" className="text-[11px] font-medium px-2.5 py-1 rounded-full transition-colors cursor-pointer" style={planBadge[plan] || planBadge.free}>
             {planLabels[plan] || plan}
           </Link>
           <Link href="/profile" aria-label="Profil" className="flex items-center justify-center w-8 h-8 rounded-full border border-[#e8e6e0] text-[#666] hover:text-[#1a1a1a] hover:border-[#1a1a1a] transition-colors">

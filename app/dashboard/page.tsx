@@ -414,7 +414,7 @@ export default function Dashboard() {
   const donutCircum = 2 * Math.PI * 40
   const donutFill = (occupancyRate / 100) * donutCircum
   const donutColor = occupancyRate >= BENCHMARK_OCCUPANCY ? '#16a34a'
-    : occupancyRate >= 70 ? '#1B4FD8' : '#dc2626'
+    : occupancyRate >= 70 ? '#1a1a1a' : '#d97706'
 
   // Pick best Smart-Insight
   let smartInsight = ''
@@ -472,7 +472,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3" style={{ marginBottom: '1.5rem' }}>
           <div style={kpiCardStyle}>
             <div style={kpiLabelStyle}>Einnahmen diesen Monat</div>
-            <div style={{ ...kpiValueStyle, color: stats.paymentQuote >= 95 ? '#16a34a' : stats.paymentQuote >= 70 ? '#d97706' : '#dc2626' }}>
+            <div style={{ ...kpiValueStyle, color: '#1a1a1a' }}>
               {fmtCurrency(stats.monthlyIncome)}
             </div>
             <div style={{ fontSize: '11.5px', color: '#6b7280', marginBottom: '4px' }}>
@@ -492,7 +492,7 @@ export default function Dashboard() {
 
           <div style={kpiCardStyle}>
             <div style={kpiLabelStyle}>Forecast 30 Tage</div>
-            <div style={{ ...kpiValueStyle, color: '#1B4FD8' }}>{fmtCurrency(stats.forecast30Days)}</div>
+            <div style={{ ...kpiValueStyle, color: '#1a1a1a' }}>{fmtCurrency(stats.forecast30Days)}</div>
             <div style={{ fontSize: '11.5px', color: '#6b7280' }}>
               Erwartete Zahlungen
             </div>
@@ -505,7 +505,7 @@ export default function Dashboard() {
             </div>
             <div style={{
               fontSize: '11.5px',
-              color: occupancyDelta >= 0 ? '#16a34a' : '#dc2626'
+              color: occupancyDelta >= 0 ? '#16a34a' : '#d97706'
             }}>
               {occupancyDelta >= 0 ? '↑' : '↓'} {Math.abs(occupancyDelta)}% vs. Branchen-Ø ({BENCHMARK_OCCUPANCY}%)
             </div>
@@ -515,11 +515,11 @@ export default function Dashboard() {
             <div style={kpiLabelStyle}>Offene Aufgaben</div>
             <div style={{
               ...kpiValueStyle,
-              color: urgentCount > 0 ? '#dc2626' : stats.actionItems.length > 0 ? '#d97706' : '#16a34a'
+              color: urgentCount > 0 ? '#d97706' : '#1a1a1a'
             }}>
               {stats.actionItems.length}
             </div>
-            <div style={{ fontSize: '11.5px', color: urgentCount > 0 ? '#dc2626' : '#6b7280' }}>
+            <div style={{ fontSize: '11.5px', color: urgentCount > 0 ? '#d97706' : '#6b7280' }}>
               {urgentCount > 0 ? `${urgentCount} dringend` : stats.actionItems.length === 0 ? 'Alles erledigt ✓' : 'Zu erledigen'}
             </div>
           </div>
@@ -529,7 +529,7 @@ export default function Dashboard() {
         <div className="flex flex-col gap-3 md:grid md:grid-cols-2" style={{ marginBottom: '1.5rem' }}>
           <div style={cardStyle}>
             <div style={cardHeaderStyle}>
-              <h3 style={cardTitleStyle}>📋 Was steht an?</h3>
+              <h3 style={cardTitleStyle}>Was steht an?</h3>
             </div>
             {stats.actionItems.length === 0 ? (
               <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#6b7280', fontSize: '13px' }}>
@@ -566,7 +566,7 @@ export default function Dashboard() {
 
           <div style={cardStyle}>
             <div style={cardHeaderStyle}>
-              <h3 style={cardTitleStyle}>📊 Auslastung & Mix</h3>
+              <h3 style={cardTitleStyle}>Auslastung & Mix</h3>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
               {(() => {
@@ -622,7 +622,7 @@ export default function Dashboard() {
         {/* === Einnahmen-Chart === */}
         <div style={{...cardStyle, marginBottom: '1.5rem'}}>
           <div style={cardHeaderStyle}>
-            <h3 style={cardTitleStyle}>📈 Einnahmen-Trend (12 Monate)</h3>
+            <h3 style={cardTitleStyle}>Einnahmen-Trend (12 Monate)</h3>
             <div style={{display: 'flex', gap: '12px', fontSize: '11px', color: '#6b7280', alignItems: 'center'}}>
               <span><span style={{display: 'inline-block', width: '12px', height: '2px', background: '#1B4FD8', marginRight: '4px', verticalAlign: 'middle'}}></span>Ist</span>
               <span><span style={{display: 'inline-block', width: '12px', height: '0', borderTop: '1.5px dashed #9ca3af', marginRight: '4px', verticalAlign: 'middle'}}></span>Soll</span>
@@ -655,10 +655,10 @@ export default function Dashboard() {
                   <text x={padL - 5} y={h - padB + 3} fontSize="9" textAnchor="end" fill="#9ca3af">0 €</text>
                   <polygon fill="#1B4FD8" fillOpacity="0.08" points={areaPts}/>
                   <polyline fill="none" stroke="#9ca3af" strokeWidth="1.5" strokeDasharray="4,3" points={expectedPts}/>
-                  <polyline fill="none" stroke="#1B4FD8" strokeWidth="2" points={polyPts}/>
+                  <polyline fill="none" stroke="#16a34a" strokeWidth="2" points={polyPts}/>
                   {points.map((p, i) => (
                     <g key={i}>
-                      <circle cx={p.x} cy={p.y} r={i === points.length-1 ? 4 : 3} fill="#1B4FD8" stroke="white" strokeWidth={i === points.length-1 ? 2 : 0}/>
+                      <circle cx={p.x} cy={p.y} r={i === points.length-1 ? 4 : 3} fill="#16a34a" stroke="white" strokeWidth={i === points.length-1 ? 2 : 0}/>
                       <text x={p.x} y={h - padB + 14} fontSize="10" textAnchor="middle" fill="#6b7280">{p.label}</text>
                       {p.income > 0 && (
                         <text x={p.x} y={p.y - 8} fontSize="9" textAnchor="middle" fill="#1B4FD8" fontWeight="500">
@@ -677,7 +677,7 @@ export default function Dashboard() {
         <div className="flex flex-col gap-3 md:grid md:grid-cols-2" style={{ marginBottom: '1.5rem' }}>
           <div style={cardStyle}>
             <div style={cardHeaderStyle}>
-              <h3 style={cardTitleStyle}>📈 Letzte Aktivität</h3>
+              <h3 style={cardTitleStyle}>Letzte Aktivität</h3>
               <a href="/payments" style={cardLinkStyle}>Alle →</a>
             </div>
             {stats.recentActivity.length === 0 ? (
@@ -700,7 +700,7 @@ export default function Dashboard() {
 
           <div style={{ ...cardStyle, background: '#f9fafb' }}>
             <div style={cardHeaderStyle}>
-              <h3 style={cardTitleStyle}>💡 Smart-Insight</h3>
+              <h3 style={cardTitleStyle}>Smart-Insight</h3>
             </div>
             <div style={{ fontSize: '13px', lineHeight: 1.6, color: '#374151' }}>
               {smartInsight}

@@ -189,6 +189,7 @@ export default function NebenkostenabrechnungDetail() {
       description: item.description || '',
       total_amount: String(item.total_amount),
       distribution_key: item.distribution_key,
+      snapshot_amount: item.snapshot_amount,
       unit_amounts: ua,
     })
   }

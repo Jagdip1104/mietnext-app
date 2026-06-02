@@ -1285,7 +1285,28 @@ export default function NebenkostenabrechnungDetail() {
                     </div>
                   ))}
                 </div>
-                <p style={{ fontSize: '13px', color: '#666', margin: '12px 0 0' }}>Summe: <strong>{formatEur(parseFloat(editItem.total_amount) || 0)}</strong></p>
+                {(() => {
+                  const summeEinzel = units.reduce((s: number, u: any) => s + (parseFloat(editItem.unit_amounts[u.id]) || 0), 0)
+                  const importiert = parseFloat(editItem.snapshot_amount) || 0
+                  const diff = summeEinzel - importiert
+                  const passt = Math.abs(diff) < 0.01
+                  return (
+                    <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #ececec' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#666', marginBottom: '4px' }}>
+                        <span>Summe Einzelbeträge</span><strong style={{ color: '#1a1a1a' }}>{formatEur(summeEinzel)}</strong>
+                      </div>
+                      {importiert > 0 && (<>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#666', marginBottom: '6px' }}>
+                          <span>Importierte Kosten</span><strong style={{ color: '#1a1a1a' }}>{formatEur(importiert)}</strong>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: '500', color: passt ? '#16a34a' : '#dc2626' }}>
+                          <span>{passt ? '✓ stimmt überein' : '⚠ Differenz'}</span>
+                          {!passt && <span>{formatEur(Math.abs(diff))}</span>}
+                        </div>
+                      </>)}
+                    </div>
+                  )
+                })()}
               </div>
             )}
             <div style={{ display: 'flex', gap: '8px' }}>

@@ -958,7 +958,7 @@ export default function NebenkostenabrechnungDetail() {
                             </p>
                             <p style={{ fontSize: '12px', color: '#bbb', margin: 0 }}>{getKeyLabel(item.distribution_key)}</p>
                           </div>
-                          <div className="flex items-center gap-3 flex-wrap">
+                          <div className="flex items-center gap-3 flex-wrap md:flex-nowrap">
                             <p style={{ fontSize: '16px', fontWeight: '500', color: '#1a1a1a', margin: 0, fontFamily: 'Georgia, serif', whiteSpace: 'nowrap' }}>
                               {formatEur(Number(item.total_amount))}
                             </p>

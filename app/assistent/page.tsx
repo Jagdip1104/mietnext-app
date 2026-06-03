@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
+import Markdown from '@/components/Markdown'
 
 const BETA_PASSWORD = process.env.NEXT_PUBLIC_BETA_PASSWORD || ''
 const STORAGE_KEY = 'mietnext_assistent_beta'
@@ -110,11 +111,12 @@ export default function AssistentPage() {
         {messages.map((m, i) => (
           <div key={i} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
             <div style={{
-              maxWidth: '85%', padding: '11px 15px', borderRadius: '14px', fontSize: '14px', lineHeight: 1.5, whiteSpace: 'pre-wrap',
+              maxWidth: '85%', padding: '11px 15px', borderRadius: '14px', fontSize: '14px', lineHeight: 1.5,
+              whiteSpace: m.role === 'user' ? 'pre-wrap' : 'normal',
               background: m.role === 'user' ? '#1a1a1a' : '#fafaf8',
               color: m.role === 'user' ? '#fff' : '#1a1a1a',
               border: m.role === 'user' ? 'none' : '1px solid #e8e6e0',
-            }}>{m.content}</div>
+            }}>{m.role === 'user' ? m.content : <Markdown text={m.content} />}</div>
           </div>
         ))}
         {loading && (

@@ -86,11 +86,16 @@ export default function AssistentPage() {
     <div style={{ maxWidth: '760px', margin: '0 auto', padding: '20px 16px 150px', minHeight: '70vh' }}>
       <style>{`.mn-inputbar{bottom:72px}@media(min-width:768px){.mn-inputbar{bottom:0}}`}</style>
 
-      <div style={{ marginBottom: '18px' }}>
-        <h1 style={{ fontFamily: 'Georgia, serif', fontSize: '24px', color: '#1a1a1a', margin: 0 }}>
-          MietNext Assistent <span style={{ fontSize: '11px', background: '#1a1a1a', color: '#fff', padding: '2px 8px', borderRadius: '20px', verticalAlign: 'middle' }}>Beta</span>
-        </h1>
-        <p style={{ fontSize: '13px', color: '#666', margin: '4px 0 0' }}>Fragen zu Funktionen &amp; Mietrecht. (Sieht noch nicht deine konkreten Daten.)</p>
+      <div style={{ marginBottom: '18px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+        <div>
+          <h1 style={{ fontFamily: 'Georgia, serif', fontSize: '24px', color: '#1a1a1a', margin: 0 }}>
+            MietNext Assistent <span style={{ fontSize: '11px', background: '#1a1a1a', color: '#fff', padding: '2px 8px', borderRadius: '20px', verticalAlign: 'middle' }}>Beta</span>
+          </h1>
+          <p style={{ fontSize: '13px', color: '#666', margin: '4px 0 0' }}>Fragen zu Funktionen &amp; Mietrecht. (Sieht noch nicht deine konkreten Daten.)</p>
+        </div>
+        {messages.length > 0 && (
+          <button onClick={() => setMessages([])} style={{ flexShrink: 0, fontSize: '13px', color: '#666', background: '#fafaf8', border: '1px solid #e8e6e0', borderRadius: '10px', padding: '7px 12px', cursor: 'pointer', whiteSpace: 'nowrap' }}>Neuer Chat</button>
+        )}
       </div>
 
       {messages.length === 0 && (

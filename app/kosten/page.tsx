@@ -44,6 +44,32 @@ export default function KostenPage() {
     await runScan(file)
   }
   
+  const downscaleImage = (file: File): Promise<File> => {
+    return new Promise((resolve) => {
+      if (!file.type.startsWith('image/')) { resolve(file); return }
+      const img = new Image()
+      const url = URL.createObjectURL(file)
+      img.onload = () => {
+        URL.revokeObjectURL(url)
+        const maxEdge = 1568
+        const scale = Math.min(1, maxEdge / Math.max(img.width, img.height))
+        const w = Math.round(img.width * scale)
+        const h = Math.round(img.height * scale)
+        const canvas = document.createElement('canvas')
+        canvas.width = w; canvas.height = h
+        const ctx = canvas.getContext('2d')
+        if (!ctx) { resolve(file); return }
+        ctx.drawImage(img, 0, 0, w, h)
+        canvas.toBlob((blob) => {
+          if (!blob) { resolve(file); return }
+          resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }))
+        }, 'image/jpeg', 0.85)
+      }
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(file) }
+      img.src = url
+    })
+  }
+
   const runScan = async (file: File) => {
     setScanning(true)
     setScanResult(null)
@@ -52,8 +78,9 @@ export default function KostenPage() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { setScanning(false); return }
       
+      const scanFile = await downscaleImage(file)
       const formData = new FormData()
-      formData.append('file', file)
+      formData.append('file', scanFile)
       
       const res = await fetch('/api/scan-receipt', {
         method: 'POST',
@@ -61,7 +88,13 @@ export default function KostenPage() {
         body: formData,
       })
       
-      if (!res.ok) { setScanning(false); return }
+      if (!res.ok) {
+        let m = `Fehler ${res.status}`
+        try { const ej = await res.json(); if (ej?.error) m = ej.error } catch {}
+        setScanResult({ error: m })
+        setScanning(false)
+        return
+      }
       const data = await res.json()
       setScanResult(data)
       autoFillFromScan(data)

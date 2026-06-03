@@ -109,10 +109,71 @@ export async function POST(req: NextRequest) {
     const hash = file.name.length + file.size + file.name.charCodeAt(0)
     extracted = { ...MOCK_RESPONSES[hash % MOCK_RESPONSES.length], is_mock: true }
   } else {
-    // TODO: Real Claude Vision API Call (kommt wenn API Key da)
-    return NextResponse.json({
-      error: 'Real API noch nicht implementiert. ANTHROPIC_API_KEY entfernen für Mock-Mode.'
-    }, { status: 501 })
+    // Real Claude Vision API Call
+    try {
+      const bytes = await file.arrayBuffer()
+      const base64 = Buffer.from(bytes).toString('base64')
+      const mimeType = file.type || 'image/jpeg'
+      const isPdf = mimeType === 'application/pdf'
+
+      const contentBlock: any = isPdf ? {
+        type: 'document',
+        source: { type: 'base64', media_type: 'application/pdf', data: base64 }
+      } : {
+        type: 'image',
+        source: { type: 'base64', media_type: mimeType, data: base64 }
+      }
+
+      const apiRes = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.ANTHROPIC_API_KEY!,
+          'anthropic-version': '2023-06-01',
+          ...(isPdf ? { 'anthropic-beta': 'pdfs-2024-09-25' } : {}),
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 1024,
+          messages: [{
+            role: 'user',
+            content: [
+              contentBlock,
+              {
+                type: 'text',
+                text: `Analysiere diesen Beleg/diese Rechnung und extrahiere die Daten.
+Antworte NUR mit einem JSON-Objekt (kein Markdown, keine Backticks, kein Text davor/danach):
+{
+  "betrag_brutto": <Zahl in Euro z.B. 125.50>,
+  "mwst_satz": <0 oder 7 oder 19>,
+  "datum": "<YYYY-MM-DD>",
+  "lieferant": "<Firmenname des Rechnungsstellers>",
+  "rechnungs_nr": "<Rechnungsnummer oder null>",
+  "adresse_aus_beleg": "<Lieferanschrift falls sichtbar, sonst null>",
+  "kategorie_vorschlag": "<eine von: heizung, warmwasser, wasser, abwasser, muell, allgemeinstrom, aufzug, hausmeister, versicherung, grundsteuer, instandhaltung, sonstige>",
+  "confidence": <0.0-1.0>
+}`
+              }
+            ]
+          }]
+        })
+      })
+
+      if (!apiRes.ok) {
+        const errText = await apiRes.text()
+        return NextResponse.json({ error: 'Anthropic API Fehler: ' + errText }, { status: 500 })
+      }
+
+      const apiData = await apiRes.json()
+      const text = (apiData.content?.[0]?.text || '').replace(/```json|```/g, '').trim()
+      const parsed = JSON.parse(text)
+      extracted = { ...parsed, is_mock: false }
+    } catch (err: any) {
+      return NextResponse.json(
+        { error: 'KI-Scan fehlgeschlagen: ' + (err.message || String(err)) },
+        { status: 500 }
+      )
+    }
   }
 
   // 4. Adress-Matching gegen user's properties

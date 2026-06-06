@@ -259,7 +259,10 @@ export default function KostenStapelPage() {
               return (
                 <div key={r.uid} style={{ ...card, padding: '16px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '12px' }}>
-                    <span style={{ fontSize: '13px', color: '#1a1a1a', fontWeight: 500, wordBreak: 'break-word', overflowWrap: 'anywhere', minWidth: 0, flex: 1 }}>📎 {r.file.name}</span>
+                    <button type="button" onClick={() => window.open(URL.createObjectURL(r.file), '_blank')}
+                      style={{ background: 'none', border: 'none', padding: 0, fontSize: '13px', color: '#1a1a1a', fontWeight: 500, cursor: 'pointer', textAlign: 'left', textDecoration: 'underline', wordBreak: 'break-word', overflowWrap: 'anywhere', minWidth: 0, flex: 1 }}>
+                      📎 {r.file.name}
+                    </button>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                       {r.status === 'scanning' && <span style={{ fontSize: '11px', color: '#1e40af' }}>🤖 scannt…</span>}
                       {r.status === 'done' && <span style={{ fontSize: '11px', color: r.confidence && r.confidence > 0.85 ? '#16a34a' : '#92400e' }}>✨ erkannt{r.confidence != null && ` ${Math.round(r.confidence * 100)}%`}{r.is_mock && ' (Demo)'}</span>}

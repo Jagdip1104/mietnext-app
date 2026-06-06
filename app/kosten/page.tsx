@@ -165,8 +165,10 @@ export default function KostenPage() {
   }
   
   const handleViewReceipt = async (path: string) => {
+    const win = window.open('', '_blank')
     const url = await getReceiptSignedUrl(path)
-    if (url) window.open(url, '_blank')
+    if (!url) { if (win) win.close(); return }
+    if (win) { win.location.href = url } else { window.open(url, '_blank') }
   }
   const [loading, setLoading]         = useState(false)
   const [userId, setUserId]           = useState<string | null>(null)

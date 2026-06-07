@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Nav from '@/components/Nav'
+import MahnungModal from '@/components/MahnungModal'
 
 interface ConfirmAction {
   paymentId: string
@@ -25,6 +26,8 @@ export default function Payments() {
   const [loading, setLoading] = useState(false)
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
+  const [profile, setProfile] = useState<any>(null)
+  const [mahnungData, setMahnungData] = useState<any>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -51,6 +54,8 @@ export default function Payments() {
       .in('contract_id', contractIds.length > 0 ? contractIds : ['none'])
       .order('due_date', { ascending: false })
     setPayments(paymentsData || [])
+    const { data: prof } = await supabase.from('profiles').select('*').eq('id', uid).single()
+    setProfile(prof)
   }
 
   const handleAdd = async () => {
@@ -128,6 +133,27 @@ export default function Payments() {
   const totalPending = filteredPayments.filter((p: any) => effectiveStatus(p) === 'pending').reduce((s: number, p: any) => s + Number(p.amount || 0), 0)
   const totalLate = filteredPayments.filter((p: any) => effectiveStatus(p) === 'late').reduce((s: number, p: any) => s + Number(p.amount || 0), 0)
 
+  const overdueByTenant = (() => {
+    const map = new Map<string, any>()
+    for (const p of payments) {
+      if (effectiveStatus(p) !== 'late') continue
+      const tid = p.contracts?.tenant_id
+      if (!tid) continue
+      if (!map.has(tid)) map.set(tid, {
+        tenantId: tid,
+        tenantName: p.contracts?.tenants?.full_name || 'Mieter',
+        propertyName: p.contracts?.units?.properties?.name || '',
+        unitName: p.contracts?.units?.name || '',
+        payments: [] as any[],
+        total: 0,
+      })
+      const g = map.get(tid)
+      g.payments.push({ id: p.id, due_date: p.due_date, amount: Number(p.amount) })
+      g.total += Number(p.amount)
+    }
+    return Array.from(map.values())
+  })()
+
   const statusColor: any = { paid: '#16a34a', pending: '#d97706', late: '#dc2626' }
   const statusBg: any = { paid: '#f0fdf4', pending: '#fffbeb', late: '#fef2f2' }
   const statusLabel: any = { paid: 'Bezahlt', pending: 'Ausstehend', late: 'Überfällig' }
@@ -165,6 +191,26 @@ export default function Payments() {
             </div>
           ))}
         </div>
+
+        {overdueByTenant.length > 0 && (
+          <div style={{ ...card, marginBottom: '24px', border: '1px solid #fecaca' }}>
+            <h2 style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 4px', fontFamily: 'Georgia, serif' }}>Überfällige Zahlungen</h2>
+            <p style={{ fontSize: '13px', color: '#999', margin: '0 0 16px' }}>Zahlungserinnerung oder Mahnung als PDF erstellen.</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {overdueByTenant.map((g: any) => (
+                <div key={g.tenantId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', padding: '10px 0', borderBottom: '1px solid #f5f4ef' }}>
+                  <div>
+                    <p style={{ fontSize: '14px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 2px' }}>{g.tenantName}</p>
+                    <p style={{ fontSize: '12px', color: '#bbb', margin: 0 }}>{g.propertyName} · {g.payments.length} offene Posten · {g.total.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</p>
+                  </div>
+                  <button onClick={() => setMahnungData(g)} style={{ backgroundColor: '#fff', color: '#dc2626', padding: '8px 16px', borderRadius: '8px', border: '1px solid #fecaca', fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    Mahnung erstellen
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {showForm && (
           <div id="formcard" className="scroll-mt-24" style={{ ...card, marginBottom: '24px' }}>
@@ -334,6 +380,9 @@ export default function Payments() {
           </div>
         )}
       </div>
+      {mahnungData && profile && (
+        <MahnungModal data={mahnungData} profile={profile} onClose={() => setMahnungData(null)} />
+      )}
     </main>
   )
 }

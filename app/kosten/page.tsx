@@ -401,12 +401,17 @@ export default function KostenPage() {
             { label: 'Gesamtkosten',          value: totalAll,   color: '#1a1a1a' },
             { label: 'Davon umlagefähig',      value: totalUml,   color: '#16a34a' },
             { label: 'Davon nicht umlagefähig',value: totalNicht, color: '#dc2626' },
-          ] as any[]).map((s: any) => (
-            <div key={s.label} style={card}>
-              <p style={{ fontSize: '12px', color: '#999', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{s.label}</p>
-              <p style={{ fontSize: '26px', fontWeight: '300', color: s.color, margin: 0, fontFamily: 'Georgia, serif' }}>{formatEur(s.value)}</p>
-            </div>
-          ))}
+          ] as any[]).map((s: any, i: number) => {
+            const key = ['all', 'ja', 'nein'][i]
+            const active = filterUmlage === key
+            return (
+              <div key={s.label} onClick={() => setFilterUmlage((active && key !== 'all' ? 'all' : key) as any)}
+                style={{ ...card, cursor: 'pointer', border: active ? '1.5px solid ' + s.color : card.border }}>
+                <p style={{ fontSize: '12px', color: '#999', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{s.label}</p>
+                <p style={{ fontSize: '26px', fontWeight: '300', color: s.color, margin: 0, fontFamily: 'Georgia, serif' }}>{formatEur(s.value)}</p>
+              </div>
+            )
+          })}
         </div>
 
         {/* ── Filter ── */}

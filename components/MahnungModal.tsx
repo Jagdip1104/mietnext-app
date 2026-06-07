@@ -35,6 +35,17 @@ export default function MahnungModal({ data, profile, onClose }: { data: Mahnung
   const [gebuehr, setGebuehr] = useState('')
   const [busy, setBusy] = useState(false)
 
+  const [sName, setSName] = useState(profile?.landlord_name || '')
+  const [sStreet, setSStreet] = useState(profile?.landlord_street || '')
+  const [sZip, setSZip] = useState(profile?.landlord_zip || '')
+  const [sCity, setSCity] = useState(profile?.landlord_city || '')
+  const [sIban, setSIban] = useState(profile?.landlord_iban || '')
+
+  const [rName, setRName] = useState(data.tenantName || '')
+  const [rStreet, setRStreet] = useState('')
+  const [rZip, setRZip] = useState('')
+  const [rCity, setRCity] = useState('')
+
   const eur = (n: number) => n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
   const fmtDE = (d: any) => {
     const dt = new Date(d)
@@ -42,8 +53,6 @@ export default function MahnungModal({ data, profile, onClose }: { data: Mahnung
     const mm = String(dt.getMonth() + 1).padStart(2, '0')
     return dd + '.' + mm + '.' + dt.getFullYear()
   }
-
-  const hasLandlord = !!profile?.landlord_name
 
   const generatePDF = async () => {
     setBusy(true)
@@ -61,19 +70,23 @@ export default function MahnungModal({ data, profile, onClose }: { data: Mahnung
       doc.text(title, 190, 13, { align: 'right' })
 
       doc.setTextColor(120, 120, 120); doc.setFontSize(8)
-      const vsender = [profile?.landlord_name, profile?.landlord_street, [profile?.landlord_zip, profile?.landlord_city].filter(Boolean).join(' ')].filter(Boolean).join(' · ')
-      doc.text(vsender || '', 20, 32)
+      const sender = [sName, sStreet, [sZip, sCity].filter(Boolean).join(' ')].filter(Boolean).join(' · ')
+      doc.text(sender || '', 20, 32)
       doc.text('Datum: ' + fmtDE(new Date()), 190, 32, { align: 'right' })
 
+      let ay = 46
       doc.setTextColor(26, 26, 26); doc.setFontSize(11); doc.setFont('helvetica', 'bold')
-      doc.text(data.tenantName, 20, 48)
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(100, 100, 100)
-      doc.text([data.propertyName, data.unitName].filter(Boolean).join(' · '), 20, 54)
+      doc.text(rName || data.tenantName, 20, ay); ay += 5.5
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(60, 60, 60)
+      if (rStreet) { doc.text(rStreet, 20, ay); ay += 5 }
+      const rZipCity = [rZip, rCity].filter(Boolean).join(' ')
+      if (rZipCity) { doc.text(rZipCity, 20, ay); ay += 5 }
+      doc.setFontSize(9.5); doc.setTextColor(120, 120, 120)
+      doc.text([data.propertyName, data.unitName].filter(Boolean).join(' · '), 20, ay + 1)
 
-      let y = 70
+      let y = 80
       doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(26, 26, 26)
-      doc.text(title + (data.propertyName ? ' – ' + data.propertyName : ''), 20, y)
-      y += 10
+      doc.text(title + (data.propertyName ? ' – ' + data.propertyName : ''), 20, y); y += 10
 
       doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5)
       doc.text('Sehr geehrte Damen und Herren,', 20, y); y += 7
@@ -108,9 +121,9 @@ export default function MahnungModal({ data, profile, onClose }: { data: Mahnung
       const fristLines = doc.splitTextToSize('Bitte überweisen Sie den Gesamtbetrag bis spätestens ' + fmtDE(deadline) + ' auf das unten genannte Konto.', 170)
       doc.text(fristLines, 20, y); y += fristLines.length * 5.5 + 4
 
-      if (profile?.landlord_iban) {
+      if (sIban) {
         doc.setFontSize(9.5); doc.setTextColor(100, 100, 100)
-        doc.text('Bankverbindung: ' + profile.landlord_iban + (profile.landlord_bic ? '  BIC ' + profile.landlord_bic : '') + (profile.landlord_bank ? '  ' + profile.landlord_bank : ''), 20, y)
+        doc.text('Bankverbindung: ' + sIban + (profile?.landlord_bic ? '  BIC ' + profile.landlord_bic : '') + (profile?.landlord_bank ? '  ' + profile.landlord_bank : ''), 20, y)
         y += 8
       }
 
@@ -120,13 +133,13 @@ export default function MahnungModal({ data, profile, onClose }: { data: Mahnung
 
       doc.setFontSize(10.5); doc.setTextColor(26, 26, 26)
       doc.text('Mit freundlichen Grüßen', 20, y); y += 6
-      doc.text(profile?.landlord_name || '', 20, y)
+      doc.text(sName || '', 20, y)
 
       doc.setDrawColor(220, 218, 214); doc.setLineWidth(0.3); doc.line(20, 283, 190, 283)
       doc.setFontSize(8); doc.setTextColor(160, 160, 160)
       doc.text('Erstellt am ' + fmtDE(new Date()) + ' · MietNext', 20, 289)
 
-      const safe = (data.tenantName || 'Mieter').replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '')
+      const safe = (rName || data.tenantName || 'Mieter').replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '')
       doc.save(title.replace(/[^a-zA-Z0-9]/g, '_') + '_' + safe + '.pdf')
     } catch (e: any) {
       alert('PDF-Fehler: ' + e.message)
@@ -135,22 +148,18 @@ export default function MahnungModal({ data, profile, onClose }: { data: Mahnung
   }
 
   const ov = { position: 'fixed' as const, inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '20px' }
-  const inp = { width: '100%', border: '1px solid #e8e6e0', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', outline: 'none', color: '#1a1a1a', backgroundColor: '#fff' }
-  const lbl = { fontSize: '12px', color: '#999', marginBottom: '6px', display: 'block', textTransform: 'uppercase' as const, letterSpacing: '0.5px' }
+  const inp = { width: '100%', border: '1px solid #e8e6e0', borderRadius: '8px', padding: '9px 12px', fontSize: '14px', outline: 'none', color: '#1a1a1a', backgroundColor: '#fff' }
+  const lbl = { fontSize: '12px', color: '#999', marginBottom: '5px', display: 'block', textTransform: 'uppercase' as const, letterSpacing: '0.5px' }
+  const sub = { fontSize: '12px', fontWeight: 600 as const, color: '#1a1a1a', textTransform: 'uppercase' as const, letterSpacing: '0.5px', margin: '4px 0 0' }
 
   return (
     <div style={ov} onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} style={{ backgroundColor: '#fff', borderRadius: '12px', maxWidth: '560px', width: '100%', maxHeight: '88vh', overflowY: 'auto' }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ backgroundColor: '#fff', borderRadius: '12px', maxWidth: '580px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
         <div style={{ padding: '20px 24px', borderBottom: '1px solid #e8e6e0' }}>
           <h2 style={{ fontSize: '18px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 2px', fontFamily: 'Georgia, serif' }}>Mahnung erstellen</h2>
-          <p style={{ fontSize: '13px', color: '#999', margin: 0 }}>{data.tenantName} · {data.propertyName}</p>
+          <p style={{ fontSize: '13px', color: '#999', margin: 0 }}>{data.propertyName} · {data.payments.length} offene Posten</p>
         </div>
-        <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {!hasLandlord && (
-            <p style={{ fontSize: '13px', color: '#b45309', backgroundColor: '#fffbeb', border: '1px solid #fed7aa', borderRadius: '8px', padding: '10px 12px', margin: 0 }}>
-              Hinweis: Trage zuerst deine Vermieter-Stammdaten (Name, Adresse, IBAN) im Profil ein — sonst fehlen Absender und Bankverbindung auf der Mahnung.
-            </p>
-          )}
+        <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div>
             <label style={lbl}>Stufe</label>
             <select value={stageKey} onChange={(e) => setStageKey(e.target.value)} style={inp}>
@@ -159,17 +168,35 @@ export default function MahnungModal({ data, profile, onClose }: { data: Mahnung
               <option value="mahnung2">2. Mahnung (letzte Frist)</option>
             </select>
           </div>
-          <div>
-            <label style={lbl}>Zahlungsfrist (bis)</label>
-            <input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} style={inp} />
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <div style={{ flex: 1 }}>
+              <label style={lbl}>Frist bis</label>
+              <input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} style={inp} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={lbl}>Mahngebühr (€)</label>
+              <input type="number" value={gebuehr} onChange={(e) => setGebuehr(e.target.value)} placeholder="0.00" style={inp} />
+            </div>
           </div>
-          <div>
-            <label style={lbl}>Mahngebühr (€, optional)</label>
-            <input type="number" value={gebuehr} onChange={(e) => setGebuehr(e.target.value)} placeholder="0.00" style={inp} />
-            <p style={{ fontSize: '12px', color: '#bbb', margin: '6px 0 0' }}>Nur tatsächlich entstandene Kosten ansetzen.</p>
+
+          <p style={sub}>Absender (Vermieter)</p>
+          <input value={sName} onChange={(e) => setSName(e.target.value)} placeholder="Name / Firma" style={inp} />
+          <input value={sStreet} onChange={(e) => setSStreet(e.target.value)} placeholder="Straße & Hausnummer" style={inp} />
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <input value={sZip} onChange={(e) => setSZip(e.target.value)} placeholder="PLZ" style={{ ...inp, maxWidth: '120px' }} />
+            <input value={sCity} onChange={(e) => setSCity(e.target.value)} placeholder="Ort" style={inp} />
           </div>
-          <div style={{ backgroundColor: '#fafaf8', borderRadius: '8px', padding: '14px 16px' }}>
-            <p style={{ fontSize: '12px', color: '#999', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Offene Posten ({data.payments.length})</p>
+          <input value={sIban} onChange={(e) => setSIban(e.target.value)} placeholder="IBAN" style={inp} />
+
+          <p style={sub}>Empfänger (Mieter)</p>
+          <input value={rName} onChange={(e) => setRName(e.target.value)} placeholder="Name" style={inp} />
+          <input value={rStreet} onChange={(e) => setRStreet(e.target.value)} placeholder="Straße & Hausnummer" style={inp} />
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <input value={rZip} onChange={(e) => setRZip(e.target.value)} placeholder="PLZ" style={{ ...inp, maxWidth: '120px' }} />
+            <input value={rCity} onChange={(e) => setRCity(e.target.value)} placeholder="Ort" style={inp} />
+          </div>
+
+          <div style={{ backgroundColor: '#fafaf8', borderRadius: '8px', padding: '14px 16px', marginTop: '4px' }}>
             {data.payments.map((p) => (
               <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#444', padding: '3px 0' }}>
                 <span>Fällig {fmtDE(p.due_date)}</span><span>{eur(p.amount)}</span>

@@ -179,17 +179,21 @@ export default function Payments() {
         {/* Übersicht */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-[24px]">
           {[
-            { label: 'Eingegangen', value: totalPaid, color: '#16a34a' },
-            { label: 'Ausstehend', value: totalPending, color: '#d97706' },
-            { label: 'Überfällig', value: totalLate, color: '#dc2626' },
-          ].map(s => (
-            <div key={s.label} style={card}>
-              <p style={{ fontSize: '12px', color: '#999', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{s.label}</p>
-              <p style={{ fontSize: '28px', fontWeight: '300', color: s.color, margin: 0, fontFamily: 'Georgia, serif' }}>
-                {s.value.toLocaleString('de-DE')} €
-              </p>
-            </div>
-          ))}
+            { label: 'Eingegangen', value: totalPaid, color: '#16a34a', key: 'paid' },
+            { label: 'Ausstehend', value: totalPending, color: '#d97706', key: 'pending' },
+            { label: 'Überfällig', value: totalLate, color: '#dc2626', key: 'late' },
+          ].map(s => {
+            const active = filterStatus === s.key
+            return (
+              <div key={s.label} onClick={() => setFilterStatus(active ? 'all' : s.key)}
+                style={{ ...card, cursor: 'pointer', border: active ? '1.5px solid ' + s.color : card.border }}>
+                <p style={{ fontSize: '12px', color: '#999', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{s.label}</p>
+                <p style={{ fontSize: '28px', fontWeight: '300', color: s.color, margin: 0, fontFamily: 'Georgia, serif' }}>
+                  {s.value.toLocaleString('de-DE')} €
+                </p>
+              </div>
+            )
+          })}
         </div>
 
         {overdueByTenant.length > 0 && (

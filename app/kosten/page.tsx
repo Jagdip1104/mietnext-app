@@ -6,12 +6,14 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Nav from '@/components/Nav'
+import { useToast } from '@/components/ui/Toast'
 
 
 const UMLAGE_CATS  = new Set(EXPENSE_CATEGORIES.filter((c: any) => c.umlagefaehig).map((c: any) => c.value))
 const SONSTIGE     = new Set(['sonstige_uml', 'sonstige_nicht'])
 
 export default function KostenPage() {
+  const toast = useToast()
   const [expenses, setExpenses]       = useState<any[]>([])
   const [properties, setProperties]   = useState<any[]>([])
   const [showForm, setShowForm]       = useState(false)
@@ -34,9 +36,9 @@ export default function KostenPage() {
   
   const handleFileSelect = async (file: File | null) => {
     if (!file) { setReceiptFile(null); setScanResult(null); return }
-    if (file.size > 10 * 1024 * 1024) { alert('Datei zu groß (max. 10 MB)'); return }
+    if (file.size > 10 * 1024 * 1024) { toast.error('Datei zu groß (max. 10 MB)'); return }
     const allowedMimes = ['application/pdf', 'image/jpeg', 'image/png', 'image/heic', 'image/heif', 'image/webp']
-    if (!allowedMimes.includes(file.type)) { alert('Nur PDF, JPG, PNG, HEIC oder WebP erlaubt'); return }
+    if (!allowedMimes.includes(file.type)) { toast.error('Nur PDF, JPG, PNG, HEIC oder WebP erlaubt'); return }
     setReceiptFile(file)
     setRemoveReceipt(false)
     
@@ -150,7 +152,7 @@ export default function KostenPage() {
       contentType: file.type, upsert: false,
     })
     setReceiptUploading(false)
-    if (error) { alert('Beleg-Upload fehlgeschlagen: ' + error.message); return null }
+    if (error) { toast.error('Beleg-Upload fehlgeschlagen: ' + error.message); return null }
     return { path, filename: file.name, mime: file.type }
   }
   
@@ -160,7 +162,7 @@ export default function KostenPage() {
   
   const getReceiptSignedUrl = async (path: string): Promise<string | null> => {
     const { data, error } = await supabase.storage.from('receipts').createSignedUrl(path, 3600)
-    if (error) { alert('Beleg kann nicht geöffnet werden: ' + error.message); return null }
+    if (error) { toast.error('Beleg kann nicht geöffnet werden: ' + error.message); return null }
     return data?.signedUrl || null
   }
   
@@ -257,7 +259,8 @@ export default function KostenPage() {
     const { error } = editingId
       ? await supabase.from('expenses').update(expenseData).eq('id', editingId)
       : await supabase.from('expenses').insert({ ...expenseData, owner_id: userId })
-    if (error) { alert('Fehler: ' + error.message); setLoading(false); return }
+    if (error) { toast.error('Speichern fehlgeschlagen: ' + error.message); setLoading(false); return }
+    toast.success(editingId ? 'Kosten aktualisiert' : 'Kosten gespeichert')
     setForm({ property_id: '', category: '', custom_category: '', amount: '', expense_date: new Date().toISOString().split('T')[0], description: '', invoice_number: '' })
     setReceiptFile(null); setExistingReceipt(null); setRemoveReceipt(false)
     setScanResult(null); setAutoFilledFields(new Set())
@@ -290,6 +293,7 @@ export default function KostenPage() {
     const exp = expenses.find((e: any) => e.id === id)
     if (exp?.receipt_path) await deleteReceiptFromStorage(exp.receipt_path)
     await supabase.from('expenses').delete().eq('id', id)
+    toast.success('Kosten gelöscht')
     setDeleteConfirm(null)
     loadData(userId!)
   }
@@ -316,7 +320,7 @@ export default function KostenPage() {
 
   const handleBulkSave = async () => {
     const valid = bulkRows.filter((r: any) => r.property_id && r.category && r.amount && parseFloat(r.amount) > 0 && r.expense_date)
-    if (valid.length === 0) { alert('Mindestens eine Zeile mit Objekt, Kategorie, Betrag und Datum ausfüllen.'); return }
+    if (valid.length === 0) { toast.error('Mindestens eine Zeile mit Objekt, Kategorie, Betrag und Datum ausfüllen.'); return }
     setLoading(true)
     const rows = valid.map((r: any) => {
       const cat = EXPENSE_CATEGORIES.find((c: any) => c.value === r.category)
@@ -334,7 +338,8 @@ export default function KostenPage() {
     })
     const { error } = await supabase.from('expenses').insert(rows)
     setLoading(false)
-    if (error) { alert('Fehler: ' + error.message); return }
+    if (error) { toast.error('Speichern fehlgeschlagen: ' + error.message); return }
+    toast.success(rows.length + ' Kosten gespeichert')
     setShowBulkForm(false)
     setBulkRows([])
     loadData(userId!)

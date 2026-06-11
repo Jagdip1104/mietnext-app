@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Nav from '@/components/Nav'
 import MahnungModal from '@/components/MahnungModal'
 import { useToast } from '@/components/ui/Toast'
+import { formatEur, fmtDate } from '@/lib/format'
 
 interface ConfirmAction {
   paymentId: string
@@ -197,7 +198,7 @@ export default function Payments() {
                 style={{ ...card, cursor: 'pointer', border: active ? '1.5px solid ' + s.color : card.border }}>
                 <p style={{ fontSize: '12px', color: '#999', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{s.label}</p>
                 <p style={{ fontSize: '28px', fontWeight: '300', color: s.color, margin: 0, fontFamily: 'Georgia, serif' }}>
-                  {s.value.toLocaleString('de-DE')} €
+                  {formatEur(s.value)}
                 </p>
               </div>
             )
@@ -333,7 +334,7 @@ export default function Payments() {
                   ) : isConfirmingDelete ? (
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                       <p style={{ fontSize: '14px', color: '#dc2626', margin: 0 }}>
-                        Zahlung über <strong>{Number(p.amount).toLocaleString('de-DE')} €</strong> wirklich löschen?
+                        Zahlung über <strong>{formatEur(p.amount)}</strong> wirklich löschen?
                       </p>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <button onClick={() => handleDelete(p.id)} style={{ backgroundColor: '#dc2626', color: '#fff', padding: '8px 16px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>
@@ -351,13 +352,13 @@ export default function Payments() {
                           {p.contracts?.tenants?.full_name}
                         </p>
                         <p style={{ fontSize: '13px', color: '#bbb', margin: 0 }}>
-                          Fällig: {new Date(p.due_date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                          {p.paid_date && ` · Bezahlt: ${new Date(p.paid_date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}`}
+                          Fällig: {fmtDate(p.due_date)}
+                          {p.paid_date && ` · Bezahlt: ${fmtDate(p.paid_date)}`}
                         </p>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                         <p style={{ fontSize: '16px', fontWeight: '500', color: '#1a1a1a', margin: 0, fontFamily: 'Georgia, serif' }}>
-                          {Number(p.amount).toLocaleString('de-DE')} €
+                          {formatEur(p.amount)}
                         </p>
                         <span style={{ fontSize: '11px', color: statusColor[effectiveStatus(p)], backgroundColor: statusBg[effectiveStatus(p)], padding: '4px 12px', borderRadius: '20px', fontWeight: '500' }}>
                           {statusLabel[effectiveStatus(p)]}

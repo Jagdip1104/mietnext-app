@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Nav from '@/components/Nav'
 import MahnungModal from '@/components/MahnungModal'
+import { useToast } from '@/components/ui/Toast'
 
 interface ConfirmAction {
   paymentId: string
@@ -29,6 +30,7 @@ export default function Payments() {
   const [profile, setProfile] = useState<any>(null)
   const [mahnungData, setMahnungData] = useState<any>(null)
   const router = useRouter()
+  const toast = useToast()
 
   useEffect(() => {
     const check = async () => {
@@ -61,20 +63,24 @@ export default function Payments() {
   const handleAdd = async () => {
     if (!selectedContract || !amount || !dueDate) return
     setLoading(true)
-    await supabase.from('payments').insert({
+    const { error } = await supabase.from('payments').insert({
       contract_id: selectedContract, amount: parseFloat(amount),
       due_date: dueDate, paid_date: paidDate || null,
       status: paidDate ? 'paid' : status,
     })
+    if (error) { toast.error('Fehler: ' + error.message); setLoading(false); return }
+    toast.success('Zahlung erfasst')
     setSelectedContract(''); setAmount(''); setDueDate(''); setPaidDate(''); setStatus('pending')
     setShowForm(false); setLoading(false); loadData(userId!)
   }
 
   const handleMarkPaid = async (id: string) => {
-    await supabase.from('payments').update({
+    const { error } = await supabase.from('payments').update({
       status: 'paid',
       paid_date: new Date().toISOString().split('T')[0]
     }).eq('id', id)
+    if (error) { toast.error('Fehler: ' + error.message); return }
+    toast.success('Als bezahlt markiert')
     loadData(userId!)
   }
 
@@ -85,9 +91,10 @@ export default function Payments() {
       paid_date: null
     }).eq('id', id)
     if (error) {
-      alert('Fehler beim Zurücksetzen: ' + error.message)
+      toast.error('Fehler beim Zurücksetzen: ' + error.message)
       return
     }
+    toast.success('Zahlung auf Ausstehend zurückgesetzt')
     setConfirmAction(null)
     loadData(userId!)
   }
@@ -96,9 +103,10 @@ export default function Payments() {
   const handleDelete = async (id: string) => {
     const { error } = await supabase.from('payments').delete().eq('id', id)
     if (error) {
-      alert('Fehler beim Löschen: ' + error.message)
+      toast.error('Fehler beim Löschen: ' + error.message)
       return
     }
+    toast.success('Zahlung gelöscht')
     setConfirmAction(null)
     loadData(userId!)
   }

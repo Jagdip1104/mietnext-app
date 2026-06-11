@@ -7,6 +7,7 @@ import Nav from '@/components/Nav'
 import MahnungModal from '@/components/MahnungModal'
 import { useToast } from '@/components/ui/Toast'
 import { formatEur, fmtDate } from '@/lib/format'
+import { Undo2 } from 'lucide-react'
 
 interface ConfirmAction {
   paymentId: string
@@ -369,7 +370,7 @@ export default function Payments() {
                           <button onClick={() => setConfirmAction({ paymentId: p.id, action: 'reset' })}
                             title="Falsch markiert? Zurück auf Ausstehend"
                             style={{ backgroundColor: '#fffbeb', color: '#d97706', padding: '8px 14px', borderRadius: '8px', border: '1px solid #fed7aa', fontSize: '13px', cursor: 'pointer' }}>
-                            ↩ Zurücksetzen
+                            <Undo2 size={13} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '6px' }} />Zurücksetzen
                           </button>
                         ) : (
                           <>

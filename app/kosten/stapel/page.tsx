@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Nav from '@/components/Nav'
+import { useToast } from '@/components/ui/Toast'
 
 const SONSTIGE = new Set(['sonstige_uml', 'sonstige_nicht'])
 const MAX_FILES = 10
@@ -28,6 +29,7 @@ type StringField = 'property_id' | 'category' | 'custom_category' | 'amount' | '
 
 export default function KostenStapelPage() {
   const router = useRouter()
+  const toast = useToast()
   const [userId, setUserId] = useState<string | null>(null)
   const [properties, setProperties] = useState<any[]>([])
   const [rows, setRows] = useState<Row[]>([])
@@ -81,13 +83,13 @@ export default function KostenStapelPage() {
     if (!fileList || fileList.length === 0) return
     const files = Array.from(fileList)
     if (rows.length + files.length > MAX_FILES) {
-      alert(`Maximal ${MAX_FILES} Belege. Du hast schon ${rows.length}, ${files.length} weitere überschreiten das Limit.`)
+      toast.error(`Maximal ${MAX_FILES} Belege. Du hast schon ${rows.length}, ${files.length} weitere überschreiten das Limit.`)
       return
     }
     const valid: File[] = []
     for (const f of files) {
-      if (f.size > 10 * 1024 * 1024) { alert(`${f.name}: zu groß (max. 10 MB) — übersprungen`); continue }
-      if (!ALLOWED_MIMES.includes(f.type)) { alert(`${f.name}: nur PDF/JPG/PNG/HEIC/WebP — übersprungen`); continue }
+      if (f.size > 10 * 1024 * 1024) { toast.error(`${f.name}: zu groß (max. 10 MB) — übersprungen`); continue }
+      if (!ALLOWED_MIMES.includes(f.type)) { toast.error(`${f.name}: nur PDF/JPG/PNG/HEIC/WebP — übersprungen`); continue }
       valid.push(f)
     }
     if (valid.length === 0) return
@@ -168,7 +170,7 @@ export default function KostenStapelPage() {
 
   const handleSaveAll = async () => {
     const valid = rows.filter(rowValid)
-    if (valid.length === 0) { alert('Mindestens eine Zeile mit Objekt, Kategorie, Betrag und Datum ausfüllen.'); return }
+    if (valid.length === 0) { toast.error('Mindestens eine Zeile mit Objekt, Kategorie, Betrag und Datum ausfüllen.'); return }
     setSaving(true); setSaveErrors([]); setSaveProgress({ done: 0, total: valid.length })
     const errors: string[] = []
     const savedUids: string[] = []

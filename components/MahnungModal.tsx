@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useToast } from '@/components/ui/Toast'
 
 interface OverduePayment { id: string; due_date: string; amount: number }
 interface MahnungInput {
@@ -34,6 +35,7 @@ export default function MahnungModal({ data, profile, onClose }: { data: Mahnung
   })
   const [gebuehr, setGebuehr] = useState('')
   const [busy, setBusy] = useState(false)
+  const toast = useToast()
 
   const [sName, setSName] = useState(profile?.landlord_name || '')
   const [sStreet, setSStreet] = useState(profile?.landlord_street || '')
@@ -141,8 +143,9 @@ export default function MahnungModal({ data, profile, onClose }: { data: Mahnung
 
       const safe = (rName || data.tenantName || 'Mieter').replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '')
       doc.save(title.replace(/[^a-zA-Z0-9]/g, '_') + '_' + safe + '.pdf')
+      toast.success('PDF erstellt')
     } catch (e: any) {
-      alert('PDF-Fehler: ' + e.message)
+      toast.error('PDF-Fehler: ' + e.message)
     }
     setBusy(false)
   }

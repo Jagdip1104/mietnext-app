@@ -1,5 +1,7 @@
 'use client'
 
+import { useToast } from '@/components/ui/Toast'
+
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
@@ -48,6 +50,7 @@ function normalizeUsageType(raw: string | null | undefined): string | null {
 }
 
 export default function Import() {
+  const toast = useToast()
   const [userId, setUserId] = useState<string | null>(null)
   const [file, setFile] = useState<File | null>(null)
   const [rows, setRows] = useState<ImportRow[]>([])
@@ -350,7 +353,7 @@ export default function Import() {
 
 
         if (impErr) {
-        alert('Import-Tracking fehlgeschlagen: ' + impErr.message)
+        toast.error('Import-Tracking fehlgeschlagen: ' + impErr.message)
         }
 
       setResult({
@@ -400,7 +403,7 @@ export default function Import() {
           .in('contract_id', allContractIds).eq('status', 'paid')
 
         if (paidPayments && paidPayments.length > 0) {
-          alert(
+          toast.error(
             `Rollback nicht möglich!\n\n` +
             `${paidPayments.length} bezahlte Zahlungen existieren auf den importierten Daten.\n\n` +
             `Gesetzliche Aufbewahrungspflicht (§147 AO): 10 Jahre.`
@@ -445,7 +448,7 @@ export default function Import() {
 
       loadImports(userId)
     } catch (err: any) {
-      alert('Rollback fehlgeschlagen: ' + err.message)
+      toast.error('Rollback fehlgeschlagen: ' + err.message)
     }
 
     setRollbackLoading(null)

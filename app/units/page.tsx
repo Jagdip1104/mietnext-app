@@ -1,5 +1,7 @@
 'use client'
 
+import { useToast } from '@/components/ui/Toast'
+
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
@@ -8,6 +10,7 @@ import PlanUsageBanner from '@/components/PlanUsageBanner'
 import { getUserPlanInfo } from '@/lib/plans'
 
 export default function Units() {
+  const toast = useToast()
   const [properties, setProperties] = useState<any[]>([])
   const [units, setUnits] = useState<any[]>([])
   const [allUnitCodes, setAllUnitCodes] = useState<string[]>([])
@@ -82,7 +85,7 @@ export default function Units() {
 
   const handleNewUnit = () => {
     if (planInfo && !editingId && !planInfo.canCreateMore) {
-      alert(`Limit erreicht!\n\nDu nutzt ${planInfo.currentUnits} von ${planInfo.limit} Einheiten (${planInfo.planName}).\n\nBitte upgrade auf einen höheren Plan um weitere Einheiten anzulegen.`)
+      toast.error(`Limit erreicht!\n\nDu nutzt ${planInfo.currentUnits} von ${planInfo.limit} Einheiten (${planInfo.planName}).\n\nBitte upgrade auf einen höheren Plan um weitere Einheiten anzulegen.`)
       router.push('/pricing')
       return
     }
@@ -93,7 +96,7 @@ export default function Units() {
     if (!name || !selectedProperty) return
 
     if (!editingId && planInfo && !planInfo.canCreateMore) {
-      alert(`Limit erreicht! Du nutzt ${planInfo.currentUnits} von ${planInfo.limit} Einheiten (${planInfo.planName}).`)
+      toast.error(`Limit erreicht! Du nutzt ${planInfo.currentUnits} von ${planInfo.limit} Einheiten (${planInfo.planName}).`)
       router.push('/pricing')
       return
     }
@@ -103,7 +106,7 @@ export default function Units() {
     if (codeTrimmed) {
       const conflictUnit = units.find(u => u.unit_code === codeTrimmed && u.id !== editingId)
       if (conflictUnit) {
-        alert(`Der Code "${codeTrimmed}" existiert bereits für eine andere Einheit (${conflictUnit.name}).\n\nBitte wähle einen anderen Code.`)
+        toast.error(`Der Code "${codeTrimmed}" existiert bereits für eine andere Einheit (${conflictUnit.name}).\n\nBitte wähle einen anderen Code.`)
         return
       }
     }
@@ -149,7 +152,7 @@ export default function Units() {
     }
 
     if (paidCount > 0) {
-      alert(
+      toast.error(
         `Diese Einheit kann nicht gelöscht werden!\n\n` +
         `Es existieren ${paidCount} bezahlte Zahlungen.\n\n` +
         `Gesetzliche Aufbewahrungspflicht (§147 AO): 10 Jahre.\n\n` +
@@ -184,7 +187,7 @@ export default function Units() {
 
     const { error } = await supabase.from('units').delete().eq('id', id)
     if (error) {
-      alert('Fehler beim Löschen: ' + error.message)
+      toast.error('Fehler beim Löschen: ' + error.message)
       setDeleteConfirm(null)
       return
     }

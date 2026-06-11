@@ -1,5 +1,7 @@
 'use client'
 
+import { useToast } from '@/components/ui/Toast'
+
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
@@ -43,6 +45,7 @@ const emptyUnit = (): UnitInput => ({
 const typeLabel: any = { wohnung: 'Wohnung', gewerbe: 'Gewerbe', stellplatz: 'Stellplatz', sonstige: 'Sonstige' }
 
 export default function Properties() {
+  const toast = useToast()
   const [properties, setProperties] = useState<any[]>([])
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -211,7 +214,7 @@ export default function Properties() {
         .update({ name, address, city, zip })
         .eq('id', editingId)
       if (error) {
-        alert('Fehler: ' + error.message)
+        toast.error('Fehler: ' + error.message)
         setLoading(false)
         return
       }
@@ -226,7 +229,7 @@ export default function Properties() {
     if (validUnits.length > 0 && planInfo) {
       const remaining = (planInfo.limit === Infinity ? 999999 : planInfo.limit) - planInfo.currentUnits
       if (validUnits.length > remaining) {
-        alert(
+        toast.error(
           `Plan-Limit überschritten!\n\n` +
           `Du nutzt ${planInfo.currentUnits} von ${planInfo.limit === Infinity ? '∞' : planInfo.limit} Einheiten (${planInfo.planName}).\n` +
           `Du versuchst ${validUnits.length} weitere Einheiten anzulegen.`
@@ -240,7 +243,7 @@ export default function Properties() {
     for (const u of validUnits) {
       let code = (u.unit_code.trim() || u.unit_code_auto).toUpperCase()
       if (!isValidUnitCode(code)) {
-        alert(`Ungültiger Code für "${u.name}": "${code}"\nNur Buchstaben, Zahlen, Bindestriche erlaubt.`)
+        toast.error(`Ungültiger Code für "${u.name}": "${code}"\nNur Buchstaben, Zahlen, Bindestriche erlaubt.`)
         setLoading(false)
         return
       }
@@ -255,7 +258,7 @@ export default function Properties() {
       .single()
 
     if (propErr || !propData) {
-      alert('Fehler beim Anlegen des Objekts: ' + (propErr?.message || 'Unbekannt'))
+      toast.error('Fehler beim Anlegen des Objekts: ' + (propErr?.message || 'Unbekannt'))
       setLoading(false)
       return
     }
@@ -287,7 +290,7 @@ export default function Properties() {
 
       if (unitsErr) {
         await supabase.from('properties').delete().eq('id', propData.id)
-        alert('Fehler beim Anlegen der Einheiten: ' + unitsErr.message + '\n\nObjekt wurde zurückgesetzt.')
+        toast.error('Fehler beim Anlegen der Einheiten: ' + unitsErr.message + '\n\nObjekt wurde zurückgesetzt.')
         setLoading(false)
         return
       }
@@ -347,7 +350,7 @@ export default function Properties() {
       setDeleteInfo(null)
       loadProperties(userId!)
     } catch (err: any) {
-      alert('Fehler beim Löschen: ' + err.message)
+      toast.error('Fehler beim Löschen: ' + err.message)
     }
     setDeleting(false)
   }

@@ -1,5 +1,7 @@
 'use client'
 
+import { useToast } from '@/components/ui/Toast'
+
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
@@ -7,6 +9,7 @@ import Nav from '@/components/Nav'
 import { generatePaymentsForContract, countPaymentsForContract } from '@/lib/payments'
 
 export default function Contracts() {
+  const toast = useToast()
   const [tenants, setTenants] = useState<any[]>([])
   const [units, setUnits] = useState<any[]>([])
   const [contracts, setContracts] = useState<any[]>([])
@@ -132,7 +135,7 @@ export default function Contracts() {
           newContract.id, startDate, parseFloat(rentCold) + parseFloat(utilityAdvance || '0'), 12, 0
         )
         if (error) {
-          alert('Vertrag erstellt, aber Zahlungen konnten nicht generiert werden: ' + error.message)
+          toast.error('Vertrag erstellt, aber Zahlungen konnten nicht generiert werden: ' + error.message)
         }
       }
     }
@@ -146,7 +149,7 @@ export default function Contracts() {
       .update({ is_active: false, end_date: today })
       .eq('id', id)
     if (contractError) {
-      alert('Fehler beim Beenden: ' + contractError.message)
+      toast.error('Fehler beim Beenden: ' + contractError.message)
       setEndConfirm(null); return
     }
     // Zukünftige unbezahlte Zahlungen löschen (nicht bezahlte bleiben für Buchhaltung)
@@ -160,20 +163,20 @@ export default function Contracts() {
   const handleDelete = async (id: string) => {
     const paid = paidCounts[id] || 0
     if (paid > 0) {
-      alert(`Dieser Vertrag hat ${paid} bereits bezahlte Zahlung(en).\n\nAus Buchhaltungsgründen (10-Jahre-Aufbewahrung nach §147 AO) kann er nicht gelöscht werden.\n\nNutze stattdessen "Beenden" um den Vertrag zu archivieren – die Daten bleiben dabei erhalten.`)
+      toast.error(`Dieser Vertrag hat ${paid} bereits bezahlte Zahlung(en).\n\nAus Buchhaltungsgründen (10-Jahre-Aufbewahrung nach §147 AO) kann er nicht gelöscht werden.\n\nNutze stattdessen "Beenden" um den Vertrag zu archivieren – die Daten bleiben dabei erhalten.`)
       setDeleteConfirm(null); return
     }
     // Alle pending Zahlungen löschen
     const { error: paymentsError } = await supabase
       .from('payments').delete().eq('contract_id', id)
     if (paymentsError) {
-      alert('Fehler beim Löschen der Zahlungen: ' + paymentsError.message)
+      toast.error('Fehler beim Löschen der Zahlungen: ' + paymentsError.message)
       setDeleteConfirm(null); return
     }
     // Vertrag löschen
     const { error } = await supabase.from('contracts').delete().eq('id', id)
     if (error) {
-      alert('Fehler beim Löschen: ' + error.message)
+      toast.error('Fehler beim Löschen: ' + error.message)
       setDeleteConfirm(null); return
     }
     setDeleteConfirm(null); loadData(userId!)
@@ -187,9 +190,9 @@ export default function Contracts() {
     )
     setGeneratingId(null)
     if (error) {
-      alert('Fehler: ' + error.message)
+      toast.error('Fehler: ' + error.message)
     } else {
-      alert(`12 Zahlungen generiert! (Monat ${existingCount + 1} bis ${existingCount + 12})`)
+      toast.success(`12 Zahlungen generiert! (Monat ${existingCount + 1} bis ${existingCount + 12})`)
       loadData(userId!)
     }
   }
@@ -226,16 +229,16 @@ export default function Contracts() {
       old_utility_advance: oldUtil, new_utility_advance: newUtil,
       reason: increaseReason, notes: increaseNotes || null,
     })
-    if (auditErr) { alert('Audit-Log fehlgeschlagen: ' + auditErr.message); setIncreaseLoading(false); return }
+    if (auditErr) { toast.error('Audit-Log fehlgeschlagen: ' + auditErr.message); setIncreaseLoading(false); return }
     const { error: updErr } = await supabase.from('contracts')
       .update({ rent_cold: newCold, utility_advance: newUtil }).eq('id', increaseModalId)
-    if (updErr) { alert('Vertrag-Update fehlgeschlagen: ' + updErr.message); setIncreaseLoading(false); return }
+    if (updErr) { toast.error('Vertrag-Update fehlgeschlagen: ' + updErr.message); setIncreaseLoading(false); return }
     if (updatePaymentsToo && pendingPaymentsCount > 0) {
       await supabase.from('payments').update({ amount: newCold + newUtil })
         .eq('contract_id', increaseModalId).in('status', ['pending', 'late']).gte('due_date', effectiveDate)
     }
     setIncreaseModalId(null); setIncreaseLoading(false); loadData(userId!)
-    alert('Mieterhöhung gespeichert!')
+    toast.success('Mieterhöhung gespeichert!')
   }
 
   const formatEur = (val: number | string | null | undefined) => {

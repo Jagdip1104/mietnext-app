@@ -1,10 +1,13 @@
 'use client'
 
+import { useToast } from '@/components/ui/Toast'
+
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
 export default function TenantPortal() {
+  const toast = useToast()
   const [tenant, setTenant] = useState<any>(null)
   const [unit, setUnit] = useState<any>(null)
   const [contract, setContract] = useState<any>(null)
@@ -118,7 +121,7 @@ export default function TenantPortal() {
       status: 'open',
     })
     if (error) {
-      alert('Fehler beim Ticket-Versand: ' + error.message)
+      toast.error('Fehler beim Ticket-Versand: ' + error.message)
       console.error('Ticket insert error:', error)
       setLoading(false)
       return

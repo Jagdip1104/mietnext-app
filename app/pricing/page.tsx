@@ -1,5 +1,7 @@
 'use client'
 
+import { useToast } from '@/components/ui/Toast'
+
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
@@ -8,6 +10,7 @@ import { colors } from '@/lib/theme'
 import { PLANS } from '@/lib/plan-features'
 
 export default function PricingPage() {
+  const toast = useToast()
   const [userId, setUserId]     = useState<string | null>(null)
   const [userEmail, setUserEmail] = useState<string | null>(null)
   const [currentPlan, setCurrentPlan] = useState<string>('free')
@@ -37,7 +40,7 @@ export default function PricingPage() {
       body: JSON.stringify({ priceId }),
     })
     const { url, error } = await res.json()
-    if (error) { alert(error); setLoading(null); return }
+    if (error) { toast.error(error); setLoading(null); return }
     window.location.href = url
   }
 
@@ -50,7 +53,7 @@ export default function PricingPage() {
       body: JSON.stringify({}),
     })
     const { url, error } = await res.json()
-    if (error) { alert(error); setLoading(null); return }
+    if (error) { toast.error(error); setLoading(null); return }
     window.location.href = url
   }
 

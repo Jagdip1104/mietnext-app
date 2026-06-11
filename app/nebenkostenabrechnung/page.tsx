@@ -1,11 +1,14 @@
 'use client'
 
+import { useToast } from '@/components/ui/Toast'
+
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Nav from '@/components/Nav'
 
 export default function NebenkostenabrechnungPage() {
+  const toast = useToast()
   const [statements, setStatements] = useState<any[]>([])
   const [properties, setProperties] = useState<any[]>([])
   const [showForm, setShowForm] = useState(false)
@@ -47,7 +50,7 @@ export default function NebenkostenabrechnungPage() {
       .insert({ owner_id: userId, property_id: selectedProperty, year: selectedYear, status: 'draft' })
       .select().single()
     if (error) {
-      alert(error.code === '23505'
+      toast.error(error.code === '23505'
         ? `Für dieses Objekt existiert bereits eine Abrechnung für ${selectedYear}.`
         : 'Fehler: ' + error.message)
       setLoading(false)

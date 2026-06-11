@@ -1,5 +1,7 @@
 'use client'
 
+import { useToast } from '@/components/ui/Toast'
+
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
@@ -27,6 +29,7 @@ const getCatLabel = (e: any) =>
   (e.custom_category) || EXPENSE_CATEGORIES[e.category] || e.category
 
 export default function GuvPage() {
+  const toast = useToast()
   const [properties, setProperties]   = useState<any[]>([])
   const [selectedProp, setSelectedProp] = useState('')
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear() - 1)
@@ -270,7 +273,7 @@ export default function GuvPage() {
       const safeName = (prop?.name || 'Objekt').replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '')
       doc.save(`GuV_${safeName}_${selectedYear}.pdf`)
     } catch (err: any) {
-      alert('PDF-Fehler: ' + err.message)
+      toast.error('PDF-Fehler: ' + err.message)
     }
     setPdfLoading(false)
   }

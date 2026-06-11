@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase'
 import { useRouter, useParams } from 'next/navigation'
 import Nav from '@/components/Nav'
 import { useToast } from '@/components/ui/Toast'
+import { Pencil, Download, RefreshCw, FileText, Undo2 } from 'lucide-react'
 
 
 
@@ -733,7 +734,7 @@ export default function NebenkostenabrechnungDetail() {
                 {statement.status === 'draft' && (
                   <button onClick={() => { setEditingPeriod(true); setPeriodStartEdit(periodStart || ''); setPeriodEndEdit(periodEnd || '') }}
                     title="Zeitraum aendern"
-                    style={{ background: 'none', border: 'none', color: '#bbb', fontSize: '13px', cursor: 'pointer', padding: 0 }}>✏️</button>
+                    style={{ background: 'none', border: 'none', color: '#bbb', fontSize: '13px', cursor: 'pointer', padding: 0 }}><Pencil size={13} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '6px' }} /></button>
                 )}
               </p>
             )}
@@ -788,7 +789,7 @@ export default function NebenkostenabrechnungDetail() {
                   style={{ backgroundColor: '#fff', color: '#92400e', padding: '8px 14px',
                     borderRadius: '8px', border: '1px solid #fed7aa', fontSize: '13px',
                     cursor: 'pointer', fontWeight: '500' }}>
-                  🔄 Aktualisieren
+                  <RefreshCw size={13} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '6px' }} />Aktualisieren
                 </button>
               </div>
             )}
@@ -798,7 +799,7 @@ export default function NebenkostenabrechnungDetail() {
                 style={{ backgroundColor: '#fff', color: '#1a1a1a', padding: '10px 20px',
                   borderRadius: '8px', border: '1.5px solid #1a1a1a', fontSize: '13px',
                   fontWeight: '500', cursor: 'pointer', marginRight: '8px' }}>
-                📥 Aus Kosten importieren
+                <Download size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '6px' }} />Aus Kosten importieren
               </button>
             )}
 
@@ -1080,7 +1081,7 @@ export default function NebenkostenabrechnungDetail() {
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h2 style={{ fontSize: '16px', fontWeight: '500', color: '#1a1a1a', margin: 0 }}>Ergebnis pro Einheit</h2>
-              <p style={{ fontSize: '12px', color: '#bbb', margin: 0 }}>✏️ Vorauszahlungen anpassen falls abweichend</p>
+              <p style={{ fontSize: '12px', color: '#bbb', margin: 0 }}><Pencil size={13} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '6px' }} /> Vorauszahlungen anpassen falls abweichend</p>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {units.map((unit: any) => {
@@ -1152,7 +1153,7 @@ export default function NebenkostenabrechnungDetail() {
                                 onClick={() => { setEditingPrepayment(unit.id); setEditPrepaymentValue(prepayments.toString()) }}
                                 title="Vorauszahlung manuell anpassen"
                                 style={{ background: 'none', border: 'none', color: '#bbb', fontSize: '14px', cursor: 'pointer', padding: '0 2px' }}>
-                                ✏️
+                                <Pencil size={13} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '6px' }} />
                               </button>
                               {isManual && (
                                 <button onClick={() => resetManualPrepayment(unit.id)}
@@ -1226,14 +1227,14 @@ export default function NebenkostenabrechnungDetail() {
                     </div>
                     <button onClick={generatePDF} disabled={pdfLoading}
                       style={{ backgroundColor: '#3b82f6', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: pdfLoading ? 'wait' : 'pointer', opacity: pdfLoading ? 0.7 : 1 }}>
-                      {pdfLoading ? '⏳ PDF wird erstellt...' : '📄 PDF exportieren'}
+                      {pdfLoading ? 'PDF wird erstellt...' : <><FileText size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '6px' }} />PDF exportieren</>}
                     </button>
                   </div>
                   <div style={{ padding: '16px 24px', backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e8e6e0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <p style={{ fontSize: '13px', color: '#999', margin: 0 }}>Abrechnung wieder bearbeiten (zurück auf Entwurf)</p>
                     <button onClick={handleReopen}
                       style={{ backgroundColor: '#fff', color: '#d97706', padding: '8px 16px', borderRadius: '8px', border: '1px solid #fed7aa', fontSize: '13px', cursor: 'pointer' }}>
-                      ↩ Wieder öffnen
+                      <Undo2 size={13} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '6px' }} />Wieder öffnen
                     </button>
                   </div>
                 </>

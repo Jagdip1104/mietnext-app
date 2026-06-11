@@ -409,7 +409,7 @@ export default function KostenPage() {
             { label: 'Davon nicht umlagefähig',value: totalNicht, color: '#dc2626' },
           ] as any[]).map((s: any, i: number) => {
             const key = ['all', 'ja', 'nein'][i]
-            const active = filterUmlage === key
+            const active = filterUmlage === key && key !== 'all'
             return (
               <div key={s.label} onClick={() => setFilterUmlage((active && key !== 'all' ? 'all' : key) as any)}
                 style={{ ...card, cursor: 'pointer', border: active ? '1.5px solid ' + s.color : card.border }}>

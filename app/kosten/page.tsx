@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Nav from '@/components/Nav'
+import { ScanLine, Paperclip, Pencil, Bot, Sparkles, AlertTriangle, Receipt } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
 
 
@@ -387,7 +388,7 @@ export default function KostenPage() {
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             <button onClick={() => router.push('/kosten/stapel')}
               style={{ backgroundColor: '#fff', color: '#1a1a1a', padding: '10px 20px', borderRadius: '8px', border: '1.5px solid #1a1a1a', fontSize: '13px', fontWeight: '500', cursor: 'pointer' }}>
-              📚 Belege scannen
+              <ScanLine size={15} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '6px' }} />Belege scannen
             </button>
             <button onClick={openBulkForm}
               style={{ backgroundColor: '#fff', color: '#1a1a1a', padding: '10px 20px', borderRadius: '8px', border: '1.5px solid #1a1a1a', fontSize: '13px', fontWeight: '500', cursor: 'pointer' }}>
@@ -488,7 +489,7 @@ export default function KostenPage() {
                     color: umlageLabel ? '#16a34a' : '#dc2626',
                     backgroundColor: umlageLabel ? '#f0fdf4' : '#fef2f2',
                   }}>
-                    {umlageLabel ? '✅ Umlagefähig – kann auf Mieter umgelegt werden' : '❌ Nicht umlagefähig – Vermieter trägt diese Kosten'}
+                    {umlageLabel ? 'Umlagefähig – kann auf Mieter umgelegt werden' : 'Nicht umlagefähig – Vermieter trägt diese Kosten'}
                   </span>
                 </div>
               )}
@@ -533,13 +534,13 @@ export default function KostenPage() {
                   fontSize: '13px',
                 }}>
                   {scanning ? (
-                    <span style={{ color: '#1e40af' }}>🤖 Beleg wird analysiert... (1-3 Sekunden)</span>
+                    <span style={{ color: '#1e40af' }}><Bot size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '6px' }} />Beleg wird analysiert... (1-3 Sekunden)</span>
                   ) : scanResult?.error ? (
-                    <span style={{ color: '#991b1b' }}>⚠️ Scan fehlgeschlagen: {scanResult.error}</span>
+                    <span style={{ color: '#991b1b' }}><AlertTriangle size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '6px' }} />Scan fehlgeschlagen: {scanResult.error}</span>
                   ) : (
                     <div>
                       <p style={{ margin: '0 0 4px', color: scanResult?.confidence > 0.85 ? '#166534' : '#92400e', fontWeight: '500' }}>
-                        ✨ Daten erkannt {scanResult?.is_mock && '(Demo-Modus — KI nicht aktiviert)'} — Bitte prüfen
+                        <Sparkles size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '6px' }} />Daten erkannt {scanResult?.is_mock && '(Demo-Modus — KI nicht aktiviert)'} — Bitte prüfen
                       </p>
                       <p style={{ margin: 0, color: '#666', fontSize: '12px' }}>
                         Lieferant: <strong>{scanResult?.lieferant || '?'}</strong>
@@ -568,7 +569,7 @@ export default function KostenPage() {
                       style={{ background: 'none', border: 'none', color: '#1a1a1a',
                         fontSize: '13px', cursor: 'pointer', textAlign: 'left',
                         flex: 1, padding: 0, textDecoration: 'underline' }}>
-                      📎 {existingReceipt.filename}
+                      <Paperclip size={13} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '6px' }} />{existingReceipt.filename}
                     </button>
                     <button type="button" onClick={() => setRemoveReceipt(true)}
                       style={{ background: '#fff', color: '#dc2626', padding: '4px 10px',
@@ -587,7 +588,7 @@ export default function KostenPage() {
                     border: '1px solid #bbf7d0', borderRadius: '8px', gap: '8px',
                   }}>
                     <span style={{ fontSize: '13px', color: '#1a1a1a', flex: 1, wordBreak: 'break-word', overflowWrap: 'anywhere', minWidth: 0 }}>
-                      📎 {receiptFile.name} ({(receiptFile.size / 1024).toFixed(0)} KB)
+                      <Paperclip size={13} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '6px' }} />{receiptFile.name} ({(receiptFile.size / 1024).toFixed(0)} KB)
                     </span>
                     <button type="button" onClick={() => { setReceiptFile(null); if (fileInputRef.current) fileInputRef.current.value = '' }}
                       style={{ background: '#fff', color: '#666', padding: '4px 10px',
@@ -606,7 +607,7 @@ export default function KostenPage() {
                     border: '1px solid #fecaca', borderRadius: '8px', gap: '8px',
                   }}>
                     <span style={{ fontSize: '13px', color: '#991b1b', flex: 1 }}>
-                      📎 {existingReceipt.filename} wird beim Speichern entfernt
+                      <Paperclip size={13} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '6px' }} />{existingReceipt.filename} wird beim Speichern entfernt
                     </span>
                     <button type="button" onClick={() => setRemoveReceipt(false)}
                       style={{ background: '#fff', color: '#1a1a1a', padding: '4px 10px',
@@ -628,7 +629,7 @@ export default function KostenPage() {
                       style={{ backgroundColor: '#fff', color: '#1a1a1a', padding: '10px 16px',
                         borderRadius: '8px', border: '1.5px dashed #1a1a1a', fontSize: '13px',
                         cursor: 'pointer', width: '100%', textAlign: 'center', fontWeight: '500' }}>
-                      📎 Beleg hochladen
+                      <Paperclip size={13} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '6px' }} />Beleg hochladen
                     </button>
                   </>
                 )}
@@ -695,7 +696,7 @@ export default function KostenPage() {
         {/* ── Liste ── */}
         {filtered.length === 0 ? (
           <div style={{ ...card, textAlign: 'center', padding: '64px' }}>
-            <p style={{ fontSize: '32px', margin: '0 0 12px' }}>🧾</p>
+            <Receipt size={36} style={{ color: '#d4d2cc', margin: '0 auto 12px', display: 'block' }} />
             <p style={{ fontSize: '15px', color: '#999', margin: '0 0 4px' }}>Keine Kosten gefunden.</p>
             <p style={{ fontSize: '13px', color: '#bbb', margin: '0 0 20px' }}>Erfasse deine erste Ausgabe für ein Objekt.</p>
             <button onClick={() => { setShowForm(true); setTimeout(() => document.getElementById('formcard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50) }}
@@ -755,14 +756,14 @@ export default function KostenPage() {
                           style={{ backgroundColor: '#fff', color: '#1a1a1a', padding: '6px 12px',
                             borderRadius: '6px', border: '1px solid #e8e6e0', fontSize: '12px',
                             cursor: 'pointer', marginRight: '6px' }}>
-                          📎 Beleg
+                          <Paperclip size={13} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '6px' }} />Beleg
                         </button>
                       )}
                       <button onClick={() => handleEditExpense(e)}
                         style={{ backgroundColor: '#fff', color: '#1a1a1a', padding: '6px 12px',
                           borderRadius: '6px', border: '1px solid #e8e6e0', fontSize: '12px',
                           cursor: 'pointer', marginRight: '6px' }}>
-                        ✏️ Bearbeiten
+                        <Pencil size={13} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '6px' }} />Bearbeiten
                       </button>
                       <button onClick={() => setDeleteConfirm(e.id)}
                         style={{ backgroundColor: '#fff', color: '#dc2626', padding: '6px 12px', borderRadius: '6px', border: '1px solid #fecaca', fontSize: '12px', cursor: 'pointer' }}>

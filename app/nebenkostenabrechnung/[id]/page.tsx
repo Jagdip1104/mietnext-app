@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter, useParams } from 'next/navigation'
 import Nav from '@/components/Nav'
+import { useToast } from '@/components/ui/Toast'
 
 
 
@@ -14,6 +15,7 @@ export default function NebenkostenabrechnungDetail() {
   const router = useRouter()
   const params = useParams()
   const id     = params?.id as string
+  const toast = useToast()
 
   const [statement, setStatement]             = useState<any>(null)
   const [units, setUnits]                     = useState<any[]>([])
@@ -61,10 +63,10 @@ export default function NebenkostenabrechnungDetail() {
 
   const savePeriod = async () => {
     if (!periodStartEdit || !periodEndEdit) return
-    if (periodStartEdit > periodEndEdit) { alert('Startdatum muss vor dem Enddatum liegen.'); return }
+    if (periodStartEdit > periodEndEdit) { toast.error('Startdatum muss vor dem Enddatum liegen.'); return }
     const { error } = await supabase.from('utility_statements')
       .update({ period_start: periodStartEdit, period_end: periodEndEdit }).eq('id', id)
-    if (error) { alert('Fehler: ' + error.message); return }
+    if (error) { toast.error('Fehler: ' + error.message); return }
     setEditingPeriod(false)
     loadData()
   }
@@ -128,10 +130,11 @@ export default function NebenkostenabrechnungDetail() {
     }
     if (newItem.distribution_key === 'per_unit') itemData.unit_amounts = newItem.unit_amounts
     const { error } = await supabase.from('utility_cost_items').insert(itemData)
-    if (error) { alert('Fehler: ' + error.message); setSaving(false); return }
+    if (error) { toast.error('Fehler: ' + error.message); setSaving(false); return }
     setNewItem({ category: '', description: '', total_amount: '', distribution_key: 'sqm', unit_amounts: {} })
     setShowAddForm(false)
     setSaving(false)
+    toast.success('Position hinzugefügt')
     loadData()
   }
 
@@ -153,7 +156,7 @@ export default function NebenkostenabrechnungDetail() {
 
   const handleBulkAdd = async () => {
     const valid = bulkRows.filter((r: any) => r.category && r.total_amount && parseFloat(r.total_amount) > 0)
-    if (valid.length === 0) { alert('Mindestens eine Zeile mit Kategorie + Betrag ausfüllen.'); return }
+    if (valid.length === 0) { toast.error('Mindestens eine Zeile mit Kategorie + Betrag ausfüllen.'); return }
     setSaving(true)
     const toInsert = valid.map((r: any) => ({
       statement_id: id,
@@ -164,7 +167,7 @@ export default function NebenkostenabrechnungDetail() {
     }))
     const { error } = await supabase.from('utility_cost_items').insert(toInsert)
     setSaving(false)
-    if (error) { alert('Fehler: ' + error.message); return }
+    if (error) { toast.error('Fehler: ' + error.message); return }
     setBulkRows([
       { category: '', distribution_key: 'sqm', total_amount: '', description: '' },
       { category: '', distribution_key: 'sqm', total_amount: '', description: '' },
@@ -214,7 +217,7 @@ export default function NebenkostenabrechnungDetail() {
     }
     const { error } = await supabase.from('utility_cost_items').update(upd).eq('id', editItem.id)
     setSaving(false)
-    if (error) { alert('Fehler: ' + error.message); return }
+    if (error) { toast.error('Fehler: ' + error.message); return }
     setEditItem(null)
     loadData()
   }
@@ -277,10 +280,11 @@ export default function NebenkostenabrechnungDetail() {
       })
     const { error } = await supabase.from('utility_cost_items').insert(toImport)
     if (error) {
-      alert('Import fehlgeschlagen: ' + error.message)
+      toast.error('Import fehlgeschlagen: ' + error.message)
     } else {
       setShowImportModal(false)
       setSelectedExpenseIds(new Set())
+      toast.success('Kosten importiert')
       loadData()
     }
     setImporting(false)
@@ -315,10 +319,11 @@ export default function NebenkostenabrechnungDetail() {
   const handleFinalize = async () => {
     const offen = costItems.filter(isEinzelbetragOffen)
     if (offen.length > 0) {
-      alert('Bitte zuerst die Einzelbeträge erfassen — es fehlen noch Werte bei: ' + offen.map((i: any) => BETRKV_CATEGORIES.find((c: any) => c.value === i.category)?.label || i.description || 'Kostenposition').join(', '))
+      toast.error('Bitte zuerst die Einzelbeträge erfassen — es fehlen noch Werte bei: ' + offen.map((i: any) => BETRKV_CATEGORIES.find((c: any) => c.value === i.category)?.label || i.description || 'Kostenposition').join(', '))
       return
     }
     await supabase.from('utility_statements').update({ status: 'finalized' }).eq('id', id)
+    toast.success('Abrechnung abgeschlossen')
     loadData()
   }
 
@@ -329,7 +334,7 @@ export default function NebenkostenabrechnungDetail() {
 
   const handleDeleteStatement = async () => {
     const { error } = await supabase.from('utility_statements').delete().eq('id', id)
-    if (error) { alert('Fehler: ' + error.message); return }
+    if (error) { toast.error('Fehler: ' + error.message); return }
     router.push('/nebenkostenabrechnung')
   }
 
@@ -459,7 +464,7 @@ export default function NebenkostenabrechnungDetail() {
       const activeUnits = units.filter((u: any) => getContractForUnit(u.id))
 
       if (activeUnits.length === 0) {
-        alert('Keine Mieter für den Abrechnungszeitraum gefunden.')
+        toast.error('Keine Mieter für den Abrechnungszeitraum gefunden.')
         setPdfLoading(false)
         return
       }
@@ -669,9 +674,10 @@ export default function NebenkostenabrechnungDetail() {
 
       const safeName = (statement.properties?.name || 'Objekt').replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '')
       doc.save(`NK_${safeName}_${statement.year}.pdf`)
+      toast.success('PDF erstellt')
 
     } catch (err: any) {
-      alert('PDF-Fehler: ' + err.message)
+      toast.error('PDF-Fehler: ' + err.message)
     }
     setPdfLoading(false)
   }

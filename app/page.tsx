@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { PLANS } from '@/lib/plan-features'
+import { Building2, Users, Banknote, Wrench, FileText, BarChart3 } from 'lucide-react'
 
 export default function Home() {
   const router = useRouter()
@@ -66,15 +67,15 @@ export default function Home() {
       <section className="max-w-[960px] mx-auto px-5 pt-10 pb-16 md:px-12 md:pb-20">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-px bg-[#e8e6e0] rounded-2xl overflow-hidden">
           {[
-            { icon: '🏢', title: 'Objekte & Einheiten', desc: 'Verwalte Wohnungen, Gewerbeeinheiten und Stellplätze an einem Ort.' },
-            { icon: '👥', title: 'Mieterverwaltung', desc: 'Alle Mieter mit Kontaktdaten, Verträgen und Kommunikationsverlauf.' },
-            { icon: '💶', title: 'Zahlungen tracken', desc: 'Behalte den Überblick über Einnahmen, offene und überfällige Mieten.' },
-            { icon: '🔧', title: 'Ticketsystem', desc: 'Schäden und Wartungsanfragen einfach erfassen und verfolgen.' },
-            { icon: '📄', title: 'Mietverträge', desc: 'Verträge digital anlegen, verwalten und jederzeit abrufen.' },
-            { icon: '📊', title: 'Live Dashboard', desc: 'Alle wichtigen Kennzahlen auf einen Blick – Auslastung, Einnahmen, Tickets.' },
+            { icon: Building2, title: 'Objekte & Einheiten', desc: 'Verwalte Wohnungen, Gewerbeeinheiten und Stellplätze an einem Ort.' },
+            { icon: Users, title: 'Mieterverwaltung', desc: 'Alle Mieter mit Kontaktdaten, Verträgen und Kommunikationsverlauf.' },
+            { icon: Banknote, title: 'Zahlungen tracken', desc: 'Behalte den Überblick über Einnahmen, offene und überfällige Mieten.' },
+            { icon: Wrench, title: 'Ticketsystem', desc: 'Schäden und Wartungsanfragen einfach erfassen und verfolgen.' },
+            { icon: FileText, title: 'Mietverträge', desc: 'Verträge digital anlegen, verwalten und jederzeit abrufen.' },
+            { icon: BarChart3, title: 'Live Dashboard', desc: 'Alle wichtigen Kennzahlen auf einen Blick – Auslastung, Einnahmen, Tickets.' },
           ].map((f, i) => (
             <div key={i} style={{ backgroundColor: '#fafaf8', padding: '32px 28px' }}>
-              <div style={{ fontSize: '28px', marginBottom: '14px' }}>{f.icon}</div>
+              <div style={{ marginBottom: '14px' }}><f.icon size={26} strokeWidth={1.5} style={{ color: '#1a1a1a' }} /></div>
               <h3 style={{ fontSize: '15px', fontWeight: '600', color: '#1a1a1a', marginBottom: '8px', fontFamily: 'system-ui, sans-serif' }}>{f.title}</h3>
               <p style={{ fontSize: '14px', color: '#888', lineHeight: '1.6', fontFamily: 'system-ui, sans-serif' }}>{f.desc}</p>
             </div>
@@ -88,7 +89,7 @@ export default function Home() {
           <div className="flex flex-col gap-4 md:grid md:grid-cols-2 md:gap-6">
             {[
               { tag: 'Vermieter-Portal', title: 'Alles unter Kontrolle', items: ['Alle Objekte & Einheiten', 'Mieter & Verträge', 'Zahlungen & Finanzen', 'Tickets & Wartung', 'Dashboard & Berichte'], color: '#4ade80' },
-              { tag: 'Mieter-Portal', title: 'Eigener Zugang', items: ['Eigene Wohnungsinfos', 'Dokumente abrufen', 'Schäden melden', 'Ticket-Status verfolgen', 'Direkter Kontakt'], color: '#60a5fa' },
+              { tag: 'Mieter-Portal', title: 'Eigener Zugang', items: ['Eigene Wohnungsinfos', 'Dokumente abrufen', 'Schäden melden', 'Ticket-Status verfolgen', 'Direkter Kontakt'], color: '#fbbf24' },
             ].map(p => (
               <div key={p.tag} className="p-6 md:p-9" style={{ backgroundColor: '#242424', borderRadius: '16px', border: '1px solid #333' }}>
                 <div style={{ fontSize: '11px', letterSpacing: '2px', color: '#888', marginBottom: '16px', fontFamily: 'system-ui, sans-serif', textTransform: 'uppercase' }}>{p.tag}</div>

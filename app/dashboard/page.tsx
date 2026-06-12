@@ -663,56 +663,53 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* === Einnahmen-Chart === */}
+        {/* === Einnahmen-Chart (Balken) === */}
         <div style={{...cardStyle, marginBottom: '1.5rem'}}>
           <div style={cardHeaderStyle}>
-            <h3 style={cardTitleStyle}>Einnahmen-Trend (12 Monate)</h3>
+            <h3 style={cardTitleStyle}>Mieteingang pro Monat</h3>
             <div style={{display: 'flex', gap: '12px', fontSize: '11px', color: '#888', alignItems: 'center'}}>
-              <span><span style={{display: 'inline-block', width: '12px', height: '2px', background: '#16a34a', marginRight: '4px', verticalAlign: 'middle'}}></span>Ist</span>
-              <span><span style={{display: 'inline-block', width: '12px', height: '0', borderTop: '1.5px dashed #bbb', marginRight: '4px', verticalAlign: 'middle'}}></span>Soll</span>
+              <span><span style={{display: 'inline-block', width: '10px', height: '10px', borderRadius: '3px', background: '#16a34a', marginRight: '4px', verticalAlign: '-1px'}}></span>Eingegangen</span>
+              <span><span style={{display: 'inline-block', width: '10px', height: '10px', borderRadius: '3px', background: '#fde68a', marginRight: '4px', verticalAlign: '-1px'}}></span>Offen</span>
             </div>
           </div>
           {(() => {
             const data = stats.monthlyChart
-            const maxVal = Math.max(...data.map(d => Math.max(d.income, d.expected)), 100)
-            const w = 100, h = 140, padL = 50, padR = 10, padT = 10, padB = 25
-            const chartW = (w * data.length) - padL - padR
-            const stepX = chartW / (data.length - 1)
-            const points = data.map((d, i) => {
-              const x = padL + i * stepX
-              const y = padT + (h - padT - padB) * (1 - d.income / maxVal)
-              return {x, y, ...d}
-            })
-            const polyPts = points.map(p => p.x + ',' + p.y).join(' ')
-            const areaPts = polyPts + ' ' + points[points.length-1].x + ',' + (h - padB) + ' ' + padL + ',' + (h - padB)
-            const expectedPts = data.map((d, i) => {
-              const x = padL + i * stepX
-              const y = padT + (h - padT - padB) * (1 - d.expected / maxVal)
-              return x + ',' + y
-            }).join(' ')
+            const maxVal = Math.max(...data.map(d => Math.max(d.income, d.expected)), 1)
+            const yr = String(new Date().getFullYear())
+            const nowKey = yr + '-' + String(new Date().getMonth() + 1).padStart(2, '0')
+            const ytd = data.filter(d => d.month.startsWith(yr))
+            const ytdIncome = ytd.reduce((s, d) => s + d.income, 0)
+            const ytdOpen = Math.max(0, ytd.reduce((s, d) => s + d.expected, 0) - ytdIncome)
             return (
-              <div style={{position: 'relative', overflowX: 'auto'}}>
-                <svg viewBox={`0 0 ${w * data.length} ${h}`} width="100%" height={h} style={{display: 'block'}}>
-                  <line x1={padL} y1={padT} x2={padL} y2={h - padB} stroke="#e8e6e0" strokeWidth="0.5"/>
-                  <line x1={padL} y1={h - padB} x2={w * data.length - padR} y2={h - padB} stroke="#e8e6e0" strokeWidth="0.5"/>
-                  <text x={padL - 5} y={padT + 4} fontSize="9" textAnchor="end" fill="#bbb">{fmtCurrency(maxVal)}</text>
-                  <text x={padL - 5} y={h - padB + 3} fontSize="9" textAnchor="end" fill="#bbb">0 €</text>
-                  <polygon fill="#16a34a" fillOpacity="0.08" points={areaPts}/>
-                  <polyline fill="none" stroke="#bbb" strokeWidth="1.5" strokeDasharray="4,3" points={expectedPts}/>
-                  <polyline fill="none" stroke="#16a34a" strokeWidth="2" points={polyPts}/>
-                  {points.map((p, i) => (
-                    <g key={i}>
-                      <circle cx={p.x} cy={p.y} r={i === points.length-1 ? 4 : 3} fill="#16a34a" stroke="white" strokeWidth={i === points.length-1 ? 2 : 0}/>
-                      <text x={p.x} y={h - padB + 14} fontSize="10" textAnchor="middle" fill="#888">{p.label}</text>
-                      {p.income > 0 && (
-                        <text x={p.x} y={p.y - 8} fontSize="9" textAnchor="middle" fill="#16a34a" fontWeight="500">
-                          {Math.round(p.income / 1000)}k
-                        </text>
-                      )}
-                    </g>
-                  ))}
-                </svg>
-              </div>
+              <>
+                <div style={{ fontSize: '12.5px', color: '#888', marginBottom: '14px' }}>
+                  {yr} bisher: <strong style={{ color: '#16a34a' }}>{fmtCurrency(ytdIncome)}</strong> eingenommen
+                  {ytdOpen > 0 && <> · <span style={{ color: '#d97706' }}>{fmtCurrency(ytdOpen)} offen</span></>}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: '6px', height: '150px' }}>
+                  {data.map((d) => {
+                    const sollH = Math.max((Math.max(d.expected, d.income) / maxVal) * 100, (d.expected > 0 || d.income > 0) ? 3 : 0)
+                    const istPct = d.expected > 0 ? Math.min(100, (d.income / d.expected) * 100) : (d.income > 0 ? 100 : 0)
+                    const isCurrent = d.month === nowKey
+                    const hatGap = d.income < d.expected
+                    return (
+                      <div key={d.month} title={d.label + ': ' + fmtCurrency(d.income) + ' von ' + fmtCurrency(d.expected)}
+                        style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', minWidth: 0 }}>
+                        <div style={{
+                          width: '100%', maxWidth: '36px', height: sollH + '%',
+                          borderRadius: '6px', overflow: 'hidden',
+                          display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
+                          background: hatGap && !isCurrent ? '#fde68a' : '#f0eeea',
+                          boxShadow: isCurrent ? '0 0 0 1.5px #1a1a1a' : 'none'
+                        }}>
+                          <div style={{ height: istPct + '%', background: '#16a34a' }} />
+                        </div>
+                        <div style={{ fontSize: '10px', color: isCurrent ? '#1a1a1a' : '#888', fontWeight: isCurrent ? 600 : 400 }}>{d.label}</div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </>
             )
           })()}
         </div>

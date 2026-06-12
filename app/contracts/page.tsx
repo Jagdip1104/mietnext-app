@@ -389,7 +389,7 @@ export default function Contracts() {
                       </span>
                       {c.is_active && (
                         <button onClick={() => handleGeneratePayments(c)} disabled={generatingId === c.id}
-                          style={{ backgroundColor: '#f0f9ff', color: '#0369a1', padding: '8px 14px', borderRadius: '8px', border: '1px solid #bae6fd', fontSize: '13px', cursor: 'pointer', opacity: generatingId === c.id ? 0.5 : 1 }}>
+                          style={{ backgroundColor: '#f0fdf4', color: '#166534', padding: '8px 14px', borderRadius: '8px', border: '1px solid #bbf7d0', fontSize: '13px', cursor: 'pointer', opacity: generatingId === c.id ? 0.5 : 1 }}>
                           {generatingId === c.id ? '...' : '+ 12 Zahlungen'}
                         </button>
                       )}

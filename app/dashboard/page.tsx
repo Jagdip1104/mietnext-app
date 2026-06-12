@@ -35,6 +35,9 @@ interface Stats {
   monthlyIncome: number
   monthlyExpected: number
   paymentQuote: number
+  paidCountMonth: number
+  expectedCountMonth: number
+  lateCount: number
   prevMonthlyIncome: number
   forecast30Days: number
   pendingPayments: number
@@ -163,6 +166,8 @@ export default function Dashboard() {
       .lte('due_date', lastDayMonth)
     const monthlyExpected = (expectedThisMonth || []).reduce((s: number, p: any) => s + Number(p.amount || 0), 0)
     const paymentQuote = monthlyExpected > 0 ? Math.round((monthlyIncome / monthlyExpected) * 100) : 0
+    const paidCountMonth = (paidThisMonth || []).length
+    const expectedCountMonth = (expectedThisMonth || []).length
 
     // Previous month for trend
     const { data: paidPrev } = await supabase
@@ -183,6 +188,7 @@ export default function Dashboard() {
       .from('payments').select('amount, due_date')
       .in('contract_id', contractIdsSafe).eq('status', 'late')
     const latePayments = (late || []).reduce((s: number, p: any) => s + Number(p.amount || 0), 0)
+    const lateCount = (late || []).length
 
     // Forecast 30 Days
     const { data: forecast } = await supabase
@@ -350,6 +356,9 @@ export default function Dashboard() {
       monthlyIncome,
       monthlyExpected,
       paymentQuote,
+      paidCountMonth,
+      expectedCountMonth,
+      lateCount,
       prevMonthlyIncome,
       forecast30Days,
       pendingPayments,
@@ -476,48 +485,70 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* === KPI Cards === */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3" style={{ marginBottom: '1.5rem' }}>
-          <div style={kpiCardStyle}>
-            <div style={kpiLabelStyle}>Einnahmen diesen Monat</div>
-            <div style={{ ...kpiValueStyle, color: '#1a1a1a' }}>
+        {/* === Monats-Hero === */}
+        <a href="/payments" style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
+          <div style={{ ...cardStyle, marginBottom: '12px', padding: '20px' }}>
+            <div style={kpiLabelStyle}>Mieteingang {new Date().toLocaleDateString('de-DE', { month: 'long' })}</div>
+            <div style={{ fontSize: '34px', fontWeight: 400, fontFamily: 'Georgia, serif', color: '#1a1a1a', lineHeight: 1.15 }}>
               {fmtCurrency(stats.monthlyIncome)}
+              <span style={{ fontSize: '15px', color: '#888' }}> von {fmtCurrency(stats.monthlyExpected)}</span>
             </div>
-            <div style={{ fontSize: '11.5px', color: '#888', marginBottom: '4px' }}>
-              {stats.paymentQuote}% Quote · Soll {fmtCurrency(stats.monthlyExpected)}
+            <div style={{ height: '8px', background: '#f0eeea', borderRadius: '4px', margin: '14px 0 10px', overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: Math.min(stats.paymentQuote, 100) + '%', background: '#16a34a', borderRadius: '4px', transition: 'width 0.6s ease' }} />
             </div>
-            {stats.monthlyExpected > stats.monthlyIncome && (
-              <div style={{ fontSize: '11px', color: '#d97706' }}>
-                {fmtCurrency(stats.monthlyExpected - stats.monthlyIncome)} noch offen
-              </div>
-            )}
-            {stats.monthlyExpected > 0 && stats.paymentQuote === 100 && (
-              <div style={{ fontSize: '11px', color: '#16a34a' }}>
-                ✓ Komplett bezahlt
-              </div>
-            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#888', flexWrap: 'wrap', gap: '6px' }}>
+              <span><strong style={{ color: '#1a1a1a' }}>{stats.paidCountMonth} von {stats.expectedCountMonth}</strong> Mieten eingegangen</span>
+              {trendPct !== 0 && (
+                <span style={{ color: trendUp ? '#16a34a' : '#d97706' }}>
+                  {trendUp ? '↑' : '↓'} {Math.abs(trendPct)}% vs. Vormonat
+                </span>
+              )}
+            </div>
           </div>
+        </a>
 
-          <div style={kpiCardStyle}>
-            <div style={kpiLabelStyle}>Forecast 30 Tage</div>
-            <div style={{ ...kpiValueStyle, color: '#1a1a1a' }}>{fmtCurrency(stats.forecast30Days)}</div>
-            <div style={{ fontSize: '11.5px', color: '#888' }}>
-              Erwartete Zahlungen
-            </div>
-          </div>
+        {/* === Quick-Actions (N26-Pills) === */}
+        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px', marginBottom: '1.25rem', WebkitOverflowScrolling: 'touch' }}>
+          <a href="/properties" style={{ ...qaPrimaryStyle, whiteSpace: 'nowrap', flexShrink: 0 }}>+ Objekt</a>
+          <a href="/payments" style={{ ...qaStyle, whiteSpace: 'nowrap', flexShrink: 0 }}>Zahlung erfassen</a>
+          <a href="/kosten" style={{ ...qaStyle, whiteSpace: 'nowrap', flexShrink: 0 }}>Kosten erfassen</a>
+          <a href="/kosten/stapel" style={{ ...qaStyle, whiteSpace: 'nowrap', flexShrink: 0 }}>Beleg scannen</a>
+          <a href="/nebenkostenabrechnung" style={{ ...qaStyle, whiteSpace: 'nowrap', flexShrink: 0 }}>NK-Abrechnung</a>
+          <a href="/import" style={{ ...qaStyle, whiteSpace: 'nowrap', flexShrink: 0 }}>Excel-Import</a>
+          <a href="/tenants" style={{ ...qaStyle, whiteSpace: 'nowrap', flexShrink: 0 }}>+ Mieter</a>
+          <a href="/units" style={{ ...qaStyle, whiteSpace: 'nowrap', flexShrink: 0 }}>+ Einheit</a>
+          <a href="/guv" style={{ ...qaStyle, whiteSpace: 'nowrap', flexShrink: 0 }}>GuV</a>
+          <a href="/mietvertrag" style={{ ...qaStyle, whiteSpace: 'nowrap', flexShrink: 0 }}>Mietvertrag</a>
+        </div>
 
-          <div style={kpiCardStyle}>
-            <div style={kpiLabelStyle}>Auslastung</div>
-            <div style={{ ...kpiValueStyle, color: occupancyRate >= BENCHMARK_OCCUPANCY ? '#16a34a' : '#1a1a1a' }}>
-              {occupancyRate}%
+        {/* === KPI Cards === */}
+        <div className="grid grid-cols-3 gap-2 md:gap-3" style={{ marginBottom: '1.5rem' }}>
+          <a href="/payments" style={{ textDecoration: 'none', color: 'inherit' }}>
+            <div style={{ ...kpiCardStyle, height: '100%', borderColor: stats.lateCount > 0 ? '#fecaca' : '#e8e6e0' }}>
+              <div style={kpiLabelStyle}>Überfällig</div>
+              <div style={{ ...kpiValueStyle, color: stats.lateCount > 0 ? '#dc2626' : '#16a34a' }}>
+                {fmtCurrency(stats.latePayments)}
+              </div>
+              <div style={{ fontSize: '11.5px', color: stats.lateCount > 0 ? '#dc2626' : '#888' }}>
+                {stats.lateCount > 0 ? stats.lateCount + (stats.lateCount === 1 ? ' Zahlung → Mahnung' : ' Zahlungen → Mahnung') : 'Nichts überfällig ✓'}
+              </div>
             </div>
-            <div style={{
-              fontSize: '11.5px',
-              color: occupancyDelta >= 0 ? '#16a34a' : '#d97706'
-            }}>
-              {occupancyDelta >= 0 ? '↑' : '↓'} {Math.abs(occupancyDelta)}% vs. Branchen-Ø ({BENCHMARK_OCCUPANCY}%)
+          </a>
+
+          <a href="/units" style={{ textDecoration: 'none', color: 'inherit' }}>
+            <div style={{ ...kpiCardStyle, height: '100%' }}>
+              <div style={kpiLabelStyle}>Auslastung</div>
+              <div style={{ ...kpiValueStyle, color: occupancyRate >= BENCHMARK_OCCUPANCY ? '#16a34a' : '#1a1a1a' }}>
+                {occupancyRate}%
+              </div>
+              <div style={{
+                fontSize: '11.5px',
+                color: occupancyDelta >= 0 ? '#16a34a' : '#d97706'
+              }}>
+                {occupancyDelta >= 0 ? '↑' : '↓'} {Math.abs(occupancyDelta)}% vs. Branchen-Ø ({BENCHMARK_OCCUPANCY}%)
+              </div>
             </div>
-          </div>
+          </a>
 
           <div style={kpiCardStyle}>
             <div style={kpiLabelStyle}>Offene Aufgaben</div>
@@ -726,21 +757,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* === Quick Actions === */}
-        <div style={cardStyle}>
-          <div style={cardHeaderStyle}>
-            <h3 style={cardTitleStyle}>Schnellzugriff</h3>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <a href="/properties" style={qaPrimaryStyle}>+ Objekt anlegen</a>
-            <a href="/import" style={qaStyle}>Excel-Import</a>
-            <a href="/units" style={qaStyle}>+ Einheit</a>
-            <a href="/tenants" style={qaStyle}>+ Mieter</a>
-            <a href="/payments" style={qaStyle}>Zahlung erfassen</a>
-            <a href="/guv" style={qaStyle}>GuV-Bericht</a>
-            <a href="/mietvertrag" style={qaStyle}>Mietvertrag</a>
-          </div>
-        </div>
       </main>
     </>
   )

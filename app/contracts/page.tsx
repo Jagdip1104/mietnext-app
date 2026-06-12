@@ -67,7 +67,7 @@ export default function Contracts() {
       .in('property_id', propertyIds.length > 0 ? propertyIds : ['none']).order('name')
     setUnits(unitsData || [])
     const { data: contractsData } = await supabase.from('contracts')
-      .select('*, tenants(full_name), units(name, total_rent, properties(name, address, zip, city))')
+      .select('*, tenants(full_name), units(name, type, total_rent, properties(name, address, zip, city))')
       .in('tenant_id', (tenantsData || []).map((t: any) => t.id).length > 0 ? (tenantsData || []).map((t: any) => t.id) : ['none'])
       .order('created_at', { ascending: false })
     setContracts(contractsData || [])
@@ -399,7 +399,9 @@ export default function Contracts() {
                         </button>
                       )}
                       <button onClick={() => handleEdit(c)} style={{ backgroundColor: '#fff', color: '#666', padding: '8px 14px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer' }}>Bearbeiten</button>
-                      <button onClick={() => setWgbContract(c)} style={{ backgroundColor: '#fff', color: '#666', padding: '8px 14px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer' }}><FileText size={13} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '6px' }} />Meldebescheinigung</button>
+                      {(!c.units?.type || c.units?.type === 'wohnung') && (
+                        <button onClick={() => setWgbContract(c)} style={{ backgroundColor: '#fff', color: '#666', padding: '8px 14px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer' }}><FileText size={13} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '6px' }} />Meldebescheinigung</button>
+                      )}
                       {c.is_active && (
                         <button onClick={() => openIncreaseModal(c.id, parseFloat(c.rent_cold || '0'), parseFloat(c.utility_advance || '0'))} style={{ backgroundColor: '#fef3c7', color: '#92400e', padding: '8px 14px', borderRadius: '8px', border: '1px solid #fde68a', fontSize: '13px', cursor: 'pointer' }}><TrendingUp size={13} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '6px' }} />Miete ändern</button>
                       )}

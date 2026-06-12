@@ -670,6 +670,7 @@ export default function Dashboard() {
             <div style={{display: 'flex', gap: '12px', fontSize: '11px', color: '#888', alignItems: 'center'}}>
               <span><span style={{display: 'inline-block', width: '10px', height: '10px', borderRadius: '3px', background: '#16a34a', marginRight: '4px', verticalAlign: '-1px'}}></span>Eingegangen</span>
               <span><span style={{display: 'inline-block', width: '10px', height: '10px', borderRadius: '3px', background: '#fde68a', marginRight: '4px', verticalAlign: '-1px'}}></span>Offen</span>
+              <span><span style={{display: 'inline-block', width: '10px', height: '10px', borderRadius: '3px', background: '#fecaca', marginRight: '4px', verticalAlign: '-1px'}}></span>Überfällig</span>
             </div>
           </div>
           {(() => {
@@ -684,7 +685,7 @@ export default function Dashboard() {
               <>
                 <div style={{ fontSize: '12.5px', color: '#888', marginBottom: '14px' }}>
                   {yr} bisher: <strong style={{ color: '#16a34a' }}>{fmtCurrency(ytdIncome)}</strong> eingenommen
-                  {ytdOpen > 0 && <> · <span style={{ color: '#d97706' }}>{fmtCurrency(ytdOpen)} offen</span></>}
+                  {ytdOpen > 0 && <> · <span style={{ color: '#d97706' }}>{fmtCurrency(ytdOpen)} ausstehend</span></>}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: '10px', height: '150px' }}>
                   {data.map((d) => {
@@ -699,7 +700,7 @@ export default function Dashboard() {
                           width: '100%', maxWidth: '36px', height: sollH + '%',
                           borderRadius: '6px', overflow: 'hidden',
                           display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
-                          background: hatGap && !isCurrent ? '#fde68a' : '#f0eeea',
+                          background: !hatGap ? '#f0eeea' : isCurrent ? '#fde68a' : '#fecaca',
                           boxShadow: isCurrent ? '0 0 0 1.5px #1a1a1a' : 'none'
                         }}>
                           <div style={{ height: istPct + '%', background: '#16a34a' }} />

@@ -83,7 +83,7 @@ export default function RegisterPage() {
           <p className="text-2xl text-white leading-relaxed mb-6" style={{ fontFamily: 'Georgia, serif' }}>
             "Endlich eine Lösung, die einfach funktioniert. Verwalte 12 Wohnungen ohne Excel-Chaos."
           </p>
-          <p className="text-sm text-white/60">— Vermieter aus Osnabrück</p>
+          <p className="text-sm text-white/60">— Andreas Held, Vermieter aus Rodgau</p>
         </div>
         <div className="text-xs text-white/40">
           © {new Date().getFullYear()} MietNext · Hosted in Frankfurt 🇩🇪

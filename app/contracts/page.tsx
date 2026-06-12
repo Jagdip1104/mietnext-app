@@ -1,7 +1,8 @@
 'use client'
 
 import { useToast } from '@/components/ui/Toast'
-import { Banknote, TrendingUp } from 'lucide-react'
+import { Banknote, TrendingUp, FileText } from 'lucide-react'
+import WohnungsgeberModal from '@/components/WohnungsgeberModal'
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
@@ -40,6 +41,8 @@ export default function Contracts() {
   const [generatingId, setGeneratingId] = useState<string | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [endConfirm, setEndConfirm] = useState<string | null>(null)
+  const [wgbContract, setWgbContract] = useState<any>(null)
+  const [profile, setProfile] = useState<any>(null)
   const [userId, setUserId] = useState<string | null>(null)
   const router = useRouter()
 
@@ -54,6 +57,8 @@ export default function Contracts() {
   }, [])
 
   const loadData = async (uid: string) => {
+    const { data: prof } = await supabase.from('profiles').select('*').eq('id', uid).maybeSingle()
+    setProfile(prof)
     const { data: props } = await supabase.from('properties').select('id').eq('owner_id', uid)
     const propertyIds = (props || []).map((p: any) => p.id)
     const { data: tenantsData } = await supabase.from('tenants').select('*').eq('owner_id', uid).order('full_name')
@@ -62,7 +67,7 @@ export default function Contracts() {
       .in('property_id', propertyIds.length > 0 ? propertyIds : ['none']).order('name')
     setUnits(unitsData || [])
     const { data: contractsData } = await supabase.from('contracts')
-      .select('*, tenants(full_name), units(name, total_rent, properties(name))')
+      .select('*, tenants(full_name), units(name, total_rent, properties(name, address, zip, city))')
       .in('tenant_id', (tenantsData || []).map((t: any) => t.id).length > 0 ? (tenantsData || []).map((t: any) => t.id) : ['none'])
       .order('created_at', { ascending: false })
     setContracts(contractsData || [])
@@ -394,6 +399,7 @@ export default function Contracts() {
                         </button>
                       )}
                       <button onClick={() => handleEdit(c)} style={{ backgroundColor: '#fff', color: '#666', padding: '8px 14px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer' }}>Bearbeiten</button>
+                      <button onClick={() => setWgbContract(c)} style={{ backgroundColor: '#fff', color: '#666', padding: '8px 14px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer' }}><FileText size={13} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '6px' }} />Meldebescheinigung</button>
                       {c.is_active && (
                         <button onClick={() => openIncreaseModal(c.id, parseFloat(c.rent_cold || '0'), parseFloat(c.utility_advance || '0'))} style={{ backgroundColor: '#fef3c7', color: '#92400e', padding: '8px 14px', borderRadius: '8px', border: '1px solid #fde68a', fontSize: '13px', cursor: 'pointer' }}><TrendingUp size={13} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '6px' }} />Miete ändern</button>
                       )}
@@ -409,6 +415,22 @@ export default function Contracts() {
           </div>
         )}
       </div>
+
+      {wgbContract && (
+        <WohnungsgeberModal
+          data={{
+            tenantName: wgbContract.tenants?.full_name || '',
+            propertyName: wgbContract.units?.properties?.name || '',
+            propertyAddress: wgbContract.units?.properties?.address || '',
+            propertyZip: wgbContract.units?.properties?.zip || '',
+            propertyCity: wgbContract.units?.properties?.city || '',
+            unitName: wgbContract.units?.name || '',
+            startDate: wgbContract.start_date || ''
+          }}
+          profile={profile}
+          onClose={() => setWgbContract(null)}
+        />
+      )}
 
       {/* Mieterhöhung Modal */}
       {increaseModalId && (() => {

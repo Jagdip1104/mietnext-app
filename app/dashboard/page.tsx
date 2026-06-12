@@ -376,7 +376,7 @@ export default function Dashboard() {
     return (
       <>
         <Nav />
-        <main style={{ padding: '4rem 2rem', textAlign: 'center', color: '#6b7280' }}>
+        <main style={{ padding: '4rem 2rem', textAlign: 'center', color: '#888' }}>
           Lade Dashboard…
         </main>
       </>
@@ -442,10 +442,10 @@ export default function Dashboard() {
           marginBottom: '1.5rem', flexWrap: 'wrap', gap: '12px'
         }}>
           <div>
-            <h1 style={{ fontSize: '24px', fontWeight: 500, margin: 0 }}>
-              {greeting}, {userName} {greetingEmoji}
+            <h1 style={{ fontSize: '28px', fontWeight: 400, margin: 0, fontFamily: 'Georgia, serif' }}>
+              {greeting}, {userName}
             </h1>
-            <div style={{ fontSize: '13px', color: '#6b7280', marginTop: '4px' }}>
+            <div style={{ fontSize: '13px', color: '#888', marginTop: '4px' }}>
               {new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
               {stats.actionItems.length > 0 && (
                 <> · Du hast <strong>{stats.actionItems.length}</strong> {stats.actionItems.length === 1 ? 'Aufgabe' : 'Aufgaben'}</>
@@ -461,7 +461,7 @@ export default function Dashboard() {
                   background: p.color === 'ok' ? '#EAF3DE' : p.color === 'warn' ? '#FAEEDA' : '#FCEBEB',
                   color: p.color === 'ok' ? '#3B6D11' : p.color === 'warn' ? '#854F0B' : '#A32D2D'
                 }}>
-                  {p.color === 'ok' ? '🟢' : p.color === 'warn' ? '🟡' : '🔴'} {p.label}
+                  {p.label}
                 </span>
               ))}
             </div>
@@ -475,7 +475,7 @@ export default function Dashboard() {
             <div style={{ ...kpiValueStyle, color: '#1a1a1a' }}>
               {fmtCurrency(stats.monthlyIncome)}
             </div>
-            <div style={{ fontSize: '11.5px', color: '#6b7280', marginBottom: '4px' }}>
+            <div style={{ fontSize: '11.5px', color: '#888', marginBottom: '4px' }}>
               {stats.paymentQuote}% Quote · Soll {fmtCurrency(stats.monthlyExpected)}
             </div>
             {stats.monthlyExpected > stats.monthlyIncome && (
@@ -493,7 +493,7 @@ export default function Dashboard() {
           <div style={kpiCardStyle}>
             <div style={kpiLabelStyle}>Forecast 30 Tage</div>
             <div style={{ ...kpiValueStyle, color: '#1a1a1a' }}>{fmtCurrency(stats.forecast30Days)}</div>
-            <div style={{ fontSize: '11.5px', color: '#6b7280' }}>
+            <div style={{ fontSize: '11.5px', color: '#888' }}>
               Erwartete Zahlungen
             </div>
           </div>
@@ -519,7 +519,7 @@ export default function Dashboard() {
             }}>
               {stats.actionItems.length}
             </div>
-            <div style={{ fontSize: '11.5px', color: urgentCount > 0 ? '#d97706' : '#6b7280' }}>
+            <div style={{ fontSize: '11.5px', color: urgentCount > 0 ? '#d97706' : '#888' }}>
               {urgentCount > 0 ? `${urgentCount} dringend` : stats.actionItems.length === 0 ? 'Alles erledigt ✓' : 'Zu erledigen'}
             </div>
           </div>
@@ -532,8 +532,8 @@ export default function Dashboard() {
               <h3 style={cardTitleStyle}>Was steht an?</h3>
             </div>
             {stats.actionItems.length === 0 ? (
-              <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#6b7280', fontSize: '13px' }}>
-                ✨ Keine offenen Aufgaben — top!
+              <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#888', fontSize: '13px' }}>
+                Keine offenen Aufgaben — top!
               </div>
             ) : (
               stats.actionItems.slice(0, 5).map((item, i) => (
@@ -543,18 +543,18 @@ export default function Dashboard() {
                   <div style={{
                     display: 'flex', alignItems: 'flex-start', gap: '10px',
                     padding: '12px 0',
-                    borderBottom: i < Math.min(stats.actionItems.length, 5) - 1 ? '0.5px solid #e5e7eb' : 'none',
+                    borderBottom: i < Math.min(stats.actionItems.length, 5) - 1 ? '1px solid #e8e6e0' : 'none',
                     cursor: 'pointer'
                   }}>
                     <div style={{
                       width: '8px', height: '8px', borderRadius: '50%',
                       marginTop: '6px', flexShrink: 0,
-                      background: item.priority === 'urgent' ? '#E24B4A'
-                        : item.priority === 'warning' ? '#EF9F27' : '#378ADD'
+                      background: item.priority === 'urgent' ? '#dc2626'
+                        : item.priority === 'warning' ? '#d97706' : '#bbb'
                     }} />
                     <div style={{ flex: 1, fontSize: '13px', lineHeight: 1.5 }}>
                       <div>{item.title}</div>
-                      <div style={{ fontSize: '11.5px', color: '#9ca3af', marginTop: '2px' }}>
+                      <div style={{ fontSize: '11.5px', color: '#bbb', marginTop: '2px' }}>
                         {item.description}
                       </div>
                     </div>
@@ -576,7 +576,7 @@ export default function Dashboard() {
                 if (stats.woUnitsOccupied > 0) segs.push({ color: '#334155', count: stats.woUnitsOccupied })
                 if (stats.gewerbeUnitsOccupied > 0) segs.push({ color: '#7F77DD', count: stats.gewerbeUnitsOccupied })
                 if (stats.lagerUnitsOccupied > 0) segs.push({ color: '#a16207', count: stats.lagerUnitsOccupied })
-                if (stats.stellplatzUnitsOccupied > 0) segs.push({ color: '#6b7280', count: stats.stellplatzUnitsOccupied })
+                if (stats.stellplatzUnitsOccupied > 0) segs.push({ color: '#888', count: stats.stellplatzUnitsOccupied })
                 let offset = 0
                 const arcs = segs.map(s => {
                   const arcLen = (s.count / totalU) * c2pi
@@ -586,7 +586,7 @@ export default function Dashboard() {
                 })
                 return (
                   <svg width="100" height="100" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="40" fill="none" stroke="#f3f4f6" strokeWidth="14" />
+                    <circle cx="50" cy="50" r="40" fill="none" stroke="#f0eeea" strokeWidth="14" />
                     {arcs.map((a, i) => (
                       <circle key={i} cx="50" cy="50" r="40" fill="none" stroke={a.color} strokeWidth="14"
                         strokeDasharray={a.dasharray} strokeDashoffset={a.dashoffset}
@@ -595,19 +595,19 @@ export default function Dashboard() {
                     <text x="50" y="48" textAnchor="middle" fontSize="16" fontWeight="500" fill="#1a1a1a">
                       {occupancyRate}%
                     </text>
-                    <text x="50" y="62" textAnchor="middle" fontSize="8" fill="#6b7280">
+                    <text x="50" y="62" textAnchor="middle" fontSize="8" fill="#888">
                       vermietet
                     </text>
                   </svg>
                 )
               })()}
-              <div style={{ flex: 1, fontSize: '12px', color: '#6b7280', lineHeight: 1.7 }}>
+              <div style={{ flex: 1, fontSize: '12px', color: '#888', lineHeight: 1.7 }}>
                 <strong style={{ color: '#1a1a1a' }}>{stats.occupiedUnits} von {stats.units}</strong> vermietet
                 <div style={{ marginTop: '8px' }}>
                   {stats.woUnits > 0 && <div><span style={{ color: '#334155' }}>●</span> {stats.woUnitsOccupied}/{stats.woUnits} Wohnung{stats.woUnits === 1 ? '' : 'en'}</div>}
                   {stats.gewerbeUnits > 0 && <div><span style={{ color: '#7F77DD' }}>●</span> {stats.gewerbeUnitsOccupied}/{stats.gewerbeUnits} Gewerbe</div>}
                   {stats.lagerUnits > 0 && <div><span style={{ color: '#a16207' }}>●</span> {stats.lagerUnitsOccupied}/{stats.lagerUnits} Lager</div>}
-                  {stats.stellplatzUnits > 0 && <div><span style={{ color: '#6b7280' }}>●</span> {stats.stellplatzUnitsOccupied}/{stats.stellplatzUnits} Stellplatz</div>}
+                  {stats.stellplatzUnits > 0 && <div><span style={{ color: '#888' }}>●</span> {stats.stellplatzUnitsOccupied}/{stats.stellplatzUnits} Stellplatz</div>}
                   {stats.vacantUnits > 0 && (
                     <div style={{ color: '#dc2626', marginTop: '4px' }}>
                       <span>●</span> {stats.vacantUnits} leer
@@ -623,9 +623,9 @@ export default function Dashboard() {
         <div style={{...cardStyle, marginBottom: '1.5rem'}}>
           <div style={cardHeaderStyle}>
             <h3 style={cardTitleStyle}>Einnahmen-Trend (12 Monate)</h3>
-            <div style={{display: 'flex', gap: '12px', fontSize: '11px', color: '#6b7280', alignItems: 'center'}}>
-              <span><span style={{display: 'inline-block', width: '12px', height: '2px', background: '#1B4FD8', marginRight: '4px', verticalAlign: 'middle'}}></span>Ist</span>
-              <span><span style={{display: 'inline-block', width: '12px', height: '0', borderTop: '1.5px dashed #9ca3af', marginRight: '4px', verticalAlign: 'middle'}}></span>Soll</span>
+            <div style={{display: 'flex', gap: '12px', fontSize: '11px', color: '#888', alignItems: 'center'}}>
+              <span><span style={{display: 'inline-block', width: '12px', height: '2px', background: '#16a34a', marginRight: '4px', verticalAlign: 'middle'}}></span>Ist</span>
+              <span><span style={{display: 'inline-block', width: '12px', height: '0', borderTop: '1.5px dashed #bbb', marginRight: '4px', verticalAlign: 'middle'}}></span>Soll</span>
             </div>
           </div>
           {(() => {
@@ -649,19 +649,19 @@ export default function Dashboard() {
             return (
               <div style={{position: 'relative', overflowX: 'auto'}}>
                 <svg viewBox={`0 0 ${w * data.length} ${h}`} width="100%" height={h} style={{display: 'block'}}>
-                  <line x1={padL} y1={padT} x2={padL} y2={h - padB} stroke="#e5e7eb" strokeWidth="0.5"/>
-                  <line x1={padL} y1={h - padB} x2={w * data.length - padR} y2={h - padB} stroke="#e5e7eb" strokeWidth="0.5"/>
-                  <text x={padL - 5} y={padT + 4} fontSize="9" textAnchor="end" fill="#9ca3af">{fmtCurrency(maxVal)}</text>
-                  <text x={padL - 5} y={h - padB + 3} fontSize="9" textAnchor="end" fill="#9ca3af">0 €</text>
-                  <polygon fill="#1B4FD8" fillOpacity="0.08" points={areaPts}/>
-                  <polyline fill="none" stroke="#9ca3af" strokeWidth="1.5" strokeDasharray="4,3" points={expectedPts}/>
+                  <line x1={padL} y1={padT} x2={padL} y2={h - padB} stroke="#e8e6e0" strokeWidth="0.5"/>
+                  <line x1={padL} y1={h - padB} x2={w * data.length - padR} y2={h - padB} stroke="#e8e6e0" strokeWidth="0.5"/>
+                  <text x={padL - 5} y={padT + 4} fontSize="9" textAnchor="end" fill="#bbb">{fmtCurrency(maxVal)}</text>
+                  <text x={padL - 5} y={h - padB + 3} fontSize="9" textAnchor="end" fill="#bbb">0 €</text>
+                  <polygon fill="#16a34a" fillOpacity="0.08" points={areaPts}/>
+                  <polyline fill="none" stroke="#bbb" strokeWidth="1.5" strokeDasharray="4,3" points={expectedPts}/>
                   <polyline fill="none" stroke="#16a34a" strokeWidth="2" points={polyPts}/>
                   {points.map((p, i) => (
                     <g key={i}>
                       <circle cx={p.x} cy={p.y} r={i === points.length-1 ? 4 : 3} fill="#16a34a" stroke="white" strokeWidth={i === points.length-1 ? 2 : 0}/>
-                      <text x={p.x} y={h - padB + 14} fontSize="10" textAnchor="middle" fill="#6b7280">{p.label}</text>
+                      <text x={p.x} y={h - padB + 14} fontSize="10" textAnchor="middle" fill="#888">{p.label}</text>
                       {p.income > 0 && (
-                        <text x={p.x} y={p.y - 8} fontSize="9" textAnchor="middle" fill="#1B4FD8" fontWeight="500">
+                        <text x={p.x} y={p.y - 8} fontSize="9" textAnchor="middle" fill="#16a34a" fontWeight="500">
                           {Math.round(p.income / 1000)}k
                         </text>
                       )}
@@ -681,7 +681,7 @@ export default function Dashboard() {
               <a href="/payments" style={cardLinkStyle}>Alle →</a>
             </div>
             {stats.recentActivity.length === 0 ? (
-              <div style={{ padding: '1rem 0', color: '#9ca3af', fontSize: '13px' }}>
+              <div style={{ padding: '1rem 0', color: '#bbb', fontSize: '13px' }}>
                 Noch keine Aktivität
               </div>
             ) : (
@@ -689,28 +689,28 @@ export default function Dashboard() {
                 <div key={i} style={{
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                   padding: '8px 0', fontSize: '12.5px',
-                  borderBottom: i < stats.recentActivity.length - 1 ? '0.5px solid #e5e7eb' : 'none'
+                  borderBottom: i < stats.recentActivity.length - 1 ? '1px solid #e8e6e0' : 'none'
                 }}>
-                  <span>{a.icon} {a.text}</span>
-                  <span style={{ fontSize: '11px', color: '#9ca3af' }}>{a.meta}</span>
+                  <span>{a.text}</span>
+                  <span style={{ fontSize: '11px', color: '#bbb' }}>{a.meta}</span>
                 </div>
               ))
             )}
           </div>
 
-          <div style={{ ...cardStyle, background: '#f9fafb' }}>
+          <div style={{ ...cardStyle, background: '#fafaf8' }}>
             <div style={cardHeaderStyle}>
               <h3 style={cardTitleStyle}>Smart-Insight</h3>
             </div>
-            <div style={{ fontSize: '13px', lineHeight: 1.6, color: '#374151' }}>
+            <div style={{ fontSize: '13px', lineHeight: 1.6, color: '#444' }}>
               {smartInsight}
             </div>
             <div style={{
               marginTop: '14px', paddingTop: '12px',
-              borderTop: '0.5px solid #e5e7eb',
-              fontSize: '11px', color: '#9ca3af'
+              borderTop: '1px solid #e8e6e0',
+              fontSize: '11px', color: '#bbb'
             }}>
-              📰 Immobilien-News-Feed kommt in einem späteren Update
+              Immobilien-News-Feed kommt in einem späteren Update
             </div>
           </div>
         </div>
@@ -718,16 +718,16 @@ export default function Dashboard() {
         {/* === Quick Actions === */}
         <div style={cardStyle}>
           <div style={cardHeaderStyle}>
-            <h3 style={cardTitleStyle}>⚡ Schnellzugriff</h3>
+            <h3 style={cardTitleStyle}>Schnellzugriff</h3>
           </div>
           <div className="flex flex-wrap gap-2">
             <a href="/properties" style={qaPrimaryStyle}>+ Objekt anlegen</a>
-            <a href="/import" style={qaStyle}>📥 Excel-Import</a>
+            <a href="/import" style={qaStyle}>Excel-Import</a>
             <a href="/units" style={qaStyle}>+ Einheit</a>
             <a href="/tenants" style={qaStyle}>+ Mieter</a>
-            <a href="/payments" style={qaStyle}>💰 Zahlung erfassen</a>
-            <a href="/guv" style={qaStyle}>📊 GuV-Bericht</a>
-            <a href="/mietvertrag" style={qaStyle}>📄 Mietvertrag</a>
+            <a href="/payments" style={qaStyle}>Zahlung erfassen</a>
+            <a href="/guv" style={qaStyle}>GuV-Bericht</a>
+            <a href="/mietvertrag" style={qaStyle}>Mietvertrag</a>
           </div>
         </div>
       </main>
@@ -743,7 +743,7 @@ function totalRecentPayments(s: Stats): number {
 // === Styles ===
 const cardStyle: React.CSSProperties = {
   background: '#fff',
-  border: '0.5px solid #e5e7eb',
+  border: '1px solid #e8e6e0',
   borderRadius: '12px',
   padding: '16px'
 }
@@ -760,19 +760,19 @@ const cardTitleStyle: React.CSSProperties = {
 }
 const cardLinkStyle: React.CSSProperties = {
   fontSize: '12px',
-  color: '#1B4FD8',
-  textDecoration: 'none'
+  color: '#1a1a1a',
+  textDecoration: 'underline'
 }
 const kpiCardStyle: React.CSSProperties = {
   background: '#fff',
-  border: '0.5px solid #e5e7eb',
+  border: '1px solid #e8e6e0',
   borderRadius: '12px',
   padding: '14px 16px'
 }
 const kpiLabelStyle: React.CSSProperties = {
   fontSize: '10.5px',
   fontWeight: 500,
-  color: '#6b7280',
+  color: '#888',
   textTransform: 'uppercase',
   letterSpacing: '0.04em',
   marginBottom: '8px'
@@ -786,7 +786,7 @@ const kpiValueStyle: React.CSSProperties = {
 const qaStyle: React.CSSProperties = {
   padding: '8px 14px',
   background: '#fff',
-  border: '0.5px solid #e5e7eb',
+  border: '1px solid #e8e6e0',
   borderRadius: '18px',
   fontSize: '12px',
   textDecoration: 'none',

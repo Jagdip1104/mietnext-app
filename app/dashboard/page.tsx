@@ -686,7 +686,7 @@ export default function Dashboard() {
                   {yr} bisher: <strong style={{ color: '#16a34a' }}>{fmtCurrency(ytdIncome)}</strong> eingenommen
                   {ytdOpen > 0 && <> · <span style={{ color: '#d97706' }}>{fmtCurrency(ytdOpen)} offen</span></>}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'flex-end', gap: '6px', height: '150px' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: '10px', height: '150px' }}>
                   {data.map((d) => {
                     const sollH = Math.max((Math.max(d.expected, d.income) / maxVal) * 100, (d.expected > 0 || d.income > 0) ? 3 : 0)
                     const istPct = d.expected > 0 ? Math.min(100, (d.income / d.expected) * 100) : (d.income > 0 ? 100 : 0)
@@ -694,7 +694,7 @@ export default function Dashboard() {
                     const hatGap = d.income < d.expected
                     return (
                       <div key={d.month} title={d.label + ': ' + fmtCurrency(d.income) + ' von ' + fmtCurrency(d.expected)}
-                        style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', minWidth: 0 }}>
+                        style={{ flex: '0 1 64px', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', minWidth: 0 }}>
                         <div style={{
                           width: '100%', maxWidth: '36px', height: sollH + '%',
                           borderRadius: '6px', overflow: 'hidden',

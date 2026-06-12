@@ -52,3 +52,14 @@ button:focus-visible {
 }
 
 /* Sanftes Erscheinen von Cards/Modals nicht noetig - keep it simple */
+
+/* Skeleton-Loading (N26-Style Shimmer) */
+.mn-skeleton {
+  background: linear-gradient(90deg, #f0eeea 25%, #faf9f6 50%, #f0eeea 75%);
+  background-size: 200% 100%;
+  animation: mn-shimmer 1.4s infinite;
+  border-radius: 12px;
+}
+@keyframes mn-shimmer {
+  to { background-position: -200% 0; }
+}

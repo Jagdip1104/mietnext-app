@@ -294,16 +294,19 @@ export default function Dashboard() {
     // === Activity Feed ===
     const recentActivity: Activity[] = []
     const { data: recentPaid } = await supabase
-      .from('payments').select('amount, paid_date, contract_id')
+      .from('payments').select('amount, paid_date, due_date, contract_id')
       .in('contract_id', contractIdsSafe).eq('status', 'paid')
       .not('paid_date', 'is', null)
       .order('paid_date', { ascending: false }).limit(5)
     ;(recentPaid || []).forEach((p: any) => {
       const c = (contracts || []).find((cc: any) => cc.id === p.contract_id)
       const t = (tenants || []).find((tt: any) => tt.id === c?.tenant_id)
+      const u = (units || []).find((uu: any) => uu.id === c?.unit_id)
+      const multiUnit = (contracts || []).filter((cc: any) => cc.tenant_id === c?.tenant_id).length > 1
+      const monat = p.due_date ? new Date(p.due_date + 'T12:00:00').toLocaleDateString('de-DE', { month: 'long' }) : ''
       recentActivity.push({
         icon: '💰',
-        text: `${t?.full_name || 'Unbekannt'} zahlte ${fmtCurrency(Number(p.amount))}`,
+        text: `${t?.full_name || 'Unbekannt'} zahlte ${fmtCurrency(Number(p.amount))}${monat ? ' für ' + monat : ''}${multiUnit && u?.name ? ' · ' + u.name : ''}`,
         meta: formatRelativeDate(p.paid_date)
       })
     })
@@ -346,6 +349,8 @@ export default function Dashboard() {
         .reduce((s: number, p: any) => s + Number(p.amount || 0), 0)
       monthlyChart.push({ month: monthKey, label: monthLabels[d.getMonth()], income: monthIncome, expected: monthExpected })
     }
+    const firstDataIdx = monthlyChart.findIndex(m => m.income > 0 || m.expected > 0)
+    const trimmedChart = firstDataIdx > 0 ? monthlyChart.slice(Math.min(firstDataIdx, monthlyChart.length - 6)) : monthlyChart
 
     setStats({
       properties: properties?.length || 0,
@@ -376,7 +381,7 @@ export default function Dashboard() {
       gewerbeUnitsOccupied,
       lagerUnitsOccupied,
       stellplatzUnitsOccupied,
-      monthlyChart
+      monthlyChart: trimmedChart
     })
     setLoading(false)
   }

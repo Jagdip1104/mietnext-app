@@ -3,7 +3,13 @@ import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
 import { getAuthedUser } from '@/lib/supabase-server'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+let _stripe: Stripe | undefined
+const stripe: Stripe = new Proxy({} as Stripe, {
+  get: (_t, prop) => {
+    if (!_stripe) _stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+    return (_stripe as any)[prop]
+  },
+})
 
 // Whitelist erlaubter Stripe Price IDs – verhindert Manipulation
 const ALLOWED_PRICE_IDS = new Set([

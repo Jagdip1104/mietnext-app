@@ -4,7 +4,13 @@ import { createClient } from '@supabase/supabase-js'
 
 export const runtime = 'nodejs'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+let _stripe: Stripe | undefined
+const stripe: Stripe = new Proxy({} as Stripe, {
+  get: (_t, prop) => {
+    if (!_stripe) _stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+    return (_stripe as any)[prop]
+  },
+})
 
 const PRICE_TO_PLAN: Record<string, string> = {
   'price_1TWjBLC2lxIY4GthiRV6tYo3': 'starter',

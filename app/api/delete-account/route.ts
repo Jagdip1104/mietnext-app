@@ -6,7 +6,13 @@ import { getAuthedUser } from '@/lib/supabase-server'
 // ── Karenzzeit: zum TESTEN 2 Tage, fuer Launch auf 30 stellen ──
 const GRACE_DAYS = 2
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+let _stripe: Stripe | undefined
+const stripe: Stripe = new Proxy({} as Stripe, {
+  get: (_t, prop) => {
+    if (!_stripe) _stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+    return (_stripe as any)[prop]
+  },
+})
 
 export async function POST() {
   const user = await getAuthedUser()

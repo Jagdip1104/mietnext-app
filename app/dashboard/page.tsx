@@ -128,7 +128,7 @@ export default function Dashboard() {
     const unitIdsSafe = unitIds.length ? unitIds : [NULL_UUID]
 
     const { data: contracts } = await supabase
-      .from('contracts').select('id, tenant_id, unit_id, rent_amount, start_date, end_date, is_active')
+      .from('contracts').select('id, tenant_id, unit_id, rent_amount, start_date, end_date, is_active, deposit')
       .in('unit_id', unitIdsSafe)
     const contractIds = (contracts || []).map((c: any) => c.id)
     const contractIdsSafe = contractIds.length ? contractIds : [NULL_UUID]
@@ -137,6 +137,10 @@ export default function Dashboard() {
     const { data: tenants } = await supabase
       .from('tenants').select('id, full_name')
       .in('id', tenantIds.length ? tenantIds : [NULL_UUID])
+
+    const { data: rentIncreases } = await supabase
+      .from('rent_increases').select('contract_id, effective_date')
+      .in('contract_id', contractIdsSafe)
 
     // === Dates ===
     const today = new Date()
@@ -265,11 +269,63 @@ export default function Dashboard() {
     const propsWithoutStmts = (properties || []).filter((p: any) => !propsWithStmts.has(p.id))
 
     if (propsWithoutStmts.length > 0) {
+      const nkDeadline = new Date(lastYear + 1, 11, 31)
+      const nkDaysLeft = Math.ceil((nkDeadline.getTime() - today.getTime()) / 86400000)
+      const nkPrio: 'urgent' | 'warning' | 'info' = nkDaysLeft <= 90 ? 'urgent' : nkDaysLeft <= 180 ? 'warning' : 'info'
+      const nkNames = propsWithoutStmts.slice(0, 2).map((p: any) => p.name).join(', ') + (propsWithoutStmts.length > 2 ? '…' : '')
+      if (nkDaysLeft > 0) {
+        actionItems.push({
+          priority: nkPrio,
+          title: `NK-Abrechnung ${lastYear}: noch ${nkDaysLeft} Tage Frist (§ 556 BGB)`,
+          description: `Fehlt für ${propsWithoutStmts.length} ${propsWithoutStmts.length === 1 ? 'Objekt' : 'Objekte'}: ${nkNames} — nach dem 31.12.${lastYear + 1} verfällt die Nachforderung`,
+          href: '/nebenkostenabrechnung'
+        })
+      } else {
+        actionItems.push({
+          priority: 'urgent',
+          title: `NK-Abrechnung ${lastYear}: Frist am 31.12.${lastYear + 1} abgelaufen`,
+          description: `${nkNames} — Nachforderungen sind verfallen (§ 556 Abs. 3 BGB), Guthaben des Mieters bleibt fällig`,
+          href: '/nebenkostenabrechnung'
+        })
+      }
+    }
+
+    // Fristen-Radar: Kautionsrueckzahlung nach Auszug
+    const sixMonthsAgo = dateStr(new Date(today.getTime() - 180 * 86400000))
+    const endedWithDeposit = (contracts || []).filter((c: any) =>
+      Number(c.deposit || 0) > 0 && c.end_date && c.end_date < todayStr && c.end_date >= sixMonthsAgo
+    )
+    endedWithDeposit.forEach((c: any) => {
+      const t = (tenants || []).find((tt: any) => tt.id === c.tenant_id)
+      const u = (units || []).find((uu: any) => uu.id === c.unit_id)
       actionItems.push({
         priority: 'warning',
-        title: `NK-Abrechnung ${lastYear} fehlt für ${propsWithoutStmts.length} ${propsWithoutStmts.length === 1 ? 'Objekt' : 'Objekte'}`,
-        description: propsWithoutStmts.slice(0, 2).map((p: any) => p.name).join(', ') + (propsWithoutStmts.length > 2 ? '…' : ''),
-        href: '/nebenkostenabrechnung'
+        title: `Kaution ${fmtCurrency(Number(c.deposit))} von ${t?.full_name || '—'} abrechnen`,
+        description: `Vertrag endete am ${new Date(c.end_date).toLocaleDateString('de-DE')}${u?.name ? ' · ' + u.name : ''} — angemessene Prüffrist (ca. 6 Monate) läuft`,
+        href: '/contracts'
+      })
+    })
+
+    // Fristen-Radar: §558-Sperrfrist abgelaufen -> Mieterhoehungs-Chance
+    const twelveMonthsAgo = dateStr(new Date(today.getFullYear() - 1, today.getMonth(), today.getDate()))
+    const lastIncrease: { [key: string]: string } = {}
+    ;(rentIncreases || []).forEach((inc: any) => {
+      if (!lastIncrease[inc.contract_id] || inc.effective_date > lastIncrease[inc.contract_id]) {
+        lastIncrease[inc.contract_id] = inc.effective_date
+      }
+    })
+    const erhoehbar = (contracts || []).filter((c: any) => {
+      if (!c.is_active || Number(c.rent_amount || 0) <= 0) return false
+      const last = lastIncrease[c.id] || c.start_date
+      return last && last <= twelveMonthsAgo
+    })
+    if (erhoehbar.length > 0) {
+      const ehNames = erhoehbar.slice(0, 2).map((c: any) => (tenants || []).find((tt: any) => tt.id === c.tenant_id)?.full_name || '—').join(', ')
+      actionItems.push({
+        priority: 'info',
+        title: `Mieterhöhung möglich bei ${erhoehbar.length} ${erhoehbar.length === 1 ? 'Vertrag' : 'Verträgen'} (§ 558 Sperrfrist um)`,
+        description: ehNames + (erhoehbar.length > 2 ? '…' : '') + ' — Miete seit 12+ Monaten unverändert',
+        href: '/contracts'
       })
     }
 
@@ -580,14 +636,14 @@ export default function Dashboard() {
                 Keine offenen Aufgaben — top!
               </div>
             ) : (
-              stats.actionItems.slice(0, 5).map((item, i) => (
+              stats.actionItems.slice(0, 6).map((item, i) => (
                 <a key={i} href={item.href || '#'} style={{
                   textDecoration: 'none', color: 'inherit', display: 'block'
                 }}>
                   <div style={{
                     display: 'flex', alignItems: 'flex-start', gap: '10px',
                     padding: '12px 0',
-                    borderBottom: i < Math.min(stats.actionItems.length, 5) - 1 ? '1px solid #e8e6e0' : 'none',
+                    borderBottom: i < Math.min(stats.actionItems.length, 6) - 1 ? '1px solid #e8e6e0' : 'none',
                     cursor: 'pointer'
                   }}>
                     <div style={{

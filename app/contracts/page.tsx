@@ -384,6 +384,7 @@ export default function Contracts() {
                         </p>
                       )}
                     </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }} className="items-start md:items-end">
                     <div className="flex flex-wrap items-center gap-2 justify-start md:justify-end">
                       <div className="text-left md:text-right">
                         <p style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 2px' }}>{formatEur(c.rent_amount)}/Mo.</p>
@@ -405,10 +406,13 @@ export default function Contracts() {
                       {c.is_active && (
                         <button onClick={() => openIncreaseModal(c.id, parseFloat(c.rent_cold || '0'), parseFloat(c.utility_advance || '0'))} style={{ backgroundColor: '#fef3c7', color: '#92400e', padding: '8px 14px', borderRadius: '8px', border: '1px solid #fde68a', fontSize: '13px', cursor: 'pointer' }}><TrendingUp size={13} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '6px' }} />Miete ändern</button>
                       )}
+                    </div>
+                    <div style={{ display: 'flex', gap: '18px' }}>
                       {c.is_active && (
-                        <button onClick={() => setEndConfirm(c.id)} style={{ backgroundColor: '#fff', color: '#d97706', padding: '8px 14px', borderRadius: '8px', border: '1px solid #fed7aa', fontSize: '13px', cursor: 'pointer' }}>Beenden</button>
+                        <button onClick={() => setEndConfirm(c.id)} style={{ background: 'none', border: 'none', padding: 0, color: '#d97706', fontSize: '12.5px', cursor: 'pointer', textDecoration: 'underline' }}>Beenden</button>
                       )}
-                      <button onClick={() => setDeleteConfirm(c.id)} style={{ backgroundColor: '#fff', color: '#dc2626', padding: '8px 14px', borderRadius: '8px', border: '1px solid #fecaca', fontSize: '13px', cursor: 'pointer' }}>Löschen</button>
+                      <button onClick={() => setDeleteConfirm(c.id)} style={{ background: 'none', border: 'none', padding: 0, color: '#dc2626', fontSize: '12.5px', cursor: 'pointer', textDecoration: 'underline' }}>Löschen</button>
+                    </div>
                     </div>
                   </div>
                 )}

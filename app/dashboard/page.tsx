@@ -376,8 +376,16 @@ export default function Dashboard() {
     return (
       <>
         <Nav />
-        <main style={{ padding: '4rem 2rem', textAlign: 'center', color: '#888' }}>
-          Lade Dashboard…
+        <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '1.5rem 1.25rem 6rem' }}>
+          <div className="mn-skeleton" style={{ height: '34px', width: '280px', marginBottom: '8px' }} />
+          <div className="mn-skeleton" style={{ height: '14px', width: '200px', marginBottom: '24px' }} />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3" style={{ marginBottom: '1.5rem' }}>
+            {[0, 1, 2, 3].map(i => <div key={i} className="mn-skeleton" style={{ height: '110px' }} />)}
+          </div>
+          <div className="flex flex-col gap-3 md:grid md:grid-cols-2">
+            <div className="mn-skeleton" style={{ height: '220px' }} />
+            <div className="mn-skeleton" style={{ height: '220px' }} />
+          </div>
         </main>
       </>
     )
@@ -687,12 +695,15 @@ export default function Dashboard() {
             ) : (
               stats.recentActivity.map((a, i) => (
                 <div key={i} style={{
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  display: 'flex', alignItems: 'center', gap: '10px',
                   padding: '8px 0', fontSize: '12.5px',
                   borderBottom: i < stats.recentActivity.length - 1 ? '1px solid #e8e6e0' : 'none'
                 }}>
-                  <span>{a.text}</span>
-                  <span style={{ fontSize: '11px', color: '#bbb' }}>{a.meta}</span>
+                  <span style={{ width: '30px', height: '30px', borderRadius: '50%', backgroundColor: '#f0eeea', color: '#444', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 600, flexShrink: 0 }}>
+                    {a.text.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()}
+                  </span>
+                  <span style={{ flex: 1 }}>{a.text}</span>
+                  <span style={{ fontSize: '11px', color: '#bbb', flexShrink: 0 }}>{a.meta}</span>
                 </div>
               ))
             )}

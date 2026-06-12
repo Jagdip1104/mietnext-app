@@ -648,7 +648,7 @@ export default function Properties() {
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <span style={{ fontSize: '12px', color: '#999', backgroundColor: '#f5f4f0', padding: '4px 12px', borderRadius: '20px' }}>
-                      {p.units?.[0]?.count || 0} Einheiten
+                      {p.units?.[0]?.count || 0} {(p.units?.[0]?.count || 0) === 1 ? 'Einheit' : 'Einheiten'}
                     </span>
                     <button onClick={() => handleEdit(p)} style={{
                       backgroundColor: '#fff', color: '#666', padding: '8px 14px',

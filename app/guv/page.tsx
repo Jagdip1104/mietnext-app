@@ -1,6 +1,7 @@
 'use client'
 
 import { useToast } from '@/components/ui/Toast'
+import { BarChart3 } from 'lucide-react'
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
@@ -330,7 +331,7 @@ export default function GuvPage() {
 
         {!loaded && !loading && (
           <div style={{ ...card, textAlign: 'center', padding: '64px' }}>
-            <p style={{ fontSize: '32px', margin: '0 0 12px' }}>📊</p>
+            <BarChart3 size={36} style={{ color: '#d4d2cc', margin: '0 auto 12px', display: 'block' }} />
             <p style={{ fontSize: '15px', color: '#999', margin: '0 0 4px' }}>Objekt und Jahr wählen</p>
             <p style={{ fontSize: '13px', color: '#bbb', margin: 0 }}>Dann auf "GuV laden" klicken</p>
           </div>

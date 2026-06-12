@@ -1,6 +1,7 @@
 'use client'
 
 import { useToast } from '@/components/ui/Toast'
+import { Banknote, TrendingUp } from 'lucide-react'
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
@@ -370,11 +371,11 @@ export default function Contracts() {
                         {c.end_date && ` bis ${new Date(c.end_date).toLocaleDateString('de-DE')}`}
                       </p>
                       <p style={{ fontSize: '12px', color: '#16a34a', margin: 0 }}>
-                        💶 {paymentCounts[c.id] || 0} Zahlungen · {paidCounts[c.id] || 0} bezahlt
+                        <Banknote size={13} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '6px' }} />{paymentCounts[c.id] || 0} Zahlungen · {paidCounts[c.id] || 0} bezahlt
                       </p>
                       {(rentIncreasesByContract[c.id] || []).length > 0 && (
                         <p style={{ fontSize: '11px', color: '#92400e', margin: '4px 0 0' }}>
-                          📈 {(rentIncreasesByContract[c.id] || []).length} Mieteränderung{(rentIncreasesByContract[c.id] || []).length !== 1 ? 'en' : ''}
+                          <TrendingUp size={12} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '6px' }} />{(rentIncreasesByContract[c.id] || []).length} Mieteränderung{(rentIncreasesByContract[c.id] || []).length !== 1 ? 'en' : ''}
                         </p>
                       )}
                     </div>
@@ -394,7 +395,7 @@ export default function Contracts() {
                       )}
                       <button onClick={() => handleEdit(c)} style={{ backgroundColor: '#fff', color: '#666', padding: '8px 14px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer' }}>Bearbeiten</button>
                       {c.is_active && (
-                        <button onClick={() => openIncreaseModal(c.id, parseFloat(c.rent_cold || '0'), parseFloat(c.utility_advance || '0'))} style={{ backgroundColor: '#fef3c7', color: '#92400e', padding: '8px 14px', borderRadius: '8px', border: '1px solid #fde68a', fontSize: '13px', cursor: 'pointer' }}>📈 Miete ändern</button>
+                        <button onClick={() => openIncreaseModal(c.id, parseFloat(c.rent_cold || '0'), parseFloat(c.utility_advance || '0'))} style={{ backgroundColor: '#fef3c7', color: '#92400e', padding: '8px 14px', borderRadius: '8px', border: '1px solid #fde68a', fontSize: '13px', cursor: 'pointer' }}><TrendingUp size={13} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '6px' }} />Miete ändern</button>
                       )}
                       {c.is_active && (
                         <button onClick={() => setEndConfirm(c.id)} style={{ backgroundColor: '#fff', color: '#d97706', padding: '8px 14px', borderRadius: '8px', border: '1px solid #fed7aa', fontSize: '13px', cursor: 'pointer' }}>Beenden</button>
@@ -512,7 +513,7 @@ export default function Contracts() {
               )}
 
               {pendingPaymentsCount > 0 && (
-                <div style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', padding: '12px', borderRadius: '8px', marginBottom: '16px' }}>
+                <div style={{ backgroundColor: '#fafaf8', border: '1px solid #e8e6e0', padding: '12px', borderRadius: '8px', marginBottom: '16px' }}>
                   <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', cursor: 'pointer' }}>
                     <input type="checkbox" checked={updatePaymentsToo} onChange={e => setUpdatePaymentsToo(e.target.checked)} style={{ marginTop: '2px' }} />
                     <div>

@@ -165,7 +165,7 @@ export default function Tenants() {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       {t.units ? (
-                        <span style={{ fontSize: '12px', color: '#3b82f6', backgroundColor: '#eff6ff', padding: '4px 12px', borderRadius: '20px' }}>
+                        <span style={{ fontSize: '12px', color: '#444', backgroundColor: '#f0eeea', padding: '4px 12px', borderRadius: '20px' }}>
                           {t.units.properties?.name} – {t.units.name}
                         </span>
                       ) : (

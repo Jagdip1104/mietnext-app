@@ -215,7 +215,7 @@ export default function Payments() {
                 <div key={g.tenantId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', padding: '10px 0', borderBottom: '1px solid #f5f4ef' }}>
                   <div>
                     <p style={{ fontSize: '14px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 2px' }}>{g.tenantName}</p>
-                    <p style={{ fontSize: '12px', color: '#bbb', margin: 0 }}>{g.propertyName} · {g.payments.length} offene Posten · {g.total.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</p>
+                    <p style={{ fontSize: '12px', color: '#bbb', margin: 0 }}>{g.propertyName} · {g.payments.length} {g.payments.length === 1 ? 'offener' : 'offene'} Posten · {g.total.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</p>
                   </div>
                   <button onClick={() => setMahnungData(g)} style={{ backgroundColor: '#fff', color: '#dc2626', padding: '8px 16px', borderRadius: '8px', border: '1px solid #fecaca', fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                     Mahnung erstellen

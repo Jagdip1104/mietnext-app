@@ -805,10 +805,11 @@ const kpiLabelStyle: React.CSSProperties = {
   marginBottom: '8px'
 }
 const kpiValueStyle: React.CSSProperties = {
-  fontSize: '24px',
+  fontSize: 'clamp(16px, 5vw, 24px)',
   fontWeight: 500,
   lineHeight: 1.1,
-  marginBottom: '6px'
+  marginBottom: '6px',
+  whiteSpace: 'nowrap'
 }
 const qaStyle: React.CSSProperties = {
   padding: '8px 14px',

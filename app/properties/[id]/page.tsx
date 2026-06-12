@@ -53,23 +53,23 @@ function ExpandableUnit({ unit, forceOpen }: { unit: UnitRow; forceOpen: boolean
   const isVacant = !unit.tenant
   useEffect(() => { setOpen(forceOpen) }, [forceOpen])
   return (
-    <div className="border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-      <button onClick={() => setOpen(o => !o)} className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${isVacant ? 'bg-gray-50 hover:bg-gray-100' : 'bg-white hover:bg-gray-50'}`}>
-        <span className="text-gray-400 flex-shrink-0">
+    <div className="border border-[#e8e6e0] rounded-lg overflow-hidden shadow-sm">
+      <button onClick={() => setOpen(o => !o)} className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${isVacant ? 'bg-[#fafaf8] hover:bg-[#f0eeea]' : 'bg-white hover:bg-[#fafaf8]'}`}>
+        <span className="text-[#bbb] flex-shrink-0">
           {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
         </span>
         <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
-          <span className="font-medium text-gray-900 text-sm">{unit.name}</span>
-          {unit.unit_code && <span className="text-xs font-mono text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">{unit.unit_code}</span>}
-          {unit.floor != null && <span className="text-xs text-gray-400 flex items-center gap-0.5"><Layers className="h-3 w-3" />{unit.floor === '0' || unit.floor === 'EG' ? 'EG' : `${unit.floor}. OG`}</span>}
-          {unit.size_sqm && <span className="text-xs text-gray-400">{unit.size_sqm} m²</span>}
+          <span className="font-medium text-[#1a1a1a] text-sm">{unit.name}</span>
+          {unit.unit_code && <span className="text-xs font-mono text-[#bbb] bg-[#f0eeea] px-1.5 py-0.5 rounded">{unit.unit_code}</span>}
+          {unit.floor != null && <span className="text-xs text-[#bbb] flex items-center gap-0.5"><Layers className="h-3 w-3" />{unit.floor === '0' || unit.floor === 'EG' ? 'EG' : `${unit.floor}. OG`}</span>}
+          {unit.size_sqm && <span className="text-xs text-[#bbb]">{unit.size_sqm} m²</span>}
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {isVacant ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-500"><UserX className="h-3 w-3" />Leerstand</span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-[#f0eeea] px-2.5 py-1 text-xs font-medium text-[#888]"><UserX className="h-3 w-3" />Leerstand</span>
           ) : (
             <>
-              <span className="text-sm text-gray-700 hidden sm:block">{unit.tenant!.full_name}</span>
+              <span className="text-sm text-[#444] hidden sm:block">{unit.tenant!.full_name}</span>
               {status === 'active'      && <Circle className="h-2.5 w-2.5 fill-emerald-500 text-emerald-500" />}
               {status === 'not_invited' && <Circle className="h-2.5 w-2.5 fill-red-400 text-red-400" />}
               <PaymentBadge payment={unit.lastPayment} />
@@ -78,19 +78,19 @@ function ExpandableUnit({ unit, forceOpen }: { unit: UnitRow; forceOpen: boolean
         </div>
       </button>
       {open && (
-        <div className="border-t border-gray-100 bg-gray-50 px-4 py-4">
+        <div className="border-t border-[#f0eeea] bg-[#fafaf8] px-4 py-4">
           {isVacant ? (
             <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-500">Diese Einheit hat keinen Mieter.</p>
-              <Link href={`/tenants?unit=${unit.id}`} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors"><Plus className="h-3.5 w-3.5" />Mieter anlegen</Link>
+              <p className="text-sm text-[#888]">Diese Einheit hat keinen Mieter.</p>
+              <Link href={`/tenants?unit=${unit.id}`} className="inline-flex items-center gap-1.5 rounded-lg bg-[#1a1a1a] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#333] transition-colors"><Plus className="h-3.5 w-3.5" />Mieter anlegen</Link>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-1.5">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-1"><User className="h-3.5 w-3.5" />Mieter</p>
-                <p className="text-sm font-medium text-gray-900">{unit.tenant!.full_name}</p>
-                {unit.tenant!.email && <a href={`mailto:${unit.tenant!.email}`} className="flex items-center gap-1.5 text-xs text-blue-600 hover:underline"><Mail className="h-3 w-3" />{unit.tenant!.email}</a>}
-                {unit.tenant!.phone && <a href={`tel:${unit.tenant!.phone}`} className="flex items-center gap-1.5 text-xs text-gray-600"><Phone className="h-3 w-3" />{unit.tenant!.phone}</a>}
+                <p className="text-xs font-semibold text-[#bbb] uppercase tracking-wide flex items-center gap-1"><User className="h-3.5 w-3.5" />Mieter</p>
+                <p className="text-sm font-medium text-[#1a1a1a]">{unit.tenant!.full_name}</p>
+                {unit.tenant!.email && <a href={`mailto:${unit.tenant!.email}`} className="flex items-center gap-1.5 text-xs text-[#1a1a1a] underline hover:underline"><Mail className="h-3 w-3" />{unit.tenant!.email}</a>}
+                {unit.tenant!.phone && <a href={`tel:${unit.tenant!.phone}`} className="flex items-center gap-1.5 text-xs text-[#666]"><Phone className="h-3 w-3" />{unit.tenant!.phone}</a>}
                 <div>
                   {status === 'active' && <span className="inline-flex items-center gap-1 text-xs text-emerald-700"><CheckCircle2 className="h-3 w-3" />Portal-Zugang aktiv</span>}
                   
@@ -98,25 +98,25 @@ function ExpandableUnit({ unit, forceOpen }: { unit: UnitRow; forceOpen: boolean
                 </div>
               </div>
               <div className="space-y-1.5">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-1"><FileText className="h-3.5 w-3.5" />Vertrag</p>
+                <p className="text-xs font-semibold text-[#bbb] uppercase tracking-wide flex items-center gap-1"><FileText className="h-3.5 w-3.5" />Vertrag</p>
                 {unit.contract ? (
                   <>
-                    <p className="text-sm font-semibold text-gray-900">{formatCurrency(unit.contract.rent_amount)}<span className="text-xs font-normal text-gray-500 ml-1">/ Monat</span></p>
-                    <p className="text-xs text-gray-500">{formatDate(unit.contract.start_date)} – {unit.contract.end_date ? formatDate(unit.contract.end_date) : 'unbefristet'}</p>
-                    <span className={`inline-block text-xs rounded-full px-2 py-0.5 font-medium ${unit.contract.is_active ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-gray-100 text-gray-600'}`}>{unit.contract.is_active ? 'Aktiv' : 'Beendet'}</span>
+                    <p className="text-sm font-semibold text-[#1a1a1a]">{formatCurrency(unit.contract.rent_amount)}<span className="text-xs font-normal text-[#888] ml-1">/ Monat</span></p>
+                    <p className="text-xs text-[#888]">{formatDate(unit.contract.start_date)} – {unit.contract.end_date ? formatDate(unit.contract.end_date) : 'unbefristet'}</p>
+                    <span className={`inline-block text-xs rounded-full px-2 py-0.5 font-medium ${unit.contract.is_active ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-[#f0eeea] text-[#666]'}`}>{unit.contract.is_active ? 'Aktiv' : 'Beendet'}</span>
                   </>
-                ) : <p className="text-xs text-gray-400">Kein Vertrag gefunden</p>}
+                ) : <p className="text-xs text-[#bbb]">Kein Vertrag gefunden</p>}
               </div>
               <div className="space-y-1.5">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-1"><CreditCard className="h-3.5 w-3.5" />Letzte Zahlung</p>
+                <p className="text-xs font-semibold text-[#bbb] uppercase tracking-wide flex items-center gap-1"><CreditCard className="h-3.5 w-3.5" />Letzte Zahlung</p>
                 {unit.lastPayment ? (
                   <>
-                    <p className="text-sm font-semibold text-gray-900">{formatCurrency(unit.lastPayment.amount)}</p>
-                    <p className="text-xs text-gray-500">Fällig: {formatDate(unit.lastPayment.due_date)}</p>
-                    {unit.lastPayment.paid_date && <p className="text-xs text-gray-500">Bezahlt: {formatDate(unit.lastPayment.paid_date)}</p>}
+                    <p className="text-sm font-semibold text-[#1a1a1a]">{formatCurrency(unit.lastPayment.amount)}</p>
+                    <p className="text-xs text-[#888]">Fällig: {formatDate(unit.lastPayment.due_date)}</p>
+                    {unit.lastPayment.paid_date && <p className="text-xs text-[#888]">Bezahlt: {formatDate(unit.lastPayment.paid_date)}</p>}
                     <PaymentBadge payment={unit.lastPayment} />
                   </>
-                ) : <p className="text-xs text-gray-400">Keine Zahlungen</p>}
+                ) : <p className="text-xs text-[#bbb]">Keine Zahlungen</p>}
               </div>
             </div>
           )}
@@ -182,39 +182,39 @@ export default function PropertyDetailPage() {
   const vacant = totalUnits - occupied
   const overdueCount = units.filter(u => u.lastPayment?.status === 'overdue').length
 
-  if (loading) return <div className="flex items-center justify-center min-h-[60vh]"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
+  if (loading) return <div className="flex items-center justify-center min-h-[60vh]"><Loader2 className="h-6 w-6 animate-spin text-[#bbb]" /></div>
   if (error) return (
     <div className="max-w-2xl mx-auto px-4 py-12 text-center">
       <AlertCircle className="h-10 w-10 text-red-400 mx-auto mb-3" />
-      <p className="text-gray-600">{error}</p>
-      <Link href="/properties" className="mt-4 inline-block text-sm text-blue-600 hover:underline">← Zurück zur Übersicht</Link>
+      <p className="text-[#666]">{error}</p>
+      <Link href="/properties" className="mt-4 inline-block text-sm text-[#1a1a1a] underline hover:underline">← Zurück zur Übersicht</Link>
     </div>
   )
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
       <div>
-        <Link href="/properties" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 mb-4"><ArrowLeft className="h-4 w-4" />Alle Objekte</Link>
+        <Link href="/properties" className="inline-flex items-center gap-1.5 text-sm text-[#888] hover:text-[#1a1a1a] mb-4"><ArrowLeft className="h-4 w-4" />Alle Objekte</Link>
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2"><Building2 className="h-6 w-6 text-blue-600 flex-shrink-0" />{property!.name}</h1>
-            <p className="text-gray-500 mt-0.5 text-sm">
+            <h1 className="flex items-center gap-2" style={{ fontSize: '28px', fontWeight: 400, fontFamily: 'Georgia, serif', color: '#1a1a1a' }}><Building2 className="h-6 w-6 flex-shrink-0" strokeWidth={1.5} style={{ color: '#888' }} />{property!.name}</h1>
+            <p className="text-[#888] mt-0.5 text-sm">
               {property!.address}
               {(property!.zip || property!.city) && `, ${[property!.zip, property!.city].filter(Boolean).join(' ')}`}
             </p>
           </div>
-          <Link href={`/units?property=${propertyId}`} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors flex-shrink-0"><Plus className="h-4 w-4" />Einheit hinzufügen</Link>
+          <Link href={`/units?property=${propertyId}`} className="inline-flex items-center gap-1.5 rounded-lg border border-[#e8e6e0] px-3 py-2 text-sm font-medium text-[#444] hover:bg-[#fafaf8] transition-colors flex-shrink-0"><Plus className="h-4 w-4" />Einheit hinzufügen</Link>
         </div>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Einheiten gesamt', value: totalUnits, color: 'text-gray-900' },
+          { label: 'Einheiten gesamt', value: totalUnits, color: 'text-[#1a1a1a]' },
           { label: 'Vermietet', value: occupied, color: 'text-emerald-700' },
-          { label: 'Leerstand', value: vacant, color: vacant > 0 ? 'text-amber-600' : 'text-gray-400' },
-          { label: 'Überfällig', value: overdueCount, color: overdueCount > 0 ? 'text-red-600' : 'text-gray-400' },
+          { label: 'Leerstand', value: vacant, color: vacant > 0 ? 'text-amber-600' : 'text-[#bbb]' },
+          { label: 'Überfällig', value: overdueCount, color: overdueCount > 0 ? 'text-red-600' : 'text-[#bbb]' },
         ].map(s => (
-          <div key={s.label} className="rounded-xl border border-gray-200 bg-white px-4 py-3">
-            <p className="text-xs text-gray-500 mb-1">{s.label}</p>
+          <div key={s.label} className="rounded-xl border border-[#e8e6e0] bg-white px-4 py-3">
+            <p className="text-xs text-[#888] mb-1">{s.label}</p>
             <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
           </div>
         ))}
@@ -222,10 +222,10 @@ export default function PropertyDetailPage() {
       {units.length > 0 && (
         <>
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Einheiten ({totalUnits})</h2>
-            <button onClick={() => setExpandAll(v => !v)} className="text-xs text-blue-600 hover:underline">{expandAll ? 'Alle einklappen' : 'Alle aufklappen'}</button>
+            <h2 className="text-sm font-semibold text-[#666] uppercase tracking-wide">Einheiten ({totalUnits})</h2>
+            <button onClick={() => setExpandAll(v => !v)} className="text-xs text-[#1a1a1a] underline hover:underline">{expandAll ? 'Alle einklappen' : 'Alle aufklappen'}</button>
           </div>
-          <div className="flex items-center gap-4 text-xs text-gray-400 flex-wrap -mt-3">
+          <div className="flex items-center gap-4 text-xs text-[#bbb] flex-wrap -mt-3">
             <span className="flex items-center gap-1.5"><Circle className="h-2 w-2 fill-emerald-500 text-emerald-500" />Portal aktiv</span>
             <span className="flex items-center gap-1.5"><Circle className="h-2 w-2 fill-amber-400 text-amber-400" />Eingeladen</span>
             <span className="flex items-center gap-1.5"><Circle className="h-2 w-2 fill-red-400 text-red-400" />Nicht eingeladen</span>
@@ -233,9 +233,9 @@ export default function PropertyDetailPage() {
         </>
       )}
       {units.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-6 py-12 text-center">
-          <Building2 className="h-10 w-10 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500 text-sm">Noch keine Einheiten angelegt.</p>
+        <div className="rounded-xl border border-dashed border-[#d4d2cc] bg-[#fafaf8] px-6 py-12 text-center">
+          <Building2 className="h-10 w-10 text-[#d4d2cc] mx-auto mb-3" />
+          <p className="text-[#888] text-sm">Noch keine Einheiten angelegt.</p>
         </div>
       ) : (
         <div className="space-y-2">

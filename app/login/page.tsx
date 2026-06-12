@@ -70,7 +70,7 @@ export default function LoginPage() {
           <p className="text-2xl font-normal text-white mb-6 leading-relaxed" style={{ fontFamily: 'Georgia, serif' }}>
             "Endlich habe ich alle meine Objekte und Mieter an einem Ort."
           </p>
-          <p className="text-sm text-[#888] m-0">— Jagdip Singh, Vermieter aus Düsseldorf</p>
+          <p className="text-sm text-[#888] m-0">— Jagdip Singh, Gründer & selbst Vermieter</p>
         </div>
       </div>
 

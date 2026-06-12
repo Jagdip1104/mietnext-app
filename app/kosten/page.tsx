@@ -670,7 +670,7 @@ export default function KostenPage() {
                     </optgroup>
                   </select>
                   <input type="number" value={row.amount} onChange={e => updateBulkRow(i, 'amount', e.target.value)} placeholder="€" style={inp} />
-                  <input type="date" value={row.expense_date} onChange={e => updateBulkRow(i, 'expense_date', e.target.value)} style={inp} />
+                  <input type="date" value={row.expense_date} onChange={e => updateBulkRow(i, 'expense_date', e.target.value)} style={{ ...inp, minWidth: 0, width: '100%', maxWidth: '100%' }} />
                   <button onClick={() => removeBulkRow(i)} title="Zeile entfernen"
                     style={{ background: 'none', border: 'none', color: '#dc2626', fontSize: '18px', cursor: 'pointer', padding: '0 8px' }}>✕</button>
                 </div>
@@ -747,7 +747,7 @@ export default function KostenPage() {
                       </p>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <p style={{ fontSize: '18px', fontWeight: '500', color: '#1a1a1a', margin: 0, fontFamily: 'Georgia, serif' }}>
+                      <p style={{ fontSize: '18px', fontWeight: '500', color: '#1a1a1a', margin: 0, fontFamily: 'Georgia, serif', whiteSpace: 'nowrap' }}>
                         {formatEur(Number(e.amount))}
                       </p>
                       {e.receipt_path && (

@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Nav from '@/components/Nav'
 import { useToast } from '@/components/ui/Toast'
+import { Paperclip, FileStack } from 'lucide-react'
 
 const SONSTIGE = new Set(['sonstige_uml', 'sonstige_nicht'])
 const MAX_FILES = 10
@@ -236,7 +237,7 @@ export default function KostenStapelPage() {
           <button type="button" onClick={() => fileInputRef.current?.click()}
             disabled={rows.length >= MAX_FILES || !!scanProgress}
             style={{ backgroundColor: '#fff', color: '#1a1a1a', padding: '14px 16px', borderRadius: '8px', border: '1.5px dashed #1a1a1a', fontSize: '14px', cursor: (rows.length >= MAX_FILES || scanProgress) ? 'default' : 'pointer', width: '100%', textAlign: 'center', fontWeight: 500, opacity: (rows.length >= MAX_FILES || scanProgress) ? 0.5 : 1 }}>
-            📎 Belege auswählen {rows.length > 0 && `(${rows.length}/${MAX_FILES})`}
+            <Paperclip size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '6px' }} />Belege auswählen {rows.length > 0 && `(${rows.length}/${MAX_FILES})`}
           </button>
           {scanProgress && <p style={{ fontSize: '13px', color: '#1e40af', margin: '12px 0 0', textAlign: 'center' }}>🤖 Scanne {scanProgress.done} / {scanProgress.total}…</p>}
         </div>
@@ -250,7 +251,7 @@ export default function KostenStapelPage() {
 
         {rows.length === 0 ? (
           <div style={{ ...card, textAlign: 'center', padding: '56px' }}>
-            <p style={{ fontSize: '32px', margin: '0 0 12px' }}>📚</p>
+            <FileStack size={36} style={{ color: '#d4d2cc', margin: '0 auto 12px', display: 'block' }} />
             <p style={{ fontSize: '15px', color: '#999', margin: 0 }}>Noch keine Belege ausgewählt.</p>
             <p style={{ fontSize: '13px', color: '#bbb', margin: '4px 0 0' }}>Lade bis zu {MAX_FILES} Fotos oder PDFs auf einmal hoch.</p>
           </div>
@@ -263,7 +264,7 @@ export default function KostenStapelPage() {
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '12px' }}>
                     <button type="button" onClick={() => window.open(URL.createObjectURL(r.file), '_blank')}
                       style={{ background: 'none', border: 'none', padding: 0, fontSize: '13px', color: '#1a1a1a', fontWeight: 500, cursor: 'pointer', textAlign: 'left', textDecoration: 'underline', wordBreak: 'break-word', overflowWrap: 'anywhere', minWidth: 0, flex: 1 }}>
-                      📎 {r.file.name}
+                      <Paperclip size={12} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '6px' }} />{r.file.name}
                     </button>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                       {r.status === 'scanning' && <span style={{ fontSize: '11px', color: '#1e40af' }}>🤖 scannt…</span>}

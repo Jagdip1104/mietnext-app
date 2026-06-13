@@ -90,6 +90,7 @@ export default function NebenkostenabrechnungDetail() {
   const [showWegForm, setShowWegForm] = useState(false)
   const [wegUnitId, setWegUnitId] = useState<string>('')
   const [wegRows, setWegRows] = useState<any[]>([])
+  const [wegScanning, setWegScanning] = useState(false)
 
   useEffect(() => { if (id) loadData() }, [id])
 
@@ -211,6 +212,43 @@ export default function NebenkostenabrechnungDetail() {
     ])
     setShowBulkForm(false)
     loadData()
+  }
+
+  const handleWegFile = async (file: File) => {
+    if (!file) return
+    setWegScanning(true)
+    try {
+      const base64: string = await new Promise((res, rej) => {
+        const r = new FileReader()
+        r.onload = () => res(String(r.result).split(',')[1] || '')
+        r.onerror = () => rej(new Error('Datei nicht lesbar'))
+        r.readAsDataURL(file)
+      })
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { toast.error('Nicht angemeldet'); setWegScanning(false); return }
+      const resp = await fetch('/api/scan-hausgeld', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ fileBase64: base64, mediaType: file.type }),
+      })
+      const json = await resp.json()
+      if (!resp.ok) { toast.error(json.error || 'Scan fehlgeschlagen'); setWegScanning(false); return }
+      const pos = Array.isArray(json.positions) ? json.positions : []
+      if (pos.length === 0) { toast.error('Keine Positionen erkannt — bitte manuell erfassen.'); setWegScanning(false); return }
+      const rows = pos.map((p: any) => {
+        const c = classifyWeg(p.bezeichnung)
+        return { name: p.bezeichnung, amount: p.betrag ? String(p.betrag) : '', umlagefaehig: c.umlagefaehig, betrev: undefined, betrkv: c.betrkv, source: 'weg' }
+      })
+      // Grundsteuer ergaenzen, falls die KI sie nicht erkannt hat
+      if (!rows.some((r: any) => (r.name || '').toLowerCase().includes('grundsteuer'))) {
+        rows.unshift({ name: 'Grundsteuer', amount: '', umlagefaehig: true, betrkv: 'grundsteuer', source: 'eigentuemer' })
+      }
+      setWegRows(rows)
+      toast.success(pos.length + ' Positionen erkannt — bitte Beträge prüfen')
+    } catch (e: any) {
+      toast.error('Fehler: ' + (e.message || String(e)))
+    }
+    setWegScanning(false)
   }
 
   const openWegForm = () => {
@@ -1030,6 +1068,18 @@ export default function NebenkostenabrechnungDetail() {
               <p style={{ fontSize: '12.5px', color: '#888', margin: '0 0 16px', lineHeight: 1.5 }}>
                 Positionen aus der Verwalter-Abrechnung mit <strong>deinem Anteil in €</strong> eintragen. MietNext schlägt umlagefähig ja/nein automatisch vor — Grundsteuer ist als Eigentümer-Direktkosten schon vorbelegt.
               </p>
+              <div style={{ backgroundColor: '#fafaf8', border: '1px dashed #d4d2cc', borderRadius: '10px', padding: '14px 16px', marginBottom: '16px' }}>
+                <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: wegScanning ? 'wait' : 'pointer', fontSize: '13px', fontWeight: 500, color: '#1a1a1a' }}>
+                  <Download size={15} style={{ transform: 'rotate(180deg)' }} />
+                  {wegScanning ? 'Wird gelesen…' : 'Hausgeldabrechnung hochladen (Foto/PDF)'}
+                  <input type="file" accept="image/*,application/pdf" disabled={wegScanning}
+                    onChange={e => { const f = e.target.files?.[0]; if (f) handleWegFile(f); e.currentTarget.value = '' }}
+                    style={{ display: 'none' }} />
+                </label>
+                <p style={{ fontSize: '11.5px', color: '#a16207', margin: '8px 0 0', lineHeight: 1.5 }}>
+                  Die KI liest die Positionen + deinen Anteil aus und füllt die Zeilen vor. <strong>Bitte gegen das Original prüfen</strong>, besonders die Beträge. Lade möglichst die ganze Seite hoch (Spalte „Ihr Anteil" muss sichtbar sein).
+                </p>
+              </div>
               {units.length > 1 && (
                 <div style={{ marginBottom: '14px' }}>
                   <label style={lbl}>Für welche Einheit?</label>

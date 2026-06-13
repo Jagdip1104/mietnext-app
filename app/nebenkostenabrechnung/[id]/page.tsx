@@ -9,6 +9,38 @@ import Nav from '@/components/Nav'
 import { useToast } from '@/components/ui/Toast'
 import { Pencil, Download, RefreshCw, FileText, Undo2 } from 'lucide-react'
 
+// Hausverwaltungs-Position -> { §2-Topf, umlagefähig }. Reihenfolge: Sonderfall, dann NEIN, dann JA.
+function classifyWeg(rawName: string): { betrkv: string, umlagefaehig: boolean } {
+  const n = (rawName || '').toLowerCase().trim()
+  if (!n) return { betrkv: 'sonstige', umlagefaehig: true }
+  if (n.includes('rauchmelder') || n.includes('rauchwarnmelder')) {
+    if (n.includes('miete') || n.includes('anschaff') || n.includes('kauf')) return { betrkv: 'sonstige', umlagefaehig: false }
+    return { betrkv: 'sonstige', umlagefaehig: true }
+  }
+  const nein = ['verwalt','konto','bankgeb','rücklage','ruecklage','zuführ','zufuehr','reparatur','kl. rep','kl.rep','instandhalt','instandsetz','sanierung','modernisier','anschaff','steuerberat','rechtskost','anwalt','kredit','mahngeb']
+  if (nein.some(k => n.includes(k))) return { betrkv: 'sonstige', umlagefaehig: false }
+  const map: [string[], string][] = [
+    [['grundsteuer'], 'grundsteuer'],
+    [['abwasser','entwässer','entwasser','regenwasser','niederschlag','schmutzwasser'], 'entwasserung'],
+    [['warmwasser'], 'warmwasser'],
+    [['wasser','frischwasser'], 'wasser'],
+    [['heizung','heizkost','brennstoff','fernwärme','fernwaerme','heizöl','heizoel'], 'heizung'],
+    [['aufzug','fahrstuhl'], 'aufzug'],
+    [['müll','muell','abfall'], 'strassenreinigung'],
+    [['straßenreinig','strassenreinig','winterdienst'], 'strassenreinigung'],
+    [['treppenhaus','gebäudereinig','gebaeudereinig','hausreinig','reinigung','ungeziefer','schädling'], 'gebaeudereinigung'],
+    [['garten','grünpflege','gruenpflege','grünanlage'], 'gartenpflege'],
+    [['allgemeinstrom','beleuchtung','strom'], 'allgemeinstrom'],
+    [['schornstein','kaminkehr'], 'schornstein'],
+    [['versicher','haftpflicht'], 'versicherung'],
+    [['hauswart','hausmeister'], 'hauswart'],
+    [['antenne','kabel','multimedia'], 'antenne'],
+    [['wäsche','waesche'], 'waeschepflege'],
+  ]
+  for (const [keys, cat] of map) if (keys.some(k => n.includes(k))) return { betrkv: cat, umlagefaehig: true }
+  return { betrkv: 'sonstige', umlagefaehig: true }
+}
+
 
 
 
@@ -55,6 +87,9 @@ export default function NebenkostenabrechnungDetail() {
   const [personEdits, setPersonEdits] = useState<Record<string, string>>({})
   const [savingPersons, setSavingPersons] = useState(false)
   const [personEditMode, setPersonEditMode] = useState(false)
+  const [showWegForm, setShowWegForm] = useState(false)
+  const [wegUnitId, setWegUnitId] = useState<string>('')
+  const [wegRows, setWegRows] = useState<any[]>([])
 
   useEffect(() => { if (id) loadData() }, [id])
 
@@ -178,6 +213,53 @@ export default function NebenkostenabrechnungDetail() {
     loadData()
   }
 
+  const openWegForm = () => {
+    setWegUnitId(units[0]?.id || '')
+    setWegRows([
+      { name: 'Grundsteuer', amount: '', umlagefaehig: true, betrkv: 'grundsteuer', source: 'eigentuemer' },
+      { name: '', amount: '', umlagefaehig: true, betrkv: 'sonstige', source: 'weg' },
+      { name: '', amount: '', umlagefaehig: true, betrkv: 'sonstige', source: 'weg' },
+    ])
+    setShowWegForm(true)
+  }
+  const updateWegRow = (i: number, field: string, value: string) => {
+    setWegRows(prev => prev.map((r: any, idx: number) => {
+      if (idx !== i) return r
+      const u: any = { ...r, [field]: value }
+      if (field === 'name') { const c = classifyWeg(value); u.betrkv = c.betrkv; u.umlagefaehig = c.umlagefaehig }
+      if (field === 'umlagefaehig') u.umlagefaehig = value === 'true'
+      return u
+    }))
+  }
+  const addWegRow = () => setWegRows(prev => [...prev, { name: '', amount: '', umlagefaehig: true, betrkv: 'sonstige', source: 'weg' }])
+  const removeWegRow = (i: number) => setWegRows(prev => prev.filter((_: any, idx: number) => idx !== i))
+  const handleWegAdd = async () => {
+    const valid = wegRows.filter((r: any) => (r.name || '').trim() && r.amount && parseFloat(r.amount) > 0)
+    if (valid.length === 0) { toast.error('Mindestens eine Position mit Bezeichnung + Betrag.'); return }
+    if (!wegUnitId) { toast.error('Bitte Einheit wählen.'); return }
+    setSaving(true)
+    const toInsert = valid.map((r: any) => {
+      const ua: Record<string, string> = {}
+      units.forEach((u: any) => { ua[u.id] = u.id === wegUnitId ? String(parseFloat(r.amount)) : '0' })
+      return {
+        statement_id: id,
+        category: r.umlagefaehig ? (r.betrkv || 'sonstige') : 'sonstige',
+        description: (r.name || '').trim(),
+        total_amount: parseFloat(r.amount),
+        distribution_key: 'per_unit',
+        unit_amounts: ua,
+        is_umlagefaehig: r.umlagefaehig,
+        source: r.source || 'weg',
+      }
+    })
+    const { error } = await supabase.from('utility_cost_items').insert(toInsert)
+    setSaving(false)
+    if (error) { toast.error('Fehler: ' + error.message); return }
+    setShowWegForm(false)
+    toast.success(valid.length + ' Positionen übernommen')
+    loadData()
+  }
+
   const handleDeleteItem = async (itemId: string) => {
     await supabase.from('utility_cost_items').delete().eq('id', itemId)
     setDeleteConfirm(null)
@@ -194,6 +276,7 @@ export default function NebenkostenabrechnungDetail() {
       total_amount: String(item.total_amount),
       distribution_key: item.distribution_key,
       snapshot_amount: item.snapshot_amount,
+      is_umlagefaehig: item.is_umlagefaehig !== false,
       unit_amounts: ua,
     })
   }
@@ -215,6 +298,7 @@ export default function NebenkostenabrechnungDetail() {
       total_amount: parseFloat(editItem.total_amount),
       description: editItem.description || null,
       unit_amounts: editItem.distribution_key === 'per_unit' ? editItem.unit_amounts : null,
+      is_umlagefaehig: editItem.is_umlagefaehig !== false,
     }
     const { error } = await supabase.from('utility_cost_items').update(upd).eq('id', editItem.id)
     setSaving(false)
@@ -425,12 +509,12 @@ export default function NebenkostenabrechnungDetail() {
     manualPrepayments[unitId] !== undefined && manualPrepayments[unitId] !== null
 
   const getTotalAllocated = (unit: any) =>
-    costItems.reduce((s: number, item: any) => s + getUnitShare(item, unit), 0)
+    costItems.filter((i: any) => i.is_umlagefaehig !== false).reduce((s: number, item: any) => s + getUnitShare(item, unit), 0)
 
   // Gruppiert Kostenpositionen nach BetrKV-Kategorie (Reihenfolge stabil, Summe je Kategorie)
-  const categoryGroups = (() => {
+  const buildGroups = (items: any[]) => {
     const map = new Map<string, any>()
-    for (const item of costItems) {
+    for (const item of items) {
       const key = item.category
       if (!map.has(key)) map.set(key, { category: key, items: [], total_amount: 0, keys: new Set<string>() })
       const g = map.get(key)
@@ -439,9 +523,12 @@ export default function NebenkostenabrechnungDetail() {
       g.keys.add(item.distribution_key)
     }
     return Array.from(map.values())
-  })()
+  }
+  const categoryGroups = buildGroups(costItems)
+  // Nur umlagefähige Positionen zählen für den Mieter (WEG: Verwaltung/Rücklage etc. fließen nicht ein)
+  const umlagefaehigeItems = costItems.filter((i: any) => i.is_umlagefaehig !== false)
 
-  const totalCosts       = costItems.reduce((s: number, i: any) => s + Number(i.total_amount), 0)
+  const totalCosts       = umlagefaehigeItems.reduce((s: number, i: any) => s + Number(i.total_amount), 0)
   const totalPrepayments = units.reduce((s: number, u: any) => s + getPrepayments(u), 0)
   const totalBalance     = totalCosts - totalPrepayments
 
@@ -463,6 +550,7 @@ export default function NebenkostenabrechnungDetail() {
       const { jsPDF }   = await import('jspdf')
       const doc         = new jsPDF({ unit: 'mm', format: 'a4' })
       const activeUnits = units.filter((u: any) => getContractForUnit(u.id))
+      const pdfGroups   = buildGroups(umlagefaehigeItems)
 
       if (activeUnits.length === 0) {
         toast.error('Keine Mieter für den Abrechnungszeitraum gefunden.')
@@ -539,7 +627,7 @@ export default function NebenkostenabrechnungDetail() {
         doc.text('Ihr Anteil', 190, y, { align: 'right' })
         y += 5
 
-        categoryGroups.forEach((grp: any) => {
+        pdfGroups.forEach((grp: any) => {
           const grpShare = grp.items.reduce((s: number, it: any) => s + getUnitShare(it, unit), 0)
           doc.setFont('helvetica', 'normal')
           doc.setFontSize(9)
@@ -619,7 +707,7 @@ export default function NebenkostenabrechnungDetail() {
         doc.text('Hinweis: Einwendungen gegen diese Abrechnung sind innerhalb von 12 Monaten nach Zugang mitzuteilen (§ 556 Abs. 3 BGB).', 22, y)
 
         // ── Tortendiagramm: Kostenverteilung dieser Einheit ──
-        const pieSegs = categoryGroups
+        const pieSegs = pdfGroups
           .map((grp: any) => ({ category: grp.category, share: grp.items.reduce((s: number, it: any) => s + getUnitShare(it, unit), 0) }))
           .filter((seg: any) => seg.share > 0)
           .sort((a: any, b: any) => b.share - a.share)
@@ -794,7 +882,7 @@ export default function NebenkostenabrechnungDetail() {
               </div>
             )}
 
-            {!showAddForm && !showBulkForm && (
+            {!showAddForm && !showBulkForm && !showWegForm && (
               <button onClick={openImportModal}
                 style={{ backgroundColor: '#fff', color: '#1a1a1a', padding: '10px 20px',
                   borderRadius: '8px', border: '1.5px solid #1a1a1a', fontSize: '13px',
@@ -803,17 +891,24 @@ export default function NebenkostenabrechnungDetail() {
               </button>
             )}
 
-            {!showAddForm && !showBulkForm && (
+            {!showAddForm && !showBulkForm && !showWegForm && (
               <button onClick={() => setShowAddForm(true)}
                 style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '8px 16px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>
                 + Position hinzufügen
               </button>
             )}
 
-            {!showAddForm && !showBulkForm && (
+            {!showAddForm && !showBulkForm && !showWegForm && (
               <button onClick={() => setShowBulkForm(true)}
                 style={{ backgroundColor: '#fff', color: '#1a1a1a', padding: '8px 16px', borderRadius: '8px', border: '1.5px solid #1a1a1a', fontSize: '13px', fontWeight: '500', cursor: 'pointer', marginLeft: '8px' }}>
                 + Mehrere erfassen
+              </button>
+            )}
+
+            {!showAddForm && !showBulkForm && !showWegForm && (
+              <button onClick={openWegForm}
+                style={{ backgroundColor: '#fff', color: '#a16207', padding: '8px 16px', borderRadius: '8px', border: '1.5px solid #fde68a', fontSize: '13px', fontWeight: '500', cursor: 'pointer', marginLeft: '8px' }}>
+                <Download size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '6px' }} />Aus Hausverwaltung
               </button>
             )}
           </div>
@@ -929,6 +1024,61 @@ export default function NebenkostenabrechnungDetail() {
             </div>
           )}
 
+          {showWegForm && (
+            <div style={{ ...card, marginBottom: '12px' }}>
+              <p style={{ fontSize: '14px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 4px' }}>Aus Hausgeldabrechnung (WEG)</p>
+              <p style={{ fontSize: '12.5px', color: '#888', margin: '0 0 16px', lineHeight: 1.5 }}>
+                Positionen aus der Verwalter-Abrechnung mit <strong>deinem Anteil in €</strong> eintragen. MietNext schlägt umlagefähig ja/nein automatisch vor — Grundsteuer ist als Eigentümer-Direktkosten schon vorbelegt.
+              </p>
+              {units.length > 1 && (
+                <div style={{ marginBottom: '14px' }}>
+                  <label style={lbl}>Für welche Einheit?</label>
+                  <select value={wegUnitId} onChange={e => setWegUnitId(e.target.value)} style={{ ...inp, maxWidth: '320px' }}>
+                    {units.map((u: any) => (<option key={u.id} value={u.id}>{u.name}</option>))}
+                  </select>
+                </div>
+              )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {wegRows.map((row: any, i: number) => {
+                  const c = classifyWeg(row.name)
+                  return (
+                    <div key={i} className="flex flex-col gap-2 md:grid md:grid-cols-[1fr_110px_auto_150px_auto] md:items-center md:gap-2">
+                      <input type="text" value={row.name} onChange={e => updateWegRow(i, 'name', e.target.value)} placeholder="z.B. Gebäudevers." style={inp} />
+                      <input type="number" value={row.amount} onChange={e => updateWegRow(i, 'amount', e.target.value)} placeholder="Anteil €" style={inp} />
+                      <button onClick={() => updateWegRow(i, 'umlagefaehig', row.umlagefaehig ? 'false' : 'true')}
+                        title="Umlagefähig umschalten"
+                        style={{ whiteSpace: 'nowrap', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', cursor: 'pointer',
+                          border: row.umlagefaehig ? '1px solid #bbf7d0' : '1px solid #fecaca',
+                          backgroundColor: row.umlagefaehig ? '#f0fdf4' : '#fef2f2',
+                          color: row.umlagefaehig ? '#166534' : '#b91c1c' }}>
+                        {row.umlagefaehig ? '✓ umlagefähig' : '✕ nicht umlagef.'}
+                      </button>
+                      <select value={row.betrkv} onChange={e => updateWegRow(i, 'betrkv', e.target.value)} style={{ ...inp, fontSize: '12px' }}>
+                        {BETRKV_CATEGORIES.map((cat: any) => (<option key={cat.value} value={cat.value}>{getCatLabel(cat.value)}</option>))}
+                      </select>
+                      <button onClick={() => removeWegRow(i)} title="Zeile entfernen"
+                        style={{ background: 'none', border: 'none', color: '#dc2626', fontSize: '18px', cursor: 'pointer', padding: '0 8px' }}>✕</button>
+                    </div>
+                  )
+                })}
+              </div>
+              <button onClick={addWegRow}
+                style={{ marginTop: '12px', backgroundColor: '#fff', color: '#1a1a1a', padding: '8px 14px', borderRadius: '8px', border: '1px dashed #ccc', fontSize: '13px', cursor: 'pointer' }}>
+                + Zeile
+              </button>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+                <button onClick={handleWegAdd} disabled={saving}
+                  style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer', opacity: saving ? 0.4 : 1 }}>
+                  {saving ? 'Speichern...' : 'Positionen übernehmen'}
+                </button>
+                <button onClick={() => setShowWegForm(false)}
+                  style={{ backgroundColor: '#fff', color: '#666', padding: '10px 20px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer' }}>
+                  Abbrechen
+                </button>
+              </div>
+            </div>
+          )}
+
           {costItems.length === 0 && !showAddForm ? (
             <div style={{ ...card, textAlign: 'center', padding: '40px' }}>
               <p style={{ fontSize: '14px', color: '#bbb', margin: 0 }}>Noch keine Kostenpositionen. Füge die erste Position hinzu.</p>
@@ -962,6 +1112,7 @@ export default function NebenkostenabrechnungDetail() {
                             <p style={{ fontSize: '14px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 2px' }}>
                               {getCatLabel(item.category)}
                               {item.description && <span style={{ color: '#999', fontWeight: '400' }}> · {item.description}</span>}
+                              {item.is_umlagefaehig === false && <span style={{ marginLeft: '8px', fontSize: '11px', color: '#a16207', backgroundColor: '#fef3c7', border: '1px solid #fde68a', borderRadius: '6px', padding: '1px 7px' }}>nicht umlagefähig</span>}
                             </p>
                             <p style={{ fontSize: '12px', color: '#bbb', margin: 0 }}>{getKeyLabel(item.distribution_key)}</p>
                           </div>
@@ -1280,6 +1431,12 @@ export default function NebenkostenabrechnungDetail() {
               <div style={{ gridColumn: 'span 2' }}>
                 <label style={lbl}>Beschreibung</label>
                 <input type="text" value={editItem.description} onChange={e => setEditItem((pp: any) => ({ ...pp, description: e.target.value }))} style={inp} />
+              </div>
+              <div style={{ gridColumn: 'span 2' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: '#444' }}>
+                  <input type="checkbox" checked={editItem.is_umlagefaehig !== false} onChange={e => setEditItem((pp: any) => ({ ...pp, is_umlagefaehig: e.target.checked }))} className="w-4 h-4 accent-[#1a1a1a]" />
+                  Umlagefähig (geht an den Mieter)
+                </label>
               </div>
             </div>
             {editItem.distribution_key === 'per_unit' && (

@@ -42,6 +42,7 @@ export default function Contracts() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [endConfirm, setEndConfirm] = useState<string | null>(null)
   const [endDateInput, setEndDateInput] = useState(() => new Date().toISOString().split('T')[0])
+  const [endWarning, setEndWarning] = useState<{ id: string, payments: any[] } | null>(null)
   const [wgbContract, setWgbContract] = useState<any>(null)
   const [profile, setProfile] = useState<any>(null)
   const [userId, setUserId] = useState<string | null>(null)
@@ -158,8 +159,17 @@ export default function Contracts() {
     loadData(userId!)
   }
 
-  const handleEndContract = async (id: string) => {
+  const handleEndContract = async (id: string, force = false) => {
     const endDate = endDateInput || new Date().toISOString().split('T')[0]
+    if (!force) {
+      const { data: paidAfter } = await supabase.from('payments')
+        .select('id, due_date, amount').eq('contract_id', id).eq('status', 'paid').gt('due_date', endDate)
+        .order('due_date', { ascending: true })
+      if (paidAfter && paidAfter.length > 0) {
+        setEndWarning({ id, payments: paidAfter })
+        return
+      }
+    }
     const { error: contractError } = await supabase.from('contracts')
       .update({ is_active: false, end_date: endDate })
       .eq('id', id)
@@ -171,6 +181,7 @@ export default function Contracts() {
     await supabase.from('payments').delete()
       .eq('contract_id', id).eq('status', 'pending').gt('due_date', endDate)
     toast.success('Vertrag zum ' + new Date(endDate + 'T12:00:00').toLocaleDateString('de-DE') + ' beendet')
+    setEndWarning(null)
     setEndConfirm(null)
     loadData(userId!)
   }
@@ -376,10 +387,27 @@ export default function Contracts() {
                           style={{ border: '1px solid #e8e6e0', borderRadius: '8px', padding: '8px 12px', fontSize: '14px', color: '#1a1a1a', outline: 'none', minWidth: 0, maxWidth: '170px' }} />
                       </div>
                       <div style={{ display: 'flex', gap: '8px' }}>
-                        <button onClick={() => handleEndContract(c.id)} style={{ backgroundColor: '#d97706', color: '#fff', padding: '8px 16px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>Ja, beenden</button>
-                        <button onClick={() => setEndConfirm(null)} style={{ backgroundColor: '#fff', color: '#666', padding: '8px 16px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer' }}>Abbrechen</button>
+                        {endWarning?.id === c.id ? (
+                          <button onClick={() => handleEndContract(c.id, true)} style={{ backgroundColor: '#dc2626', color: '#fff', padding: '8px 16px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>Trotzdem beenden</button>
+                        ) : (
+                          <button onClick={() => handleEndContract(c.id)} style={{ backgroundColor: '#d97706', color: '#fff', padding: '8px 16px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>Ja, beenden</button>
+                        )}
+                        <button onClick={() => { setEndWarning(null); setEndConfirm(null) }} style={{ backgroundColor: '#fff', color: '#666', padding: '8px 16px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer' }}>Abbrechen</button>
                       </div>
                     </div>
+                    {endWarning?.id === c.id && (
+                      <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: '8px', padding: '12px 14px' }}>
+                        <p style={{ fontSize: '12.5px', color: '#92400e', margin: '0 0 6px', fontWeight: 500 }}>
+                          {endWarning?.payments.length} bezahlte {endWarning?.payments.length === 1 ? 'Zahlung liegt' : 'Zahlungen liegen'} nach dem {new Date(endDateInput + 'T12:00:00').toLocaleDateString('de-DE')}:
+                        </p>
+                        <p style={{ fontSize: '12px', color: '#92400e', margin: '0 0 6px' }}>
+                          {endWarning?.payments.map((p: any) => new Date(p.due_date + 'T12:00:00').toLocaleDateString('de-DE') + ' (' + formatEur(p.amount) + ')').join(', ')}
+                        </p>
+                        <p style={{ fontSize: '11.5px', color: '#a16207', margin: 0, lineHeight: 1.5 }}>
+                          Diese bleiben erhalten (bezahlt = §147 AO). Stimmt das Enddatum, oder waren die Markierungen ein Versehen? Versehentliche kannst du auf der Zahlungen-Seite zurücksetzen.
+                        </p>
+                      </div>
+                    )}
                     <p style={{ fontSize: '11.5px', color: '#888', margin: 0, lineHeight: 1.5 }}>
                       Mieten bis zum Vertragsende bleiben erhalten, unbezahlte Zahlungen danach werden entfernt. Bei ordentlicher Kündigung gilt meist die 3-Monats-Frist (§ 573c BGB).
                     </p>
@@ -431,7 +459,7 @@ export default function Contracts() {
                     </div>
                     <div style={{ display: 'flex', gap: '18px' }}>
                       {c.is_active && (
-                        <button onClick={() => { setEndDateInput(new Date().toISOString().split('T')[0]); setEndConfirm(c.id) }} style={{ background: 'none', border: 'none', padding: 0, color: '#d97706', fontSize: '12.5px', cursor: 'pointer', textDecoration: 'underline' }}>Beenden</button>
+                        <button onClick={() => { setEndDateInput(new Date().toISOString().split('T')[0]); setEndWarning(null); setEndConfirm(c.id) }} style={{ background: 'none', border: 'none', padding: 0, color: '#d97706', fontSize: '12.5px', cursor: 'pointer', textDecoration: 'underline' }}>Beenden</button>
                       )}
                       <button onClick={() => setDeleteConfirm(c.id)} style={{ background: 'none', border: 'none', padding: 0, color: '#dc2626', fontSize: '12.5px', cursor: 'pointer', textDecoration: 'underline' }}>Löschen</button>
                     </div>

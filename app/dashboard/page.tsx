@@ -293,7 +293,7 @@ export default function Dashboard() {
     // Fristen-Radar: Kautionsrueckzahlung nach Auszug
     const sixMonthsAgo = dateStr(new Date(today.getTime() - 180 * 86400000))
     const endedWithDeposit = (contracts || []).filter((c: any) =>
-      Number(c.deposit || 0) > 0 && c.end_date && c.end_date < todayStr && c.end_date >= sixMonthsAgo
+      Number(c.deposit || 0) > 0 && c.end_date && c.end_date < todayStr && c.end_date >= sixMonthsAgo && !c.deposit_returned_at
     )
     endedWithDeposit.forEach((c: any) => {
       const t = (tenants || []).find((tt: any) => tt.id === c.tenant_id)

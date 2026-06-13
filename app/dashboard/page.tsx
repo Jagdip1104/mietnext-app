@@ -128,7 +128,7 @@ export default function Dashboard() {
     const unitIdsSafe = unitIds.length ? unitIds : [NULL_UUID]
 
     const { data: contracts } = await supabase
-      .from('contracts').select('id, tenant_id, unit_id, rent_amount, start_date, end_date, is_active, deposit')
+      .from('contracts').select('id, tenant_id, unit_id, rent_amount, start_date, end_date, is_active, deposit, deposit_returned_at')
       .in('unit_id', unitIdsSafe)
     const contractIds = (contracts || []).map((c: any) => c.id)
     const contractIdsSafe = contractIds.length ? contractIds : [NULL_UUID]

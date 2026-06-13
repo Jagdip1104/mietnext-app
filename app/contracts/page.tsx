@@ -68,7 +68,7 @@ export default function Contracts() {
       .in('property_id', propertyIds.length > 0 ? propertyIds : ['none']).order('name')
     setUnits(unitsData || [])
     const { data: contractsData } = await supabase.from('contracts')
-      .select('*, tenants(full_name), units(name, type, total_rent, properties(name, address, zip, city))')
+      .select('*, deposit_returned_at, tenants(full_name), units(name, type, total_rent, properties(name, address, zip, city))')
       .in('tenant_id', (tenantsData || []).map((t: any) => t.id).length > 0 ? (tenantsData || []).map((t: any) => t.id) : ['none'])
       .order('created_at', { ascending: false })
     setContracts(contractsData || [])
@@ -150,6 +150,14 @@ export default function Contracts() {
   }
 
   // Vertrag beenden (is_active = false, zukünftige Zahlungen entfernen)
+  const handleDepositReturned = async (id: string) => {
+    const today = new Date().toISOString().split('T')[0]
+    const { error } = await supabase.from('contracts').update({ deposit_returned_at: today }).eq('id', id)
+    if (error) { toast.error('Fehler: ' + error.message); return }
+    toast.success('Kaution als abgerechnet markiert')
+    loadData(userId!)
+  }
+
   const handleEndContract = async (id: string) => {
     const endDate = endDateInput || new Date().toISOString().split('T')[0]
     const { error: contractError } = await supabase.from('contracts')
@@ -398,6 +406,11 @@ export default function Contracts() {
                       <div className="text-left md:text-right">
                         <p style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 2px' }}>{formatEur(c.rent_amount)}/Mo.</p>
                         {c.deposit ? <p style={{ fontSize: '12px', color: '#bbb', margin: 0 }}>Kaution: {formatEur(c.deposit)}</p> : null}
+                        {c.deposit && !c.is_active && (
+                          c.deposit_returned_at
+                            ? <p style={{ fontSize: '11.5px', color: '#16a34a', margin: '4px 0 0' }}>✓ Kaution abgerechnet am {new Date(c.deposit_returned_at + 'T12:00:00').toLocaleDateString('de-DE')}</p>
+                            : <button onClick={() => handleDepositReturned(c.id)} style={{ marginTop: '4px', background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '4px 10px', fontSize: '11.5px', cursor: 'pointer' }}>Kaution abgerechnet</button>
+                        )}
                       </div>
                       <span style={{ fontSize: '12px', color: c.is_active ? '#16a34a' : '#999', backgroundColor: c.is_active ? '#f0fdf4' : '#f5f4f0', padding: '4px 12px', borderRadius: '20px' }}>
                         {c.is_active ? 'Aktiv' : 'Beendet'}

@@ -41,6 +41,7 @@ export default function Contracts() {
   const [generatingId, setGeneratingId] = useState<string | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [endConfirm, setEndConfirm] = useState<string | null>(null)
+  const [endDateInput, setEndDateInput] = useState(() => new Date().toISOString().split('T')[0])
   const [wgbContract, setWgbContract] = useState<any>(null)
   const [profile, setProfile] = useState<any>(null)
   const [userId, setUserId] = useState<string | null>(null)
@@ -150,17 +151,18 @@ export default function Contracts() {
 
   // Vertrag beenden (is_active = false, zukünftige Zahlungen entfernen)
   const handleEndContract = async (id: string) => {
-    const today = new Date().toISOString().split('T')[0]
+    const endDate = endDateInput || new Date().toISOString().split('T')[0]
     const { error: contractError } = await supabase.from('contracts')
-      .update({ is_active: false, end_date: today })
+      .update({ is_active: false, end_date: endDate })
       .eq('id', id)
     if (contractError) {
       toast.error('Fehler beim Beenden: ' + contractError.message)
       setEndConfirm(null); return
     }
-    // Zukünftige unbezahlte Zahlungen löschen (nicht bezahlte bleiben für Buchhaltung)
+    // Unbezahlte Zahlungen NACH dem Enddatum löschen (bis zum Auszug bleiben sie erhalten)
     await supabase.from('payments').delete()
-      .eq('contract_id', id).eq('status', 'pending').gt('due_date', today)
+      .eq('contract_id', id).eq('status', 'pending').gt('due_date', endDate)
+    toast.success('Vertrag zum ' + new Date(endDate + 'T12:00:00').toLocaleDateString('de-DE') + ' beendet')
     setEndConfirm(null)
     loadData(userId!)
   }
@@ -358,14 +360,21 @@ export default function Contracts() {
                     </div>
                   </div>
                 ) : endConfirm === c.id ? (
-                  <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3">
-                    <p style={{ fontSize: '14px', color: '#d97706', margin: 0 }}>
-                      Vertrag heute beenden? Zukünftige unbezahlte Zahlungen werden entfernt.
-                    </p>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button onClick={() => handleEndContract(c.id)} style={{ backgroundColor: '#d97706', color: '#fff', padding: '8px 16px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>Ja, beenden</button>
-                      <button onClick={() => setEndConfirm(null)} style={{ backgroundColor: '#fff', color: '#666', padding: '8px 16px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer' }}>Abbrechen</button>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: '12px' }}>
+                      <div>
+                        <label style={{ fontSize: '11px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '4px' }}>Vertragsende zum</label>
+                        <input type="date" value={endDateInput} onChange={(e) => setEndDateInput(e.target.value)}
+                          style={{ border: '1px solid #e8e6e0', borderRadius: '8px', padding: '8px 12px', fontSize: '14px', color: '#1a1a1a', outline: 'none', minWidth: 0, maxWidth: '170px' }} />
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button onClick={() => handleEndContract(c.id)} style={{ backgroundColor: '#d97706', color: '#fff', padding: '8px 16px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>Ja, beenden</button>
+                        <button onClick={() => setEndConfirm(null)} style={{ backgroundColor: '#fff', color: '#666', padding: '8px 16px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer' }}>Abbrechen</button>
+                      </div>
                     </div>
+                    <p style={{ fontSize: '11.5px', color: '#888', margin: 0, lineHeight: 1.5 }}>
+                      Mieten bis zum Vertragsende bleiben erhalten, unbezahlte Zahlungen danach werden entfernt. Bei ordentlicher Kündigung gilt meist die 3-Monats-Frist (§ 573c BGB).
+                    </p>
                   </div>
                 ) : (
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
@@ -409,7 +418,7 @@ export default function Contracts() {
                     </div>
                     <div style={{ display: 'flex', gap: '18px' }}>
                       {c.is_active && (
-                        <button onClick={() => setEndConfirm(c.id)} style={{ background: 'none', border: 'none', padding: 0, color: '#d97706', fontSize: '12.5px', cursor: 'pointer', textDecoration: 'underline' }}>Beenden</button>
+                        <button onClick={() => { setEndDateInput(new Date().toISOString().split('T')[0]); setEndConfirm(c.id) }} style={{ background: 'none', border: 'none', padding: 0, color: '#d97706', fontSize: '12.5px', cursor: 'pointer', textDecoration: 'underline' }}>Beenden</button>
                       )}
                       <button onClick={() => setDeleteConfirm(c.id)} style={{ background: 'none', border: 'none', padding: 0, color: '#dc2626', fontSize: '12.5px', cursor: 'pointer', textDecoration: 'underline' }}>Löschen</button>
                     </div>

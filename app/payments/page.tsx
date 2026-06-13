@@ -50,7 +50,7 @@ export default function Payments() {
     const { data: contractsData } = await supabase.from('contracts')
       .select('*, tenants(full_name), units(name, properties(name))')
       .in('tenant_id', tenantIds.length > 0 ? tenantIds : ['none'])
-      .eq('is_active', true).order('created_at', { ascending: false })
+      .order('created_at', { ascending: false })
     setContracts(contractsData || [])
     const contractIds = (contractsData || []).map((c: any) => c.id)
     const { data: paymentsData } = await supabase.from('payments')

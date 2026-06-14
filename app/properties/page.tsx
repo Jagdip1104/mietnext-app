@@ -53,6 +53,7 @@ export default function Properties() {
   const [address, setAddress] = useState('')
   const [city, setCity] = useState('')
   const [zip, setZip] = useState('')
+  const [verwaltungstyp, setVerwaltungstyp] = useState('selbst')
   const [newUnits, setNewUnits] = useState<UnitInput[]>([emptyUnit()])
   const [loading, setLoading] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -94,6 +95,7 @@ export default function Properties() {
   const handleEdit = (p: any) => {
     setEditingId(p.id); setName(p.name)
     setAddress(p.address || ''); setCity(p.city || ''); setZip(p.zip || '')
+    setVerwaltungstyp(p.verwaltungstyp || 'selbst')
     setNewUnits([])
     setShowForm(true)
   }
@@ -101,6 +103,7 @@ export default function Properties() {
   const handleNewProperty = () => {
     setEditingId(null)
     setName(''); setAddress(''); setCity(''); setZip('')
+    setVerwaltungstyp('selbst')
     setNewUnits([emptyUnit()])
     setShowForm(true)
   }
@@ -108,6 +111,7 @@ export default function Properties() {
   const handleCancel = () => {
     setShowForm(false); setEditingId(null)
     setName(''); setAddress(''); setCity(''); setZip('')
+    setVerwaltungstyp('selbst')
     setNewUnits([emptyUnit()])
   }
 
@@ -211,7 +215,7 @@ export default function Properties() {
 
     if (editingId) {
       const { error } = await supabase.from('properties')
-        .update({ name, address, city, zip })
+        .update({ name, address, city, zip, verwaltungstyp })
         .eq('id', editingId)
       if (error) {
         toast.error('Fehler: ' + error.message)
@@ -253,7 +257,7 @@ export default function Properties() {
 
     const { data: propData, error: propErr } = await supabase
       .from('properties')
-      .insert({ name, address, city, zip, owner_id: userId })
+      .insert({ name, address, city, zip, verwaltungstyp, owner_id: userId })
       .select()
       .single()
 
@@ -468,6 +472,16 @@ export default function Properties() {
                 <label style={label}>Stadt</label>
                 <input value={city} onChange={e => setCity(e.target.value)}
                   placeholder="Wallenhorst" style={input} />
+              </div>
+              <div style={{ gridColumn: 'span 2' }}>
+                <label style={label}>Verwaltungsart</label>
+                <select value={verwaltungstyp} onChange={e => setVerwaltungstyp(e.target.value)} style={input}>
+                  <option value="selbst">Selbst verwaltet (ganzes Objekt gehört mir)</option>
+                  <option value="weg">Eigentumswohnung in WEG (Hausverwaltung rechnet Hausgeld ab)</option>
+                </select>
+                <p style={{ fontSize: '12px', color: '#888', margin: '6px 0 0', lineHeight: 1.5 }}>
+                  Bei WEG kannst du in der Nebenkostenabrechnung die Hausgeldabrechnung des Verwalters hochladen — MietNext uebernimmt deinen Anteil automatisch.
+                </p>
               </div>
             </div>
 

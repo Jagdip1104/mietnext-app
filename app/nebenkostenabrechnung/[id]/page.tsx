@@ -577,6 +577,7 @@ export default function NebenkostenabrechnungDetail() {
   const formatEur   = (n: number) => n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
   const getCatLabel = (v: string) => BETRKV_CATEGORIES.find((c: any) => c.value === v)?.label || v
   const getKeyLabel = (v: string) => DISTRIBUTION_KEYS.find((d: any) => d.value === v)?.label || v
+  const isWegItem = (it: any) => it?.source === 'weg' || it?.source === 'eigentuemer'
 
   // ─── PDF Export ──────────────────────────────────────────────────────────────
   const fmtDE = (d: any) => {
@@ -686,6 +687,7 @@ export default function NebenkostenabrechnungDetail() {
           else if (keyVal === 'equal') vert = `1 / ${unitCount} Einh.`
           else if (keyVal === 'persons') vert = `${fmtNum(unit.person_count)} / ${fmtNum(totalPersons)} Pers.`
           else if (keyVal === 'per_unit') vert = 'Einzelbetrag'
+          if (grp.items.some(isWegItem)) vert = 'lt. WEG-Abrechnung'
           doc.setTextColor(140, 140, 140); doc.setFontSize(8)
           doc.text(vert, 116, y)
           doc.setFontSize(9); doc.setTextColor(30, 30, 30)
@@ -1168,7 +1170,7 @@ export default function NebenkostenabrechnungDetail() {
                               {item.description && <span style={{ color: '#999', fontWeight: '400' }}> · {item.description}</span>}
                               {item.is_umlagefaehig === false && <span style={{ marginLeft: '8px', fontSize: '11px', color: '#a16207', backgroundColor: '#fef3c7', border: '1px solid #fde68a', borderRadius: '6px', padding: '1px 7px' }}>nicht umlagefähig</span>}
                             </p>
-                            <p style={{ fontSize: '12px', color: '#bbb', margin: 0 }}>{getKeyLabel(item.distribution_key)}</p>
+                            <p style={{ fontSize: '12px', color: '#bbb', margin: 0 }}>{isWegItem(item) ? 'lt. WEG-Abrechnung' : getKeyLabel(item.distribution_key)}</p>
                           </div>
                           <div className="flex items-center gap-3 flex-wrap md:flex-nowrap">
                             <p style={{ fontSize: '16px', fontWeight: '500', color: '#1a1a1a', margin: 0, fontFamily: 'Georgia, serif', whiteSpace: 'nowrap' }}>

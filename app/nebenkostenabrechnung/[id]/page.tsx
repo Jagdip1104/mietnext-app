@@ -32,7 +32,7 @@ function classifyWeg(rawName: string): { betrkv: string, umlagefaehig: boolean }
     [['garten','grünpflege','gruenpflege','grünanlage'], 'gartenpflege'],
     [['allgemeinstrom','beleuchtung','strom'], 'allgemeinstrom'],
     [['schornstein','kaminkehr'], 'schornstein'],
-    [['versicher','haftpflicht'], 'versicherung'],
+    [['versicher','vers.','gebäudevers','haftpflicht','sachvers'], 'versicherung'],
     [['hauswart','hausmeister'], 'hauswart'],
     [['antenne','kabel','multimedia'], 'antenne'],
     [['wäsche','waesche'], 'waeschepflege'],

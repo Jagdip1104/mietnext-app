@@ -1103,6 +1103,11 @@ export default function NebenkostenabrechnungDetail() {
                   Die KI liest die Positionen + deinen Anteil aus und füllt die Zeilen vor. <strong>Bitte gegen das Original prüfen</strong>, besonders die Beträge. Lade möglichst die ganze Seite hoch (Spalte „Ihr Anteil" muss sichtbar sein).
                 </p>
               </div>
+              <div style={{ backgroundColor: '#fafaf8', border: '1px solid #e8e6e0', borderRadius: '10px', padding: '12px 16px', marginBottom: '16px' }}>
+                <p style={{ fontSize: '12px', color: '#666', margin: 0, lineHeight: 1.6 }}>
+                  <strong style={{ color: '#1a1a1a' }}>Nicht vergessen</strong> — Posten, die der Verwalter oft nicht abrechnet und die du selbst nachträgst: <strong>Grundsteuer</strong> (zahlst du direkt an die Gemeinde, schon vorbelegt), ggf. eigene <strong>Wartungsverträge</strong> (Therme, Rauchmelder) oder <strong>Kabelanschluss</strong>.
+                </p>
+              </div>
               {units.length > 1 && (
                 <div style={{ marginBottom: '14px' }}>
                   <label style={lbl}>Für welche Einheit?</label>

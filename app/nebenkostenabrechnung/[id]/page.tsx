@@ -1172,11 +1172,11 @@ export default function NebenkostenabrechnungDetail() {
                         <div className="flex flex-col gap-3 md:flex-row md:justify-between md:items-center">
                           <div>
                             <p style={{ fontSize: '14px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 2px' }}>
-                              {getCatLabel(item.category)}
-                              {item.description && <span style={{ color: '#999', fontWeight: '400' }}> · {item.description}</span>}
+                              {item.is_umlagefaehig === false ? (item.description || 'Position') : getCatLabel(item.category)}
+                              {item.is_umlagefaehig !== false && item.description && <span style={{ color: '#999', fontWeight: '400' }}> · {item.description}</span>}
                               {item.is_umlagefaehig === false && <span style={{ marginLeft: '8px', fontSize: '11px', color: '#a16207', backgroundColor: '#fef3c7', border: '1px solid #fde68a', borderRadius: '6px', padding: '1px 7px' }}>nicht umlagefähig</span>}
                             </p>
-                            <p style={{ fontSize: '12px', color: '#bbb', margin: 0 }}>{isWegItem(item) ? 'lt. WEG-Abrechnung' : getKeyLabel(item.distribution_key)}</p>
+                            <p style={{ fontSize: '12px', color: '#bbb', margin: 0 }}>{item.is_umlagefaehig === false ? 'Eigentümer trägt · nicht auf Mieter umgelegt' : (isWegItem(item) ? 'lt. WEG-Abrechnung' : getKeyLabel(item.distribution_key))}</p>
                           </div>
                           <div className="flex items-center gap-3 flex-wrap md:flex-nowrap">
                             <p style={{ fontSize: '16px', fontWeight: '500', color: '#1a1a1a', margin: 0, fontFamily: 'Georgia, serif', whiteSpace: 'nowrap' }}>

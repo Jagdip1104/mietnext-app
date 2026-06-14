@@ -290,6 +290,10 @@ export default function NebenkostenabrechnungDetail() {
         source: r.source || 'weg',
       }
     })
+    // Vorhandene WEG-/Eigentuemer-Positionen ersetzen (idempotent bei erneutem Upload)
+    // Manuell erfasste Positionen (source='manuell') bleiben unberuehrt.
+    await supabase.from('utility_cost_items')
+      .delete().eq('statement_id', id).in('source', ['weg', 'eigentuemer'])
     const { error } = await supabase.from('utility_cost_items').insert(toInsert)
     setSaving(false)
     if (error) { toast.error('Fehler: ' + error.message); return }

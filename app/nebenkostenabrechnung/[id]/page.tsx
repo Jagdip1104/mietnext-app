@@ -1109,9 +1109,15 @@ export default function NebenkostenabrechnungDetail() {
                           color: row.umlagefaehig ? '#166534' : '#b91c1c' }}>
                         {row.umlagefaehig ? '✓ umlagefähig' : '✕ nicht umlagef.'}
                       </button>
-                      <select value={row.betrkv} onChange={e => updateWegRow(i, 'betrkv', e.target.value)} style={{ ...inp, fontSize: '12px' }}>
-                        {BETRKV_CATEGORIES.map((cat: any) => (<option key={cat.value} value={cat.value}>{getCatLabel(cat.value)}</option>))}
-                      </select>
+                      {row.umlagefaehig ? (
+                        <select value={row.betrkv} onChange={e => updateWegRow(i, 'betrkv', e.target.value)} style={{ ...inp, fontSize: '12px' }}>
+                          {BETRKV_CATEGORIES.map((cat: any) => (<option key={cat.value} value={cat.value}>{getCatLabel(cat.value)}</option>))}
+                        </select>
+                      ) : (
+                        <div style={{ ...inp, fontSize: '12px', color: '#999', backgroundColor: '#f5f4f1', display: 'flex', alignItems: 'center' }}>
+                          — Eigentümer trägt
+                        </div>
+                      )}
                       <button onClick={() => removeWegRow(i)} title="Zeile entfernen"
                         style={{ background: 'none', border: 'none', color: '#dc2626', fontSize: '18px', cursor: 'pointer', padding: '0 8px' }}>✕</button>
                     </div>

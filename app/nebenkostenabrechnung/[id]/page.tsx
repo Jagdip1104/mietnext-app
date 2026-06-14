@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase'
 import { useRouter, useParams } from 'next/navigation'
 import Nav from '@/components/Nav'
 import { useToast } from '@/components/ui/Toast'
-import { Pencil, Download, RefreshCw, FileText, Undo2 } from 'lucide-react'
+import { Pencil, Download, RefreshCw, FileText, Undo2, Building2 } from 'lucide-react'
 
 // Hausverwaltungs-Position -> { §2-Topf, umlagefähig }. Reihenfolge: Sonderfall, dann NEIN, dann JA.
 function classifyWeg(rawName: string): { betrkv: string, umlagefaehig: boolean } {
@@ -111,7 +111,7 @@ export default function NebenkostenabrechnungDetail() {
   const loadData = async () => {
     const { data: stmt } = await supabase
       .from('utility_statements')
-      .select('*, properties(id, name, address, city)')
+      .select('*, properties(id, name, address, city, verwaltungstyp)')
       .eq('id', id).single()
     setStatement(stmt)
     setManualPrepayments(stmt?.manual_prepayments || {})
@@ -949,13 +949,30 @@ export default function NebenkostenabrechnungDetail() {
               </button>
             )}
 
-            {!showAddForm && !showBulkForm && !showWegForm && (
+            {!showAddForm && !showBulkForm && !showWegForm && statement?.properties?.verwaltungstyp === 'weg' && (
               <button onClick={openWegForm}
-                style={{ backgroundColor: '#fff', color: '#a16207', padding: '8px 16px', borderRadius: '8px', border: '1.5px solid #fde68a', fontSize: '13px', fontWeight: '500', cursor: 'pointer', marginLeft: '8px' }}>
+                style={{ backgroundColor: '#a16207', color: '#fff', padding: '8px 16px', borderRadius: '8px', border: '1.5px solid #a16207', fontSize: '13px', fontWeight: '500', cursor: 'pointer', marginLeft: '8px' }}>
                 <Download size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '6px' }} />Aus Hausverwaltung
               </button>
             )}
           </div>
+
+          {!showAddForm && !showBulkForm && !showWegForm && statement?.properties?.verwaltungstyp === 'weg' && (
+            <div style={{ backgroundColor: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', padding: '16px 20px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+              <div>
+                <p style={{ fontSize: '13.5px', fontWeight: '600', color: '#92400e', margin: '0 0 3px' }}>
+                  <Building2 size={15} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '6px' }} />Dieses Objekt ist eine WEG
+                </p>
+                <p style={{ fontSize: '12.5px', color: '#a16207', margin: 0, lineHeight: 1.5 }}>
+                  Lade die Hausgeldabrechnung deines Verwalters hoch — MietNext liest die Positionen und übernimmt deinen Anteil automatisch. Grundsteuer trägst du separat nach.
+                </p>
+              </div>
+              <button onClick={openWegForm}
+                style={{ backgroundColor: '#a16207', color: '#fff', padding: '10px 18px', borderRadius: '8px', border: 'none', fontSize: '13px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                <Download size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '6px' }} />Hausgeldabrechnung hochladen
+              </button>
+            </div>
+          )}
 
           {showAddForm && (
             <div style={{ ...card, marginBottom: '12px' }}>

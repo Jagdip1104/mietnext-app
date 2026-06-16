@@ -1347,15 +1347,15 @@ export default function NebenkostenabrechnungDetail() {
                         )}
                       </div>
 
-                      <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start' }}>
+                      <div className="flex flex-col gap-3 w-full md:w-auto md:flex-row md:gap-6 md:items-start">
                         {/* Anteil */}
-                        <div style={{ textAlign: 'right' as const }}>
+                        <div className="md:text-right">
                           <p style={{ fontSize: '11px', color: '#999', margin: '0 0 2px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Anteil Kosten</p>
                           <p style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: 0 }}>{formatEur(allocated)}</p>
                         </div>
 
                         {/* Vorauszahlung – editierbar */}
-                        <div style={{ textAlign: 'right' as const }}>
+                        <div className="md:text-right">
                           <p style={{ fontSize: '11px', color: '#999', margin: '0 0 2px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                             Vorauszahlung
                             {isManual && <span style={{ color: '#d97706', marginLeft: '4px' }}>● manuell</span>}
@@ -1407,7 +1407,7 @@ export default function NebenkostenabrechnungDetail() {
                         </div>
 
                         {/* Ergebnis */}
-                        <div style={{ textAlign: 'right' as const }}>
+                        <div className="md:text-right">
                           <p style={{ fontSize: '11px', color: '#999', margin: '0 0 2px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                             {isNach ? 'Nachzahlung' : 'Guthaben'}
                           </p>

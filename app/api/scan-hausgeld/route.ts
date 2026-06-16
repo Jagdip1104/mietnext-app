@@ -38,6 +38,17 @@ export async function POST(req: NextRequest) {
   const { data: { user }, error: userErr } = await supabase.auth.getUser(accessToken)
   if (userErr || !user) return NextResponse.json({ error: 'Ungueltiges Token' }, { status: 401 })
 
+  // Rate-Limit: max 30 Scans pro Nutzer pro Tag (Kostenschutz)
+  const since = new Date(); since.setHours(0, 0, 0, 0)
+  const { count: usageToday } = await supabase
+    .from('ai_usage')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+    .gte('created_at', since.toISOString())
+  if ((usageToday || 0) >= 30) {
+    return NextResponse.json({ error: 'Tageslimit fuer KI-Scans erreicht (30/Tag). Bitte morgen erneut oder Positionen manuell erfassen.' }, { status: 429 })
+  }
+
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ error: 'KI nicht konfiguriert (ANTHROPIC_API_KEY fehlt).' }, { status: 501 })
   }
@@ -85,6 +96,7 @@ export async function POST(req: NextRequest) {
     } catch {
       return NextResponse.json({ error: 'KI-Antwort nicht lesbar. Bitte manuell erfassen.' }, { status: 422 })
     }
+    await supabase.from('ai_usage').insert({ user_id: user.id, kind: 'scan-hausgeld' })
     return NextResponse.json({ positions })
   } catch (err: any) {
     return NextResponse.json({ error: 'Fehler: ' + (err.message || String(err)) }, { status: 500 })

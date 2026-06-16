@@ -17,7 +17,7 @@ function classifyWeg(rawName: string): { betrkv: string, umlagefaehig: boolean }
     if (n.includes('miete') || n.includes('anschaff') || n.includes('kauf')) return { betrkv: 'sonstige', umlagefaehig: false }
     return { betrkv: 'sonstige', umlagefaehig: true }
   }
-  const nein = ['verwalt','konto','bankgeb','rücklage','ruecklage','zuführ','zufuehr','reparatur','kl. rep','kl.rep','instandhalt','instandsetz','sanierung','modernisier','anschaff','steuerberat','rechtskost','anwalt','kredit','mahngeb']
+  const nein = ['verwalt','konto','bankgeb','rücklage','ruecklage','rüklage','rueklage','rückl','ruckl','zuführ','zufuehr','wirtschaftsplan','reparatur','rep.','kl. rep','kl.rep','instandhalt','instandsetz','sanierung','modernisier','anschaff','steuerberat','rechtskost','anwalt','kredit','mahngeb']
   if (nein.some(k => n.includes(k))) return { betrkv: 'sonstige', umlagefaehig: false }
   const map: [string[], string][] = [
     [['grundsteuer'], 'grundsteuer'],

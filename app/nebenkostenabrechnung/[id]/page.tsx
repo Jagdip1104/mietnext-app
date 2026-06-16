@@ -1140,8 +1140,7 @@ export default function NebenkostenabrechnungDetail() {
                           — Eigentümer trägt
                         </div>
                       )}
-                      <button onClick={() => removeWegRow(i)} title="Zeile entfernen"
-                        style={{ background: 'none', border: 'none', color: '#dc2626', fontSize: '18px', cursor: 'pointer', padding: '0 8px' }}>✕</button>
+                      <button onClick={() => removeWegRow(i)} title="Zeile entfernen" className="self-end md:self-auto" style={{ background: 'none', border: 'none', color: '#dc2626', fontSize: '13px', cursor: 'pointer', padding: '6px 4px' }}><span className="md:hidden">✕ Entfernen</span><span className="hidden md:inline" style={{ fontSize: '18px' }}>✕</span></button>
                     </div>
                   )
                 })}

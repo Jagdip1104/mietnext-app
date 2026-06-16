@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+export const maxDuration = 60
+
 const PROMPT = `Das ist eine Hausgeldabrechnung / Einzelabrechnung einer WEG-Hausverwaltung für einen einzelnen Wohnungseigentümer.
 
 Lies JEDE Abrechnungsposition (Kostenart) und den auf DIESEN Eigentümer entfallenden Betrag in Euro.
@@ -16,6 +18,16 @@ Regeln:
 - Erfasse ALLE Positionen, auch nicht umlagefaehige (Verwaltung, Ruecklage, Reparatur) — die Filterung passiert spaeter
 - Zufuehrung zur Ruecklage / Erhaltungsruecklage NUR aufnehmen, wenn sie als eigene Kostenposition gelistet ist
 - Wenn das Bild keine Abrechnung ist, gib [] zurueck`
+
+function parseBetrag(v: any): number {
+  if (typeof v === 'number') return isFinite(v) ? v : 0
+  if (typeof v !== 'string') return 0
+  let str = v.replace(/[^\d.,-]/g, '').trim()
+  if (str.includes('.') && str.includes(',')) str = str.replace(/\./g, '').replace(',', '.')
+  else if (str.includes(',')) str = str.replace(',', '.')
+  const n = Number(str)
+  return isFinite(n) ? n : 0
+}
 
 export async function POST(req: NextRequest) {
   const authHeader = req.headers.get('Authorization')
@@ -51,7 +63,7 @@ export async function POST(req: NextRequest) {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 2000,
+        max_tokens: 8000,
         messages: [{ role: 'user', content: [sourceBlock, { type: 'text', text: PROMPT }] }],
       }),
     })
@@ -68,7 +80,7 @@ export async function POST(req: NextRequest) {
       if (Array.isArray(parsed)) {
         positions = parsed
           .filter((p: any) => p && typeof p.bezeichnung === 'string')
-          .map((p: any) => ({ bezeichnung: String(p.bezeichnung).trim(), betrag: Number(p.betrag) || 0 }))
+          .map((p: any) => ({ bezeichnung: String(p.bezeichnung).trim(), betrag: parseBetrag(p.betrag) }))
       }
     } catch {
       return NextResponse.json({ error: 'KI-Antwort nicht lesbar. Bitte manuell erfassen.' }, { status: 422 })

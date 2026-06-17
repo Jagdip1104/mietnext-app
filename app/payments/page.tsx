@@ -31,6 +31,8 @@ export default function Payments() {
   const [userId, setUserId] = useState<string | null>(null)
   const [profile, setProfile] = useState<any>(null)
   const [mahnungData, setMahnungData] = useState<any>(null)
+  const [bookingId, setBookingId] = useState<string | null>(null)
+  const [bookAmount, setBookAmount] = useState('')
   const router = useRouter()
   const toast = useToast()
 
@@ -74,6 +76,18 @@ export default function Payments() {
     toast.success('Zahlung erfasst')
     setSelectedContract(''); setAmount(''); setDueDate(''); setPaidDate(''); setStatus('pending')
     setShowForm(false); setLoading(false); loadData(userId!)
+  }
+
+  const handleBookPayment = async (id: string) => {
+    const val = parseFloat((bookAmount || '').replace(',', '.'))
+    if (!val || val <= 0) { toast.error('Bitte Betrag eingeben'); return }
+    const { error } = await supabase.from('payment_receipts').insert({
+      payment_id: id, amount: val, received_on: new Date().toISOString().split('T')[0]
+    })
+    if (error) { toast.error('Fehler: ' + error.message); return }
+    toast.success('Teilzahlung verbucht')
+    setBookingId(null); setBookAmount('')
+    loadData(userId!)
   }
 
   const handleMarkPaid = async (id: string) => {
@@ -358,6 +372,11 @@ export default function Payments() {
                           Fällig: {fmtDate(p.due_date)}
                           {p.paid_date && ` · Bezahlt: ${fmtDate(p.paid_date)}`}
                         </p>
+                        {isPartial(p) && (
+                          <p style={{ fontSize: '12px', color: '#d97706', margin: '4px 0 0', fontWeight: '500' }}>
+                            Teilbezahlt: {formatEur(Number(p.paid_amount || 0))} · offen {formatEur(remaining(p))}
+                          </p>
+                        )}
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                         <p style={{ fontSize: '16px', fontWeight: '500', color: '#1a1a1a', margin: 0, fontFamily: 'Georgia, serif' }}>
@@ -380,6 +399,26 @@ export default function Payments() {
                               style={{ backgroundColor: '#f0fdf4', color: '#16a34a', padding: '8px 14px', borderRadius: '8px', border: '1px solid #bbf7d0', fontSize: '13px', cursor: 'pointer' }}>
                               Als bezahlt markieren
                             </button>
+                            {bookingId === p.id ? (
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                <input type="number" value={bookAmount} onChange={e => setBookAmount(e.target.value)} autoFocus
+                                  placeholder={`max ${remaining(p)}`}
+                                  style={{ width: '90px', border: '1px solid #e8e6e0', borderRadius: '6px', padding: '6px 8px', fontSize: '13px', outline: 'none', textAlign: 'right' as const }} />
+                                <button onClick={() => handleBookPayment(p.id)}
+                                  style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '8px 14px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>
+                                  Verbuchen
+                                </button>
+                                <button onClick={() => { setBookingId(null); setBookAmount('') }}
+                                  style={{ backgroundColor: '#fff', color: '#666', padding: '8px 10px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer' }}>
+                                  ✕
+                                </button>
+                              </span>
+                            ) : (
+                              <button onClick={() => { setBookingId(p.id); setBookAmount('') }}
+                                style={{ backgroundColor: '#fffbeb', color: '#d97706', padding: '8px 14px', borderRadius: '8px', border: '1px solid #fed7aa', fontSize: '13px', cursor: 'pointer' }}>
+                                Teilzahlung
+                              </button>
+                            )}
                             <button onClick={() => setConfirmAction({ paymentId: p.id, action: 'delete' })}
                               title="Zahlung löschen"
                               style={{ backgroundColor: '#fff', color: '#dc2626', padding: '8px 14px', borderRadius: '8px', border: '1px solid #fecaca', fontSize: '13px', cursor: 'pointer' }}>

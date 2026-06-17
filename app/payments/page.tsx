@@ -77,10 +77,13 @@ export default function Payments() {
   }
 
   const handleMarkPaid = async (id: string) => {
-    const { error } = await supabase.from('payments').update({
-      status: 'paid',
-      paid_date: new Date().toISOString().split('T')[0]
-    }).eq('id', id)
+    const p = payments.find((x: any) => x.id === id)
+    if (!p) return
+    const rest = Number(p.amount || 0) - Number(p.paid_amount || 0)
+    if (rest <= 0) { loadData(userId!); return }
+    const { error } = await supabase.from('payment_receipts').insert({
+      payment_id: id, amount: rest, received_on: new Date().toISOString().split('T')[0]
+    })
     if (error) { toast.error('Fehler: ' + error.message); return }
     toast.success('Als bezahlt markiert')
     loadData(userId!)
@@ -88,10 +91,7 @@ export default function Payments() {
 
   // Bezahlt → Ausstehend zurücksetzen
   const handleResetToPending = async (id: string) => {
-    const { error } = await supabase.from('payments').update({
-      status: 'pending',
-      paid_date: null
-    }).eq('id', id)
+    const { error } = await supabase.from('payment_receipts').delete().eq('payment_id', id)
     if (error) {
       toast.error('Fehler beim Zurücksetzen: ' + error.message)
       return
@@ -118,10 +118,12 @@ export default function Payments() {
   const _now = new Date()
   const curYear = _now.getFullYear()
   const curMonth = _now.getMonth()
+  const remaining = (p: any) => Math.max(0, Number(p.amount || 0) - Number(p.paid_amount || 0))
+  const isPartial = (p: any) => Number(p.paid_amount || 0) > 0 && remaining(p) > 0
   const effectiveStatus = (p: any) => {
-    if (p.status === 'paid') return 'paid'
-    if (p.status === 'late') return 'late'
-    return p.due_date < todayISO ? 'late' : 'pending'
+    if (remaining(p) <= 0) return 'paid'
+    if (p.status === 'late' || p.due_date < todayISO) return 'late'
+    return 'pending'
   }
   const filteredPayments = payments.filter((p: any) => {
     if (filterProperty !== 'all' && p.contracts?.units?.properties?.name !== filterProperty) return false
@@ -139,9 +141,9 @@ export default function Payments() {
   const propertyOptions: string[] = Array.from(new Set(payments.map((p: any) => p.contracts?.units?.properties?.name).filter(Boolean) as string[])).sort()
   const yearOptions: string[] = Array.from(new Set(payments.map((p: any) => new Date(p.due_date).getFullYear().toString()))).sort().reverse()
 
-  const totalPaid = filteredPayments.filter((p: any) => effectiveStatus(p) === 'paid').reduce((s: number, p: any) => s + Number(p.amount || 0), 0)
-  const totalPending = filteredPayments.filter((p: any) => effectiveStatus(p) === 'pending').reduce((s: number, p: any) => s + Number(p.amount || 0), 0)
-  const totalLate = filteredPayments.filter((p: any) => effectiveStatus(p) === 'late').reduce((s: number, p: any) => s + Number(p.amount || 0), 0)
+  const totalPaid = filteredPayments.reduce((s: number, p: any) => s + Number(p.paid_amount || 0), 0)
+  const totalPending = filteredPayments.filter((p: any) => effectiveStatus(p) === 'pending').reduce((s: number, p: any) => s + remaining(p), 0)
+  const totalLate = filteredPayments.filter((p: any) => effectiveStatus(p) === 'late').reduce((s: number, p: any) => s + remaining(p), 0)
 
   const overdueByTenant = (() => {
     const map = new Map<string, any>()
@@ -158,8 +160,8 @@ export default function Payments() {
         total: 0,
       })
       const g = map.get(tid)
-      g.payments.push({ id: p.id, due_date: p.due_date, amount: Number(p.amount) })
-      g.total += Number(p.amount)
+      g.payments.push({ id: p.id, due_date: p.due_date, amount: remaining(p) })
+      g.total += remaining(p)
     }
     return Array.from(map.values())
   })()

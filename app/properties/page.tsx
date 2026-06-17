@@ -479,9 +479,15 @@ export default function Properties() {
                   <option value="selbst">Selbst verwaltet (ganzes Objekt gehört mir)</option>
                   <option value="weg">Eigentumswohnung in WEG (Hausverwaltung rechnet Hausgeld ab)</option>
                 </select>
-                <p style={{ fontSize: '12px', color: '#888', margin: '6px 0 0', lineHeight: 1.5 }}>
-                  Bei WEG kannst du in der Nebenkostenabrechnung die Hausgeldabrechnung des Verwalters hochladen — MietNext uebernimmt deinen Anteil automatisch. Mehrere Wohnungen im selben Haus? Lege jede als eigenes Objekt an, da der Verwalter pro Wohnung abrechnet.
-                </p>
+                {verwaltungstyp === 'weg' ? (
+                  <div style={{ marginTop: '8px', backgroundColor: '#fef3c7', border: '1px solid #fde68a', borderRadius: '8px', padding: '12px 14px', fontSize: '13px', color: '#92400e', lineHeight: 1.55 }}>
+                    <strong>WEG = eine Wohnung pro Objekt.</strong> Der Verwalter rechnet pro Wohnung ab — lade die Hausgeldabrechnung in der Nebenkostenabrechnung hoch, MietNext uebernimmt deinen Anteil. <strong>Mehrere Wohnungen im selben Haus? Lege jede als eigenes Objekt an.</strong>
+                  </div>
+                ) : (
+                  <p style={{ fontSize: '12px', color: '#888', margin: '6px 0 0', lineHeight: 1.5 }}>
+                    Bei WEG kannst du die Hausgeldabrechnung des Verwalters hochladen — MietNext uebernimmt deinen Anteil automatisch.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -498,6 +504,7 @@ export default function Properties() {
                         : 'Fülle erst Stadt + Adresse aus, dann werden Codes automatisch erzeugt.'}
                     </p>
                   </div>
+                  {verwaltungstyp !== 'weg' && (
                   <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                     <span style={{ fontSize: '11px', color: '#999', alignSelf: 'center', marginRight: '4px' }}>Schnell:</span>
                     <button type="button" onClick={() => quickAdd(3)} style={{
@@ -513,6 +520,7 @@ export default function Properties() {
                       borderRadius: '6px', border: 'none', fontSize: '12px', cursor: 'pointer'
                     }}>10 Wohnungen</button>
                   </div>
+                  )}
                 </div>
 
                 <div style={{

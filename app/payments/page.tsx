@@ -21,8 +21,7 @@ export default function Payments() {
   const [selectedContract, setSelectedContract] = useState('')
   const [amount, setAmount] = useState('')
   const [dueDate, setDueDate] = useState('')
-  const [paidDate, setPaidDate] = useState('')
-  const [status, setStatus] = useState('pending')
+
   const [filterProperty, setFilterProperty] = useState<string>('all')
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [filterYear, setFilterYear] = useState<string>('month')
@@ -69,12 +68,12 @@ export default function Payments() {
     setLoading(true)
     const { error } = await supabase.from('payments').insert({
       contract_id: selectedContract, amount: parseFloat(amount),
-      due_date: dueDate, paid_date: paidDate || null,
-      status: paidDate ? 'paid' : status,
+      due_date: dueDate, paid_date: null,
+      status: 'pending',
     })
     if (error) { toast.error('Fehler: ' + error.message); setLoading(false); return }
-    toast.success('Zahlung erfasst')
-    setSelectedContract(''); setAmount(''); setDueDate(''); setPaidDate(''); setStatus('pending')
+    toast.success('Forderung angelegt')
+    setSelectedContract(''); setAmount(''); setDueDate('')
     setShowForm(false); setLoading(false); loadData(userId!)
   }
 
@@ -199,7 +198,7 @@ export default function Payments() {
             <p style={{ fontSize: '14px', color: '#999', margin: 0 }}>{filteredPayments.length === payments.length ? `${payments.length} Zahlungen gesamt` : `${filteredPayments.length} von ${payments.length} Zahlungen`}</p>
           </div>
           <button onClick={() => { setShowForm(true); setTimeout(() => document.getElementById('formcard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50) }} style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer' }}>
-            + Zahlung erfassen
+            + Forderung anlegen
           </button>
         </div>
 
@@ -246,7 +245,7 @@ export default function Payments() {
         {showForm && (
           <div id="formcard" className="scroll-mt-24" style={{ ...card, marginBottom: '24px' }}>
             <h2 style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 20px', fontFamily: 'Georgia, serif' }}>
-              Zahlung erfassen
+              Forderung anlegen
             </h2>
             <div className="flex flex-col gap-4 md:grid md:grid-cols-2 mb-[20px]">
               <div style={{ gridColumn: 'span 2' }}>
@@ -270,17 +269,10 @@ export default function Payments() {
                 <label style={label}>Fällig am *</label>
                 <input value={dueDate} onChange={e => setDueDate(e.target.value)} type="date" style={input} />
               </div>
-              <div>
-                <label style={label}>Eingegangen am</label>
-                <input value={paidDate} onChange={e => setPaidDate(e.target.value)} type="date" style={input} />
-              </div>
-              <div>
-                <label style={label}>Status</label>
-                <select value={status} onChange={e => setStatus(e.target.value)} style={input}>
-                  <option value="pending">Ausstehend</option>
-                  <option value="paid">Bezahlt</option>
-                  <option value="late">Überfällig</option>
-                </select>
+              <div style={{ gridColumn: 'span 2' }}>
+                <p style={{ fontSize: '12px', color: '#999', margin: 0 }}>
+                  Legt eine offene Soll-Forderung an (z.B. fehlende Nachforderung). Geldeingaenge buchst du direkt an der Rate ueber „Teilzahlung" oder „Als bezahlt markieren".
+                </p>
               </div>
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
@@ -320,7 +312,7 @@ export default function Payments() {
           <div style={{ ...card, textAlign: 'center', padding: '64px' }}>
             <p style={{ fontSize: '14px', color: '#bbb', margin: '0 0 12px' }}>Noch keine Zahlungen erfasst.</p>
             <button onClick={() => { setShowForm(true); setTimeout(() => document.getElementById('formcard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50) }} style={{ background: 'none', border: 'none', color: '#1a1a1a', fontSize: '14px', cursor: 'pointer', textDecoration: 'underline' }}>
-              Erste Zahlung erfassen →
+              Erste Forderung anlegen →
             </button>
           </div>
         ) : (

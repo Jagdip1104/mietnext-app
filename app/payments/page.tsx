@@ -105,7 +105,8 @@ export default function Payments() {
 
   // Bezahlt → Ausstehend zurücksetzen
   const handleResetToPending = async (id: string) => {
-    const { error } = await supabase.from('payment_receipts').delete().eq('payment_id', id)
+    await supabase.from('payment_receipts').delete().eq('payment_id', id)
+    const { error } = await supabase.from('payments').update({ status: 'pending', paid_date: null, paid_amount: 0 }).eq('id', id)
     if (error) {
       toast.error('Fehler beim Zurücksetzen: ' + error.message)
       return

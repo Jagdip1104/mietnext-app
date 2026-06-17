@@ -480,7 +480,7 @@ export default function Properties() {
                   <option value="weg">Eigentumswohnung in WEG (Hausverwaltung rechnet Hausgeld ab)</option>
                 </select>
                 <p style={{ fontSize: '12px', color: '#888', margin: '6px 0 0', lineHeight: 1.5 }}>
-                  Bei WEG kannst du in der Nebenkostenabrechnung die Hausgeldabrechnung des Verwalters hochladen — MietNext uebernimmt deinen Anteil automatisch.
+                  Bei WEG kannst du in der Nebenkostenabrechnung die Hausgeldabrechnung des Verwalters hochladen — MietNext uebernimmt deinen Anteil automatisch. Mehrere Wohnungen im selben Haus? Lege jede als eigenes Objekt an, da der Verwalter pro Wohnung abrechnet.
                 </p>
               </div>
             </div>

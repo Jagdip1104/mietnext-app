@@ -757,7 +757,7 @@ export default function NebenkostenabrechnungDetail() {
           .sort((a: any, b: any) => b.share - a.share)
         if (pieSegs.length > 0 && allocated > 0 && y < 235) {
           y += 10
-          const cx = 42, cy = y + 16, rad = 15
+          const cx = 42, cy = y + 22, rad = 15
           const PIE = [[37,99,235],[16,185,129],[245,158,11],[239,68,68],[139,92,246],[6,182,212],[236,72,153],[132,204,22],[249,115,22],[100,116,139]]
           doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(26, 26, 26)
           doc.text('Ihre Kostenverteilung', 22, y + 2)

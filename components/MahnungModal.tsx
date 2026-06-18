@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useToast } from '@/components/ui/Toast'
+import { supabase } from '@/lib/supabase'
 
 interface OverduePayment { id: string; due_date: string; amount: number }
 interface MahnungInput {
@@ -164,6 +165,14 @@ export default function MahnungModal({ data, profile, onClose }: { data: Mahnung
           if (out && out.error === 'no_email') toast.error('Dieser Mieter hat keine E-Mail hinterlegt.')
           else toast.error('Versand fehlgeschlagen (' + (out && out.error ? out.error : res.status) + ')')
         } else {
+          await supabase.from('mahnung_log').insert({
+            tenant_id: data.tenantId,
+            stage: stageKey,
+            total: data.total,
+            fee: parseFloat(gebuehr) || 0,
+            deadline,
+            sent_to: data.tenantEmail || null,
+          })
           toast.success('Mahnung per E-Mail versendet')
         }
       } else {

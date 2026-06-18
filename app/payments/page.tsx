@@ -30,6 +30,7 @@ export default function Payments() {
   const [userId, setUserId] = useState<string | null>(null)
   const [profile, setProfile] = useState<any>(null)
   const [mahnungData, setMahnungData] = useState<any>(null)
+  const [lastMahnung, setLastMahnung] = useState<Record<string, any>>({})
   const [bookingId, setBookingId] = useState<string | null>(null)
   const [bookAmount, setBookAmount] = useState('')
   const router = useRouter()
@@ -59,6 +60,12 @@ export default function Payments() {
       .in('contract_id', contractIds.length > 0 ? contractIds : ['none'])
       .order('due_date', { ascending: false })
     setPayments(paymentsData || [])
+    const { data: mahnLogs } = await supabase.from('mahnung_log')
+      .select('tenant_id, stage, sent_at')
+      .order('sent_at', { ascending: false })
+    const lastMap: Record<string, any> = {}
+    for (const m of (mahnLogs || [])) { if (!lastMap[m.tenant_id]) lastMap[m.tenant_id] = m }
+    setLastMahnung(lastMap)
     const { data: prof } = await supabase.from('profiles').select('*').eq('id', uid).single()
     setProfile(prof)
   }
@@ -232,6 +239,11 @@ export default function Payments() {
                 <div key={g.tenantId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', padding: '10px 0', borderBottom: '1px solid #f5f4ef' }}>
                   <div>
                     <p style={{ fontSize: '14px', fontWeight: '500', color: '#1a1a1a', margin: '0 0 2px' }}>{g.tenantName}</p>
+                    {lastMahnung[g.tenantId] && (
+                      <p style={{ fontSize: '12px', color: '#b45309', margin: '3px 0 0' }}>
+                        Zuletzt gemahnt: {new Date(lastMahnung[g.tenantId].sent_at).toLocaleDateString('de-DE')} ({lastMahnung[g.tenantId].stage === 'erinnerung' ? 'Zahlungserinnerung' : lastMahnung[g.tenantId].stage === 'mahnung1' ? '1. Mahnung' : '2. Mahnung'})
+                      </p>
+                    )}
                     <p style={{ fontSize: '12px', color: '#bbb', margin: 0 }}>{g.propertyName} · {g.payments.length} {g.payments.length === 1 ? 'offener' : 'offene'} Posten · {g.total.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</p>
                   </div>
                   <button onClick={() => setMahnungData(g)} style={{ backgroundColor: '#fff', color: '#dc2626', padding: '8px 16px', borderRadius: '8px', border: '1px solid #fecaca', fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}>

@@ -9,6 +9,7 @@ import Link from 'next/link'
 import Nav from '@/components/Nav'
 import { getUserPlanInfo } from '@/lib/plans'
 import { generateUnitCode, isValidUnitCode, makeUniqueCode } from '@/lib/unit-code'
+import AddressAutocomplete from '@/components/AddressAutocomplete'
 
 interface UnitInput {
   type: string
@@ -54,6 +55,8 @@ export default function Properties() {
   const [city, setCity] = useState('')
   const [zip, setZip] = useState('')
   const [verwaltungstyp, setVerwaltungstyp] = useState('selbst')
+  const [lat, setLat] = useState<number | null>(null)
+  const [lng, setLng] = useState<number | null>(null)
   const [newUnits, setNewUnits] = useState<UnitInput[]>([emptyUnit()])
   const [loading, setLoading] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -94,7 +97,7 @@ export default function Properties() {
 
   const handleEdit = (p: any) => {
     setEditingId(p.id); setName(p.name)
-    setAddress(p.address || ''); setCity(p.city || ''); setZip(p.zip || '')
+    setAddress(p.address || ''); setCity(p.city || ''); setZip(p.zip || ''); setLat(p.lat ?? null); setLng(p.lng ?? null)
     setVerwaltungstyp(p.verwaltungstyp || 'selbst')
     setNewUnits([])
     setShowForm(true)
@@ -215,7 +218,7 @@ export default function Properties() {
 
     if (editingId) {
       const { error } = await supabase.from('properties')
-        .update({ name, address, city, zip, verwaltungstyp })
+        .update({ name, address, city, zip, verwaltungstyp, lat, lng })
         .eq('id', editingId)
       if (error) {
         toast.error('Fehler: ' + error.message)
@@ -257,7 +260,7 @@ export default function Properties() {
 
     const { data: propData, error: propErr } = await supabase
       .from('properties')
-      .insert({ name, address, city, zip, verwaltungstyp, owner_id: userId })
+      .insert({ name, address, city, zip, verwaltungstyp, lat, lng, owner_id: userId })
       .select()
       .single()
 
@@ -460,8 +463,18 @@ export default function Properties() {
               </div>
               <div style={{ gridColumn: 'span 2' }}>
                 <label style={label}>Adresse (Straße + Hausnummer)</label>
-                <input value={address} onChange={e => setAddress(e.target.value)}
-                  placeholder="z.B. Wielandstraße 11" style={input} />
+                <AddressAutocomplete
+                  value={address}
+                  onChange={v => { setAddress(v); setLat(null); setLng(null) }}
+                  onSelect={s => {
+                    setAddress(s.street || address)
+                    if (s.zip) setZip(s.zip)
+                    if (s.city) setCity(s.city)
+                    setLat(s.lat); setLng(s.lng)
+                  }}
+                  placeholder="Adresse eingeben, Vorschlag auswaehlen"
+                  style={input}
+                />
               </div>
               <div>
                 <label style={label}>PLZ</label>

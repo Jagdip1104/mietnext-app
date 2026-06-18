@@ -55,7 +55,7 @@ export default function Payments() {
     setContracts(contractsData || [])
     const contractIds = (contractsData || []).map((c: any) => c.id)
     const { data: paymentsData } = await supabase.from('payments')
-      .select('*, contracts(tenant_id, tenants(full_name), units(name, properties(name)))')
+      .select('*, contracts(tenant_id, tenants(full_name, email), units(name, properties(name)))')
       .in('contract_id', contractIds.length > 0 ? contractIds : ['none'])
       .order('due_date', { ascending: false })
     setPayments(paymentsData || [])
@@ -168,6 +168,7 @@ export default function Payments() {
       if (!map.has(tid)) map.set(tid, {
         tenantId: tid,
         tenantName: p.contracts?.tenants?.full_name || 'Mieter',
+        tenantEmail: p.contracts?.tenants?.email || '',
         propertyName: p.contracts?.units?.properties?.name || '',
         unitName: p.contracts?.units?.name || '',
         payments: [] as any[],

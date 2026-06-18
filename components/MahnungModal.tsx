@@ -7,6 +7,7 @@ interface OverduePayment { id: string; due_date: string; amount: number }
 interface MahnungInput {
   tenantId: string
   tenantName: string
+  tenantEmail?: string
   propertyName: string
   unitName: string
   payments: OverduePayment[]
@@ -240,8 +241,12 @@ export default function MahnungModal({ data, profile, onClose }: { data: Mahnung
           <button onClick={() => generatePDF(false)} disabled={busy} style={{ backgroundColor: '#fff', color: '#1a1a1a', padding: '10px 18px', borderRadius: '8px', border: '1px solid #1a1a1a', fontSize: '13px', cursor: busy ? 'wait' : 'pointer', opacity: busy ? 0.6 : 1 }}>
             {busy ? '...' : 'PDF herunterladen'}
           </button>
-          <button onClick={() => { if (confirm('Mahnung jetzt per E-Mail an den Mieter senden?')) generatePDF(true) }} disabled={busy} style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 18px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: busy ? 'wait' : 'pointer', opacity: busy ? 0.6 : 1 }}>
-            {busy ? 'Sende...' : 'Per E-Mail senden'}
+          <button onClick={() => {
+            const gesamt = data.total + (parseFloat(gebuehr) || 0)
+            const msg = STAGE_TITLES[stageKey] + ': ' + eur(gesamt) + ' an ' + (rName || data.tenantName) + ' (' + (data.tenantEmail || '') + ') senden?'
+            if (confirm(msg)) generatePDF(true)
+          }} disabled={busy || !data.tenantEmail} title={!data.tenantEmail ? 'Keine E-Mail hinterlegt' : ''} style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 18px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: (busy || !data.tenantEmail) ? 'not-allowed' : 'pointer', opacity: (busy || !data.tenantEmail) ? 0.5 : 1 }}>
+            {busy ? 'Sende...' : (data.tenantEmail ? 'Per E-Mail senden' : 'Keine E-Mail')}
           </button>
         </div>
       </div>

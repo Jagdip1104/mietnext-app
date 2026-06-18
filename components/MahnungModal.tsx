@@ -56,7 +56,7 @@ export default function MahnungModal({ data, profile, onClose }: { data: Mahnung
     return dd + '.' + mm + '.' + dt.getFullYear()
   }
 
-  const generatePDF = async () => {
+  const generatePDF = async (send = false) => {
     setBusy(true)
     try {
       const { jsPDF } = await import('jspdf')
@@ -142,8 +142,33 @@ export default function MahnungModal({ data, profile, onClose }: { data: Mahnung
       doc.text('Erstellt am ' + fmtDE(new Date()) + ' · MietNext', 20, 289)
 
       const safe = (rName || data.tenantName || 'Mieter').replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '')
-      doc.save(title.replace(/[^a-zA-Z0-9]/g, '_') + '_' + safe + '.pdf')
-      toast.success('PDF erstellt')
+      const fileName = title.replace(/[^a-zA-Z0-9]/g, '_') + '_' + safe + '.pdf'
+      if (send) {
+        const b64 = doc.output('datauristring').split('base64,')[1]
+        const res = await fetch('/api/send-document', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tenantId: data.tenantId,
+            subject: title + (data.propertyName ? ' - ' + data.propertyName : ''),
+            heading: title,
+            message: 'anbei erhalten Sie die ' + title + ' als PDF im Anhang. Den offenen Gesamtbetrag entnehmen Sie bitte dem Dokument.',
+            senderName: sName,
+            filename: fileName,
+            pdfBase64: b64,
+          }),
+        })
+        const out = await res.json().catch(() => ({}))
+        if (!res.ok) {
+          if (out && out.error === 'no_email') toast.error('Dieser Mieter hat keine E-Mail hinterlegt.')
+          else toast.error('Versand fehlgeschlagen (' + (out && out.error ? out.error : res.status) + ')')
+        } else {
+          toast.success('Mahnung per E-Mail versendet')
+        }
+      } else {
+        doc.save(fileName)
+        toast.success('PDF erstellt')
+      }
     } catch (e: any) {
       toast.error('PDF-Fehler: ' + e.message)
     }
@@ -212,8 +237,11 @@ export default function MahnungModal({ data, profile, onClose }: { data: Mahnung
         </div>
         <div style={{ padding: '16px 24px', borderTop: '1px solid #e8e6e0', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
           <button onClick={onClose} style={{ backgroundColor: '#fff', color: '#666', padding: '10px 18px', borderRadius: '8px', border: '1px solid #e8e6e0', fontSize: '13px', cursor: 'pointer' }}>Schließen</button>
-          <button onClick={generatePDF} disabled={busy} style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 18px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: busy ? 'wait' : 'pointer', opacity: busy ? 0.6 : 1 }}>
-            {busy ? 'PDF wird erstellt...' : 'PDF erstellen'}
+          <button onClick={() => generatePDF(false)} disabled={busy} style={{ backgroundColor: '#fff', color: '#1a1a1a', padding: '10px 18px', borderRadius: '8px', border: '1px solid #1a1a1a', fontSize: '13px', cursor: busy ? 'wait' : 'pointer', opacity: busy ? 0.6 : 1 }}>
+            {busy ? '...' : 'PDF herunterladen'}
+          </button>
+          <button onClick={() => { if (confirm('Mahnung jetzt per E-Mail an den Mieter senden?')) generatePDF(true) }} disabled={busy} style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 18px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: busy ? 'wait' : 'pointer', opacity: busy ? 0.6 : 1 }}>
+            {busy ? 'Sende...' : 'Per E-Mail senden'}
           </button>
         </div>
       </div>

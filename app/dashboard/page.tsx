@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Nav from '@/components/Nav'
 import PlanUsageBanner from '@/components/PlanUsageBanner'
+import OnboardingChecklist from '@/components/OnboardingChecklist'
 
 interface ActionItem {
   priority: 'urgent' | 'warning' | 'info'
@@ -583,6 +584,7 @@ export default function Dashboard() {
         </div>
 
         {/* === KPI Cards === */}
+        <OnboardingChecklist />
         <div className="grid grid-cols-3 gap-2 md:gap-3" style={{ marginBottom: '1.5rem' }}>
           <a href="/payments" style={{ textDecoration: 'none', color: 'inherit' }}>
             <div style={{ ...kpiCardStyle, height: '100%', borderColor: stats.lateCount > 0 ? '#fecaca' : '#e8e6e0' }}>

@@ -308,7 +308,7 @@ export default function GuvPage() {
 
         {/* ── Auswahl ── */}
         <div style={{ ...card, marginBottom: '24px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '16px', alignItems: 'flex-end' }}>
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-3 md:gap-4" style={{ alignItems: 'flex-end' }}>
             <div>
               <label style={lbl}>Objekt *</label>
               <select value={selectedProp} onChange={e => { setSelectedProp(e.target.value); setLoaded(false) }} style={inp}>
@@ -322,7 +322,7 @@ export default function GuvPage() {
                 {years.map(y => <option key={y} value={y}>{y}</option>)}
               </select>
             </div>
-            <button onClick={loadGuV} disabled={!selectedProp || loading}
+            <button onClick={loadGuV} disabled={!selectedProp || loading} className="w-full md:w-auto"
               style={{ backgroundColor: '#1a1a1a', color: '#fff', padding: '10px 24px', borderRadius: '8px', border: 'none', fontSize: '13px', cursor: 'pointer', opacity: !selectedProp ? 0.4 : 1, whiteSpace: 'nowrap' as const }}>
               {loading ? 'Lade...' : 'GuV laden →'}
             </button>

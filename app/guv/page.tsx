@@ -108,7 +108,7 @@ export default function GuvPage() {
   const isGewinn         = ergebnis >= 0
   const selectedPropObj  = properties.find((p: any) => p.id === selectedProp)
 
-  const formatEur = (n: number) => n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
+  const formatEur = (n: number) => n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '\u00A0\u20AC'
   const formatDate = (d: string) => new Date(d).toLocaleDateString('de-DE')
   const years = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i)
 
@@ -382,7 +382,7 @@ export default function GuvPage() {
                         <p style={{ fontSize: '12px', color: '#bbb', margin: 0 }}>Bezahlt: {formatDate(p.paid_date)}</p>
                       </div>
                       <p style={{ fontSize: '15px', fontWeight: '500', color: '#16a34a', margin: 0, fontFamily: 'Georgia, serif' }}>
-                        + {formatEur(Number(p.amount))}
+                        <span style={{ whiteSpace: 'nowrap' }}>+ {formatEur(Number(p.amount))}</span>
                       </p>
                     </div>
                   ))}
@@ -419,7 +419,7 @@ export default function GuvPage() {
                         </p>
                       </div>
                       <p style={{ fontSize: '15px', fontWeight: '500', color: '#dc2626', margin: 0, fontFamily: 'Georgia, serif' }}>
-                        − {formatEur(Number(e.amount))}
+                        <span style={{ whiteSpace: 'nowrap' }}>− {formatEur(Number(e.amount))}</span>
                       </p>
                     </div>
                   ))}
@@ -456,7 +456,7 @@ export default function GuvPage() {
                         </p>
                       </div>
                       <p style={{ fontSize: '15px', fontWeight: '500', color: '#dc2626', margin: 0, fontFamily: 'Georgia, serif' }}>
-                        − {formatEur(Number(e.amount))}
+                        <span style={{ whiteSpace: 'nowrap' }}>− {formatEur(Number(e.amount))}</span>
                       </p>
                     </div>
                   ))}
@@ -480,7 +480,7 @@ export default function GuvPage() {
                 </p>
               </div>
               <p style={{ fontSize: '32px', fontWeight: '300', color: isGewinn ? '#16a34a' : '#dc2626', margin: 0, fontFamily: 'Georgia, serif' }}>
-                {isGewinn ? '+' : '−'} {formatEur(Math.abs(ergebnis))}
+                <span style={{ whiteSpace: 'nowrap' }}>{isGewinn ? '+' : '−'} {formatEur(Math.abs(ergebnis))}</span>
               </p>
             </div>
 

@@ -466,7 +466,7 @@ export default function Dashboard() {
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Guten Morgen' : hour < 18 ? 'Guten Tag' : 'Guten Abend'
   const greetingEmoji = hour < 12 ? '☀️' : hour < 18 ? '👋' : '🌙'
-  const userName = landlordName || user?.user_metadata?.first_name || user?.email?.split('@')[0] || 'Vermieter'
+  const userName = landlordName || user?.user_metadata?.full_name || user?.user_metadata?.first_name || user?.email?.split('@')[0] || 'Vermieter'
 
   const occupancyRate = stats.units > 0 ? Math.round((stats.occupiedUnits / stats.units) * 100) : 0
   const occupancyDelta = occupancyRate - BENCHMARK_OCCUPANCY
